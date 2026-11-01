@@ -9,6 +9,7 @@ import Footer from "@/components/Footer";
 import SellerModal from "@/components/SellerModal";
 import { FEATURED_PROJECTS } from "@/lib/data";
 import { useSavedProjects } from "@/lib/savedProjectsContext";
+import { useProjects } from "@/lib/projectsContext";
 import { 
   Maximize, 
   Bed, 
@@ -31,7 +32,8 @@ import {
 export default function ProjectDetailClient() {
   const params = useParams();
   const projectId = params?.id as string;
-  const project = FEATURED_PROJECTS.find((p) => p.id === projectId);
+  const { projects } = useProjects();
+  const project = projects.find((p) => p.id === projectId) || FEATURED_PROJECTS.find((p) => p.id === projectId);
 
   const { isSaved, toggleSave } = useSavedProjects();
   const [activeImageIndex, setActiveImageIndex] = useState(0);

@@ -27,6 +27,49 @@ export interface ArchitecturalProject {
   };
   floorPlanImage?: string;
   featured?: boolean;
+  status?: "published" | "draft";
+  facing?: "North" | "South" | "East" | "West" | "North-East";
+  vastuScore?: number;
+  views?: number;
+  inquiries?: number;
+  sheetCount?: number;
+  dwgAvailable?: boolean;
+  bimAvailable?: boolean;
+  boqAvailable?: boolean;
+  mepAvailable?: boolean;
+  updatedAt?: string;
+}
+
+export interface ClientInquiry {
+  id: string;
+  clientName: string;
+  clientEmail: string;
+  clientPhone: string;
+  projectName: string;
+  projectId: string;
+  plotLocation: string;
+  plotDimensions: string;
+  budgetRange: string;
+  message: string;
+  date: string;
+  status: "new" | "in_review" | "responded" | "completed";
+  replyText?: string;
+  respondedAt?: string;
+}
+
+export interface StudioProfile {
+  name: string;
+  studio: string;
+  coaNumber: string;
+  location: string;
+  verified: boolean;
+  bio: string;
+  email: string;
+  phone: string;
+  image: string;
+  coverImage: string;
+  specialization: string;
+  awards: string[];
 }
 
 export interface ArchitecturalStyle {

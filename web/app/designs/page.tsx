@@ -11,10 +11,12 @@ import { ArchitecturalProject } from "@/lib/types";
 import Image from "next/image";
 import { Search, Maximize, Bed, Layers, ArrowRight, ArrowUpDown, X, Bookmark, BookmarkCheck } from "lucide-react";
 import { useSavedProjects } from "@/lib/savedProjectsContext";
+import { useProjects } from "@/lib/projectsContext";
 
 function DesignsCatalogContent() {
   const searchParams = useSearchParams();
   const { isSaved, toggleSave } = useSavedProjects();
+  const { projects } = useProjects();
   const [selectedProject, setSelectedProject] = useState<ArchitecturalProject | null>(null);
   const [isSellerModalOpen, setIsSellerModalOpen] = useState(false);
 
@@ -50,7 +52,8 @@ function DesignsCatalogContent() {
   }, [searchParams]);
 
   const filteredAndSortedProjects = useMemo(() => {
-    let result = FEATURED_PROJECTS.filter((project) => {
+    const activeProjects = projects.filter((p) => p.status !== "draft");
+    let result = activeProjects.filter((project) => {
       // Search Query
       const queryLower = searchQuery.toLowerCase();
       const matchesSearch =
