@@ -20,7 +20,7 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
   const router = useRouter();
-  const { switchRole, switchUser, users } = useAuth();
+  const { switchRole, switchUser, users, login } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [loginSuccess, setLoginSuccess] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
@@ -62,6 +62,7 @@ export default function LoginPage() {
       const result = await res.json();
 
       if (res.ok && result.user) {
+        login(result.user);
         if (result.user.role === "super_admin") {
           switchRole("super_admin");
         } else if (result.user.role === "admin") {

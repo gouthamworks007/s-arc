@@ -7,6 +7,7 @@ const STORAGE_KEY_AUTH_USER = "sarc_auth_current_user_v1";
 const STORAGE_KEY_AUTH_USERS = "sarc_auth_all_users_v1";
 const STORAGE_KEY_SETTINGS = "sarc_platform_settings_v1";
 const STORAGE_KEY_AUDIT_LOGS = "sarc_audit_logs_v1";
+const STORAGE_KEY_IS_LOGGED_IN = "sarc_is_logged_in_v1";
 
 const DEFAULT_USERS: UserAccount[] = [
   {
@@ -149,9 +150,12 @@ const DEFAULT_AUDIT_LOGS: AuditLog[] = [
 ];
 
 interface AuthContextType {
-  currentUser: UserAccount;
+  currentUser: UserAccount | null;
+  isLoggedIn: boolean;
   users: UserAccount[];
-  role: UserRole;
+  role: UserRole | null;
+  login: (user: UserAccount) => void;
+  logout: () => void;
   switchRole: (role: UserRole, subRole?: UserSubRole) => void;
   switchUser: (userId: string) => void;
   updateUserRole: (userId: string, newRole: UserRole) => void;
@@ -169,8 +173,9 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  // Default to Super Admin so the user immediately sees the full administrative controls
-  const [currentUser, setCurrentUser] = useState<UserAccount>(DEFAULT_USERS[0]);
+  // Visitors start as guests (not logged in) until explicitly signing into an account
+  const [currentUser, setCurrentUser] = useState<UserAccount | null>(null);
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
   const [users, setUsers] = useState<UserAccount[]>(DEFAULT_USERS);
   const [settings, setSettings] = useState<PlatformSettings>(DEFAULT_SETTINGS);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>(DEFAULT_AUDIT_LOGS);
@@ -178,7 +183,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Load from localStorage on client mount
   useEffect(() => {
     try {
+      const storedLoggedIn = localStorage.getItem(STORAGE_KEY_IS_LOGGED_IN) === "true";
       const storedUsers = localStorage.getItem(STORAGE_KEY_AUTH_USERS);
+      let activeUsers = DEFAULT_USERS;
+
       if (storedUsers) {
         let parsed = JSON.parse(storedUsers);
         // Seamlessly migrate legacy superadmin email to superadmin@admin.com
@@ -197,8 +205,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (mutated) {
           localStorage.setItem(STORAGE_KEY_AUTH_USERS, JSON.stringify(parsed));
         }
+        activeUsers = parsed;
         setUsers(parsed);
+      }
 
+      if (storedLoggedIn) {
         const storedCur = localStorage.getItem(STORAGE_KEY_AUTH_USER);
         if (storedCur) {
           let parsedCur = JSON.parse(storedCur);
@@ -206,9 +217,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             parsedCur = { ...parsedCur, email: "superadmin@admin.com", name: "Super Admin" };
             localStorage.setItem(STORAGE_KEY_AUTH_USER, JSON.stringify(parsedCur));
           }
-          const found = parsed.find((u: UserAccount) => u.id === parsedCur.id);
-          if (found) setCurrentUser(found);
+          const found = activeUsers.find((u: UserAccount) => u.id === parsedCur.id);
+          if (found) {
+            setCurrentUser(found);
+            setIsLoggedIn(true);
+          } else {
+            setCurrentUser(parsedCur);
+            setIsLoggedIn(true);
+          }
         }
+      } else {
+        setCurrentUser(null);
+        setIsLoggedIn(false);
       }
 
       const storedSettings = localStorage.getItem(STORAGE_KEY_SETTINGS);
@@ -230,10 +250,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const login = (account: UserAccount) => {
+    setCurrentUser(account);
+    setIsLoggedIn(true);
+    try {
+      localStorage.setItem(STORAGE_KEY_AUTH_USER, JSON.stringify(account));
+      localStorage.setItem(STORAGE_KEY_IS_LOGGED_IN, "true");
+    } catch (e) {
+      console.error(e);
+    }
+    logAction("User Signed In", `${account.name} (${account.email})`);
+  };
+
+  const logout = () => {
+    setCurrentUser(null);
+    setIsLoggedIn(false);
+    try {
+      localStorage.removeItem(STORAGE_KEY_AUTH_USER);
+      localStorage.removeItem(STORAGE_KEY_IS_LOGGED_IN);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   const saveCurrentUser = (user: UserAccount) => {
     setCurrentUser(user);
+    setIsLoggedIn(true);
     try {
       localStorage.setItem(STORAGE_KEY_AUTH_USER, JSON.stringify(user));
+      localStorage.setItem(STORAGE_KEY_IS_LOGGED_IN, "true");
     } catch (e) {
       console.error(e);
     }
@@ -242,8 +287,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logAction = (action: string, target: string) => {
     const newLog: AuditLog = {
       id: `log-${Date.now().toString().slice(-4)}`,
-      actorName: currentUser.name,
-      actorRole: currentUser.role,
+      actorName: currentUser ? currentUser.name : "System Operator",
+      actorRole: currentUser ? currentUser.role : "super_admin",
       action,
       target,
       timestamp: "Just now"
@@ -307,7 +352,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const targetUser = users.find((u) => u.id === userId);
 
     // Strict Enforcement: Only Super Admin can approve accounts
-    if (newStatus === "active" && currentUser.role !== "super_admin") {
+    if (newStatus === "active" && (!currentUser || currentUser.role !== "super_admin")) {
       alert("Permission Denied: Only Super Admin (Tier 1) has authority to approve and activate accounts.");
       return;
     }
@@ -318,7 +363,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       ...(notes ? { reviewNotes: notes } : {})
     } : u));
     saveUsers(updated);
-    if (currentUser.id === userId) {
+    if (currentUser && currentUser.id === userId) {
       saveCurrentUser({ ...currentUser, status: newStatus });
     }
     logAction(
@@ -396,8 +441,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     <AuthContext.Provider
       value={{
         currentUser,
+        isLoggedIn,
         users,
-        role: currentUser.role,
+        role: currentUser ? currentUser.role : null,
+        login,
+        logout,
         switchRole,
         switchUser,
         updateUserRole,

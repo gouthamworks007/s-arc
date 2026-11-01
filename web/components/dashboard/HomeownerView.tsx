@@ -42,7 +42,7 @@ export default function HomeownerView() {
 
   // Inquiries made by this client
   const myInquiries = inquiries.filter(
-    (i) => i.clientEmail === currentUser.email || i.clientName.includes("Ramesh")
+    (i) => i.clientEmail === currentUser?.email || i.clientName.includes("Ramesh")
   );
 
   const handleDownload = (id: string) => {
@@ -58,7 +58,7 @@ export default function HomeownerView() {
           <div>
             <div className="flex items-center gap-2 mb-1">
               <h2 className="text-2xl sm:text-3xl font-serif text-charcoal">
-                Welcome back, {currentUser.name}
+                Welcome back, {currentUser?.name || "Client"}
               </h2>
               <span className="px-2.5 py-0.5 rounded-full bg-copper/20 text-copper border border-copper/30 text-xs font-mono font-medium">
                 Homeowner Portal

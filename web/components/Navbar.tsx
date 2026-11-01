@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Search, Menu, X, ArrowRight, Bookmark } from "lucide-react";
+import { Search, Menu, X, ArrowRight, Bookmark, Key, LogOut, User } from "lucide-react";
 import { useSavedProjects } from "@/lib/savedProjectsContext";
 import { useAuth } from "@/lib/authContext";
 
@@ -16,7 +16,7 @@ interface NavbarProps {
 export default function Navbar({ onOpenSellerModal, onOpenSearch }: NavbarProps) {
   const pathname = usePathname();
   const { savedProjects, setIsCompareOpen } = useSavedProjects();
-  const { role, currentUser } = useAuth();
+  const { role, currentUser, isLoggedIn, logout } = useAuth();
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -28,12 +28,12 @@ export default function Navbar({ onOpenSellerModal, onOpenSearch }: NavbarProps)
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
+  // Public navigation: Dashboard is protected and accessible only with an account
   const navLinks = [
     { name: "Explore Designs", href: "/designs", active: pathname === "/designs" },
     { name: "Styles", href: "/styles", active: pathname === "/styles" },
     { name: "Architects", href: "/architects", active: pathname === "/architects" },
     { name: "How It Works", href: "/how-it-works", active: pathname === "/how-it-works" },
-    { name: "Studio Dashboard", href: "/dashboard", active: pathname === "/dashboard" },
   ];
 
   return (
@@ -102,24 +102,51 @@ export default function Navbar({ onOpenSellerModal, onOpenSearch }: NavbarProps)
             )}
           </button>
 
-          <Link
-            href="/dashboard"
-            className={`px-3 py-1.5 rounded-full text-xs font-mono font-medium flex items-center gap-1.5 transition-all ${
-              role === "super_admin"
-                ? "bg-amber-100 text-amber-900 border border-amber-300 hover:bg-amber-200"
-                : role === "admin"
-                ? "bg-sky-100 text-sky-900 border border-sky-300 hover:bg-sky-200"
-                : "bg-warm-grey text-charcoal border border-warm-border hover:border-copper"
-            }`}
-            title="Open 3-Tier Dashboard"
-          >
-            <span className={`w-2 h-2 rounded-full ${
-              role === "super_admin" ? "bg-amber-500" : role === "admin" ? "bg-sky-500" : "bg-copper"
-            }`} />
-            <span>
-              {role === "super_admin" ? "Super Admin" : role === "admin" ? "Admin" : currentUser.subRole === "homeowner" ? "Client" : "Architect"}
-            </span>
-          </Link>
+          {/* Account Authentication or Dashboard Action */}
+          {isLoggedIn && currentUser ? (
+            <div className="flex items-center gap-2">
+              <Link
+                href="/dashboard"
+                className={`px-3.5 py-1.5 rounded-full text-xs font-mono font-medium flex items-center gap-2 transition-all shadow-sm ${
+                  role === "super_admin"
+                    ? "bg-amber-100 text-amber-900 border border-amber-300 hover:bg-amber-200"
+                    : role === "admin"
+                    ? "bg-sky-100 text-sky-900 border border-sky-300 hover:bg-sky-200"
+                    : "bg-warm-grey text-charcoal border border-warm-border hover:border-copper"
+                }`}
+                title="Open Private Dashboard"
+              >
+                <span className={`w-2 h-2 rounded-full ${
+                  role === "super_admin" ? "bg-amber-500" : role === "admin" ? "bg-sky-500" : "bg-copper"
+                }`} />
+                <span>
+                  {role === "super_admin"
+                    ? "Super Admin"
+                    : role === "admin"
+                    ? "Admin"
+                    : currentUser.subRole === "homeowner"
+                    ? "Client"
+                    : "Architect"}
+                </span>
+              </Link>
+
+              <button
+                onClick={logout}
+                className="p-1.5 rounded-full text-secondaryText hover:text-red-600 hover:bg-red-50 transition-colors"
+                title="Sign Out"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            </div>
+          ) : (
+            <Link
+              href="/login"
+              className="px-4 py-2 rounded-full border border-warm-border text-xs font-sans font-medium text-charcoal hover:border-copper hover:text-copper transition-all flex items-center gap-1.5"
+            >
+              <Key className="w-3.5 h-3.5 text-copper" />
+              <span>Sign In</span>
+            </Link>
+          )}
 
           <Link
             href="/designs"
@@ -172,23 +199,51 @@ export default function Navbar({ onOpenSellerModal, onOpenSearch }: NavbarProps)
             ))}
 
             <div className="pt-4 border-t border-warm-border flex flex-col gap-3">
-              <div className="flex items-center justify-between text-xs py-1">
-                <Link
-                  href="/login"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="text-charcoal font-medium hover:text-copper"
-                >
-                  Sign In
-                </Link>
-                <span className="text-warm-border">•</span>
-                <Link
-                  href="/signup"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="text-copper font-medium hover:underline"
-                >
-                  Create Account
-                </Link>
-              </div>
+              {isLoggedIn && currentUser ? (
+                <div className="flex flex-col gap-2">
+                  <Link
+                    href="/dashboard"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="py-2.5 px-3 bg-warm-grey rounded-xl text-charcoal font-medium text-xs flex items-center justify-between"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className={`w-2 h-2 rounded-full ${role === "super_admin" ? "bg-amber-500" : "bg-copper"}`} />
+                      <span>{currentUser.name} ({role === "super_admin" ? "Super Admin" : role === "admin" ? "Admin" : "User"})</span>
+                    </div>
+                    <span className="font-mono text-copper text-[11px]">Dashboard →</span>
+                  </Link>
+
+                  <button
+                    onClick={() => {
+                      logout();
+                      setMobileMenuOpen(false);
+                    }}
+                    className="w-full text-left py-1.5 px-1 text-xs text-red-600 font-sans flex items-center gap-1.5"
+                  >
+                    <LogOut className="w-3.5 h-3.5" />
+                    <span>Sign Out of Account</span>
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between text-xs py-1">
+                  <Link
+                    href="/login"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="text-charcoal font-medium hover:text-copper flex items-center gap-1"
+                  >
+                    <Key className="w-3.5 h-3.5 text-copper" />
+                    <span>Sign In</span>
+                  </Link>
+                  <span className="text-warm-border">•</span>
+                  <Link
+                    href="/signup"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="text-copper font-medium hover:underline"
+                  >
+                    Create Account
+                  </Link>
+                </div>
+              )}
 
               <button
                 onClick={() => {

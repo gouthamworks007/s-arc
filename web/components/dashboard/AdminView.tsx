@@ -43,7 +43,7 @@ export default function AdminView() {
   const handleRecommendArchitect = (architect: UserAccount) => {
     forwardForApproval(
       architect.id,
-      `Audited by Admin ${currentUser.name}: Registration verified on Council of Architecture India registry. Recommended for Super Admin approval.`
+      `Audited by Admin ${currentUser?.name || "Sarah Thomas"}: Registration verified on Council of Architecture India registry. Recommended for Super Admin approval.`
     );
   };
 

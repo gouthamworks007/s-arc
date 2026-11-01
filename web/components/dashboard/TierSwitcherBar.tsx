@@ -3,10 +3,12 @@
 import React from "react";
 import Image from "next/image";
 import { useAuth } from "@/lib/authContext";
-import { Crown, Shield, User, Home, Sparkles } from "lucide-react";
+import { Crown, Shield, User, Home, Sparkles, LogOut } from "lucide-react";
 
 export default function TierSwitcherBar() {
-  const { currentUser, role, switchRole, switchUser, users } = useAuth();
+  const { currentUser, role, switchRole, switchUser, users, logout } = useAuth();
+
+  if (!currentUser) return null;
 
   return (
     <div className="bg-charcoal text-white rounded-3xl p-4 sm:p-5 mb-8 shadow-xl border border-white/10">
@@ -91,6 +93,16 @@ export default function TierSwitcherBar() {
           >
             <Home className="w-3.5 h-3.5 text-secondaryText" />
             <span>Tier 3: Homeowner</span>
+          </button>
+
+          {/* Sign Out Button */}
+          <button
+            onClick={logout}
+            className="px-3.5 py-2 rounded-2xl bg-white/10 hover:bg-red-500/20 text-white/80 hover:text-red-300 text-xs font-sans font-medium flex items-center gap-1.5 transition-all shrink-0 border border-white/10 hover:border-red-400/40 ml-1"
+            title="Sign Out of Account"
+          >
+            <LogOut className="w-3.5 h-3.5" />
+            <span>Sign Out</span>
           </button>
         </div>
       </div>
