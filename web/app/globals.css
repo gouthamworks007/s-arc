@@ -1,0 +1,81 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --charcoal: #171717;
+  --pure-white: #ffffff;
+  --warm-grey: #f5f4f1;
+  --muted-copper: #ad8065;
+  --light-border: #e8e6e2;
+  --secondary-text: #777777;
+}
+
+html {
+  scroll-behavior: smooth;
+  color: var(--charcoal);
+  background-color: var(--pure-white);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: var(--font-sans), "Space Grotesk", sans-serif;
+  font-weight: 300;
+  overflow-x: hidden;
+  color: var(--charcoal);
+}
+
+h1, h2, h3, .font-serif, .font-heading {
+  font-family: var(--font-serif), "Cormorant Garamond", Georgia, serif;
+  font-feature-settings: "liga" 1, "dlig" 1;
+}
+
+::selection {
+  background-color: #ad8065;
+  color: #ffffff;
+}
+
+/* Custom architectural minimalist scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f5f4f1;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #ad8065;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #996f56;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Global Round-Edge Aesthetic */
+input:not([type="checkbox"]):not([type="radio"]),
+select,
+textarea {
+  border-radius: 0.75rem;
+}
+
+input[type="checkbox"] {
+  border-radius: 0.25rem;
+}
