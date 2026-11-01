@@ -21,7 +21,10 @@ import {
   CheckCircle2, 
   TrendingUp,
   Percent,
-  Search
+  Search,
+  Building2,
+  Shield,
+  Lock
 } from "lucide-react";
 
 export default function SuperAdminView() {
@@ -36,7 +39,7 @@ export default function SuperAdminView() {
     deleteUser 
   } = useAuth();
 
-  const [activeTab, setActiveTab] = useState<"admins" | "finances" | "users" | "audit">("admins");
+  const [activeTab, setActiveTab] = useState<"approvals" | "admins" | "finances" | "users" | "audit">("approvals");
 
   // Create Admin Modal State
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
@@ -55,6 +58,15 @@ export default function SuperAdminView() {
   const [userRoleFilter, setUserRoleFilter] = useState<string>("all");
 
   const adminsList = users.filter((u) => u.role === "admin" || u.role === "super_admin");
+
+  // Pending approval queues (Super Admin is sole approval authority)
+  const pendingArchitects = users.filter(
+    (u) => u.role === "user" && u.subRole === "architect" && u.status === "pending_verification"
+  );
+  const pendingAdmins = users.filter(
+    (u) => u.role === "admin" && u.status === "pending_verification"
+  );
+  const pendingTotalCount = pendingArchitects.length + pendingAdmins.length;
 
   const filteredUsers = users.filter((u) => {
     if (userRoleFilter !== "all" && u.role !== userRoleFilter) return false;
@@ -113,7 +125,7 @@ export default function SuperAdminView() {
                 </span>
               </div>
               <p className="text-xs text-secondaryText font-sans mt-0.5">
-                Global governance over platform finances, administrative staff, security audit logs, and system configuration.
+                Global governance over platform finances, administrative appointments, Council of Architecture (COA) approvals, security audit logs, and system configuration.
               </p>
             </div>
           </div>
@@ -153,17 +165,23 @@ export default function SuperAdminView() {
             </span>
           </div>
 
-          <div className="p-4 bg-white/90 backdrop-blur-sm border border-warm-border rounded-2xl">
-            <span className="text-[11px] text-secondaryText font-sans block mb-1">
-              Administrative Officers
-            </span>
-            <div className="text-xl sm:text-2xl font-serif text-charcoal font-medium">
-              {adminsList.length} Active
+          <button
+            onClick={() => setActiveTab("approvals")}
+            className="p-4 text-left bg-gradient-to-br from-amber-50 to-white/90 border border-amber-300 rounded-2xl hover:border-amber-400 transition-all group"
+          >
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[11px] text-amber-900 font-medium font-sans">
+                Pending Approvals (Tier 1 Authority)
+              </span>
+              <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
             </div>
-            <span className="text-[10px] text-secondaryText font-mono mt-1 block">
-              Tier 1 & Tier 2 credentials
+            <div className="text-xl sm:text-2xl font-serif text-charcoal font-medium group-hover:text-amber-700 transition-colors">
+              {pendingTotalCount} Pending
+            </div>
+            <span className="text-[10px] text-amber-800 font-mono mt-1 block">
+              {pendingArchitects.length} Architects • {pendingAdmins.length} Admins
             </span>
-          </div>
+          </button>
 
           <div className="p-4 bg-white/90 backdrop-blur-sm border border-warm-border rounded-2xl">
             <span className="text-[11px] text-secondaryText font-sans block mb-1">
@@ -173,7 +191,7 @@ export default function SuperAdminView() {
               {users.length} Users
             </div>
             <span className="text-[10px] text-emerald-700 font-mono mt-1 block">
-              {users.filter((u) => u.status === "active").length} Active • {users.filter((u) => u.status === "pending_verification").length} Pending
+              {users.filter((u) => u.status === "active").length} Active • {adminsList.length} Admins
             </span>
           </div>
         </div>
@@ -181,6 +199,23 @@ export default function SuperAdminView() {
 
       {/* Tabs Switcher */}
       <div className="flex items-center border-b border-warm-border overflow-x-auto scrollbar-none gap-2">
+        <button
+          onClick={() => setActiveTab("approvals")}
+          className={`pb-3.5 px-4 text-xs font-medium font-sans border-b-2 transition-all flex items-center gap-2 whitespace-nowrap ${
+            activeTab === "approvals"
+              ? "border-amber-500 text-charcoal font-semibold"
+              : "border-transparent text-secondaryText hover:text-charcoal"
+          }`}
+        >
+          <Crown className="w-4 h-4 text-amber-500" />
+          <span>Sole Approvals Queue ({pendingTotalCount})</span>
+          {pendingTotalCount > 0 && (
+            <span className="px-1.5 py-0.5 rounded-full bg-amber-400 text-charcoal font-mono text-[10px] font-bold">
+              {pendingTotalCount}
+            </span>
+          )}
+        </button>
+
         <button
           onClick={() => setActiveTab("admins")}
           className={`pb-3.5 px-4 text-xs font-medium font-sans border-b-2 transition-all flex items-center gap-2 whitespace-nowrap ${
@@ -230,6 +265,201 @@ export default function SuperAdminView() {
         </button>
       </div>
 
+      {/* TAB 0: SOLE APPROVALS QUEUE (SUPER ADMIN ONLY) */}
+      {activeTab === "approvals" && (
+        <div className="space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-xl font-serif text-charcoal">Sole Approval Authority Queue</h3>
+                <span className="px-2.5 py-0.5 rounded-full bg-amber-400 text-charcoal font-mono text-[10px] font-bold uppercase tracking-wider">
+                  Tier 1 Exclusive Authority
+                </span>
+              </div>
+              <p className="text-xs text-secondaryText font-sans mt-0.5">
+                Only Super Admin has authority to approve Council of Architecture (COA) credentials for architects, appoint/approve Platform Admins, and activate accounts.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setIsInviteModalOpen(true)}
+                className="px-4 py-2 rounded-full border border-warm-border hover:border-amber-400 bg-white text-xs font-medium text-charcoal flex items-center gap-1.5 transition-all shadow-sm"
+              >
+                <Plus className="w-3.5 h-3.5 text-amber-500" />
+                <span>Nominate Platform Admin</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Section 1: Architect COA License Approvals */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Building2 className="w-4 h-4 text-copper" />
+                <h4 className="font-serif text-base text-charcoal">Architect COA License Approvals ({pendingArchitects.length})</h4>
+              </div>
+              <span className="text-[11px] font-mono text-secondaryText">Architects awaiting official verification seal</span>
+            </div>
+
+            {pendingArchitects.length === 0 ? (
+              <div className="p-8 text-center bg-white border border-warm-border rounded-3xl">
+                <CheckCircle2 className="w-8 h-8 text-emerald-600 mx-auto mb-2" />
+                <div className="font-serif text-sm text-charcoal">All Architect Credentials Approved</div>
+                <p className="text-xs text-secondaryText font-sans mt-0.5">No pending COA submissions in the queue.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                {pendingArchitects.map((arch) => (
+                  <div
+                    key={arch.id}
+                    className="p-5 bg-white border-2 border-amber-300/80 hover:border-amber-400 rounded-3xl shadow-sm flex flex-col justify-between transition-all"
+                  >
+                    <div>
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-3">
+                          <div className="relative w-11 h-11 rounded-xl overflow-hidden border border-warm-border bg-charcoal shrink-0">
+                            <Image src={arch.avatar} alt={arch.name} fill className="object-cover" />
+                          </div>
+                          <div>
+                            <h5 className="font-serif text-base text-charcoal font-medium">{arch.name}</h5>
+                            <span className="text-xs text-secondaryText">{arch.studioName} • {arch.location}</span>
+                          </div>
+                        </div>
+                        <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300 font-mono text-[10px] font-medium">
+                          Awaiting Super Admin
+                        </span>
+                      </div>
+
+                      <div className="p-3 bg-warm-grey/50 border border-warm-border rounded-2xl mb-3 space-y-1 text-xs font-sans">
+                        <div className="flex items-center justify-between">
+                          <span className="text-secondaryText">COA Reg. Number:</span>
+                          <span className="font-mono font-bold text-copper">{arch.coaNumber || "CA/2023/94102"}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-secondaryText">Email:</span>
+                          <span className="font-mono text-secondaryText">{arch.email}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-secondaryText">Phone:</span>
+                          <span className="font-mono text-secondaryText">{arch.phone || "+91 94460 77889"}</span>
+                        </div>
+                      </div>
+
+                      {/* Admin Audit Trail / Notes */}
+                      <div className="p-3 bg-amber-50/70 border border-amber-200/80 rounded-2xl mb-4 text-xs font-sans">
+                        <div className="text-[11px] font-mono font-semibold text-amber-900 flex items-center gap-1.5 mb-1">
+                          <ShieldCheck className="w-3.5 h-3.5 text-amber-700" />
+                          <span>Tier 2 Preliminary Audit:</span>
+                        </div>
+                        <p className="text-amber-950/90 leading-relaxed text-[11px]">
+                          {arch.reviewNotes || "Admin verified COA registry records. Recommended for Tier 1 seal approval."}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2.5 pt-3 border-t border-warm-border/60">
+                      <button
+                        onClick={() => updateUserStatus(arch.id, "suspended")}
+                        className="px-4 py-2 rounded-xl border border-warm-border text-xs font-medium text-red-600 hover:bg-red-50 transition-colors"
+                      >
+                        Reject
+                      </button>
+                      <button
+                        onClick={() => updateUserStatus(arch.id, "active")}
+                        className="flex-1 py-2 px-4 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-medium flex items-center justify-center gap-2 transition-all shadow-sm"
+                      >
+                        <Crown className="w-3.5 h-3.5 text-amber-300" />
+                        <span>Approve & Issue COA Seal</span>
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Section 2: Platform Administrator Approvals */}
+          <div className="space-y-4 pt-4 border-t border-warm-border/60">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Shield className="w-4 h-4 text-sky-600" />
+                <h4 className="font-serif text-base text-charcoal">Platform Admin Approvals & Nominees ({pendingAdmins.length})</h4>
+              </div>
+              <span className="text-[11px] font-mono text-secondaryText">Platform Admins requiring Super Admin approval</span>
+            </div>
+
+            {pendingAdmins.length === 0 ? (
+              <div className="p-8 text-center bg-white border border-warm-border rounded-3xl">
+                <CheckCircle2 className="w-8 h-8 text-sky-600 mx-auto mb-2" />
+                <div className="font-serif text-sm text-charcoal">All Platform Administrators Approved</div>
+                <p className="text-xs text-secondaryText font-sans mt-0.5">All administrative staff hold verified Tier 2 credentials.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                {pendingAdmins.map((adm) => (
+                  <div
+                    key={adm.id}
+                    className="p-5 bg-white border-2 border-sky-300/80 hover:border-sky-400 rounded-3xl shadow-sm flex flex-col justify-between transition-all"
+                  >
+                    <div>
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-3">
+                          <div className="relative w-11 h-11 rounded-xl overflow-hidden border border-warm-border bg-charcoal shrink-0">
+                            <Image src={adm.avatar} alt={adm.name} fill className="object-cover" />
+                          </div>
+                          <div>
+                            <h5 className="font-serif text-base text-charcoal font-medium">{adm.name}</h5>
+                            <span className="text-xs text-secondaryText">{adm.email} • {adm.location}</span>
+                          </div>
+                        </div>
+                        <span className="px-2 py-0.5 rounded-full bg-sky-100 text-sky-900 border border-sky-300 font-mono text-[10px] font-medium">
+                          Nominee Awaiting Approval
+                        </span>
+                      </div>
+
+                      <div className="p-3 bg-sky-50/60 border border-sky-200/70 rounded-2xl mb-3 space-y-1.5 text-xs font-sans">
+                        <div className="flex items-center justify-between">
+                          <span className="text-secondaryText">Role Requested:</span>
+                          <span className="font-mono font-bold text-sky-900">Platform Admin (Tier 2)</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-secondaryText">Proposed Scopes:</span>
+                          <span className="font-mono text-secondaryText text-[11px]">
+                            {adm.permissions?.join(", ") || "Listing Moderation, User Verification"}
+                          </span>
+                        </div>
+                        {adm.reviewNotes && (
+                          <div className="pt-1.5 text-[11px] text-secondaryText border-t border-sky-200/50">
+                            <strong>Nomination Context:</strong> {adm.reviewNotes}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2.5 pt-3 border-t border-warm-border/60">
+                      <button
+                        onClick={() => deleteUser(adm.id)}
+                        className="px-4 py-2 rounded-xl border border-warm-border text-xs font-medium text-red-600 hover:bg-red-50 transition-colors"
+                      >
+                        Reject Nomination
+                      </button>
+                      <button
+                        onClick={() => updateUserStatus(adm.id, "active")}
+                        className="flex-1 py-2 px-4 rounded-xl bg-charcoal hover:bg-charcoal/90 text-white text-xs font-medium flex items-center justify-center gap-2 transition-all shadow-sm"
+                      >
+                        <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
+                        <span>Approve Admin Credentials</span>
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* TAB 1: ADMIN MANAGEMENT */}
       {activeTab === "admins" && (
         <div className="space-y-4">
@@ -237,7 +467,7 @@ export default function SuperAdminView() {
             <div>
               <h3 className="text-lg font-serif text-charcoal">Appointed Platform Administrators</h3>
               <p className="text-xs text-secondaryText font-sans">
-                Admins have permission to approve COA licenses, moderate blueprint submissions, and resolve client disputes.
+                Platform Administrators handle blueprint curation, inquiry routing, and preliminary COA audits. All appointments and approvals require Super Admin clearance.
               </p>
             </div>
           </div>
@@ -271,13 +501,20 @@ export default function SuperAdminView() {
                         </div>
                       </td>
                       <td className="py-4 px-4">
-                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-mono font-medium ${
-                          adm.role === "super_admin"
-                            ? "bg-amber-400 text-charcoal font-bold"
-                            : "bg-sky-50 text-sky-800 border border-sky-200"
-                        }`}>
-                          {adm.role === "super_admin" ? "Super Admin (Tier 1)" : "Admin (Tier 2)"}
-                        </span>
+                        <div className="flex flex-col gap-1 items-start">
+                          <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-mono font-medium ${
+                            adm.role === "super_admin"
+                              ? "bg-amber-400 text-charcoal font-bold"
+                              : "bg-sky-50 text-sky-800 border border-sky-200"
+                          }`}>
+                            {adm.role === "super_admin" ? "Super Admin (Tier 1)" : "Admin (Tier 2)"}
+                          </span>
+                          {adm.status === "pending_verification" && (
+                            <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300 font-mono text-[9px] font-semibold">
+                              Pending Approval
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="py-4 px-4 text-secondaryText">
                         <div>{adm.email}</div>
@@ -301,6 +538,15 @@ export default function SuperAdminView() {
                       <td className="py-4 px-5 text-right">
                         {adm.role !== "super_admin" && (
                           <div className="flex items-center justify-end gap-2">
+                            {adm.status === "pending_verification" && (
+                              <button
+                                onClick={() => updateUserStatus(adm.id, "active")}
+                                className="px-2.5 py-1 rounded-lg bg-amber-400 hover:bg-amber-500 text-charcoal text-[11px] font-semibold transition-colors shadow-sm"
+                                title="Approve and activate Admin credentials"
+                              >
+                                Approve Admin
+                              </button>
+                            )}
                             <button
                               onClick={() => updateUserRole(adm.id, "super_admin")}
                               className="px-2.5 py-1 rounded-lg border border-warm-border text-[11px] text-secondaryText hover:text-amber-700 hover:border-amber-400 transition-colors"
@@ -504,7 +750,14 @@ export default function SuperAdminView() {
                       <td className="py-4 px-5 text-right">
                         {u.role !== "super_admin" && (
                           <div className="flex items-center justify-end gap-2">
-                            {u.status === "active" ? (
+                            {u.status === "pending_verification" ? (
+                              <button
+                                onClick={() => updateUserStatus(u.id, "active")}
+                                className="px-2.5 py-1 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white text-[11px] font-medium shadow-sm transition-colors"
+                              >
+                                Approve Account
+                              </button>
+                            ) : u.status === "active" ? (
                               <button
                                 onClick={() => updateUserStatus(u.id, "suspended")}
                                 className="px-2.5 py-1 rounded-lg border border-warm-border text-[11px] text-amber-700 hover:bg-amber-50"
@@ -516,7 +769,7 @@ export default function SuperAdminView() {
                                 onClick={() => updateUserStatus(u.id, "active")}
                                 className="px-2.5 py-1 rounded-lg border border-warm-border text-[11px] text-emerald-700 hover:bg-emerald-50"
                               >
-                                Activate
+                                Reactivate
                               </button>
                             )}
                             <button

@@ -18,11 +18,15 @@ import {
   FileCheck,
   Check,
   Eye,
-  Filter
+  Filter,
+  Lock,
+  ShieldAlert,
+  Clock,
+  ArrowRight
 } from "lucide-react";
 
 export default function AdminView() {
-  const { users, updateUserStatus, logAction } = useAuth();
+  const { users, currentUser, forwardForApproval, logAction } = useAuth();
   const { projects, updateProject, inquiries } = useProjects();
 
   const [activeTab, setActiveTab] = useState<"verification" | "moderation" | "inquiries">("verification");
@@ -36,14 +40,19 @@ export default function AdminView() {
     (u) => u.role === "user" && u.subRole === "architect" && u.status === "active"
   );
 
-  const handleApproveArchitect = (architect: UserAccount) => {
-    updateUserStatus(architect.id, "active");
-    logAction("Approved COA Verification", `${architect.name} (${architect.coaNumber || "COA Verified"})`);
+  const handleRecommendArchitect = (architect: UserAccount) => {
+    forwardForApproval(
+      architect.id,
+      `Audited by Admin ${currentUser.name}: Registration verified on Council of Architecture India registry. Recommended for Super Admin approval.`
+    );
   };
 
-  const handleRejectArchitect = (architect: UserAccount) => {
-    updateUserStatus(architect.id, "suspended");
-    logAction("Rejected Architect Verification", `${architect.name}`);
+  const handleFlagArchitect = (architect: UserAccount) => {
+    logAction(
+      "Admin Flagged Architect Application",
+      `Discrepancy noted for ${architect.name} (${architect.coaNumber || "No COA"}) - Escalated to Super Admin`
+    );
+    alert(`Discrepancy logged for ${architect.name}. Escalated to Super Admin audit trail.`);
   };
 
   const handleToggleFeatured = (project: ArchitecturalProject) => {
@@ -74,7 +83,7 @@ export default function AdminView() {
                 </span>
               </div>
               <p className="text-xs text-secondaryText font-sans mt-0.5">
-                Review and approve Council of Architecture (COA) credentials, curate drawing packages, and monitor client inquiries.
+                Audit Council of Architecture (COA) credentials, curate blueprint packages, and monitor client inquiries. All account activations and seal approvals require Super Admin clearance.
               </p>
             </div>
           </div>
@@ -84,13 +93,13 @@ export default function AdminView() {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="p-4 bg-white/90 backdrop-blur-sm border border-warm-border rounded-2xl">
             <span className="text-[11px] text-secondaryText font-sans block mb-1">
-              Pending COA Verifications
+              Architect Credential Audit Queue
             </span>
             <div className="text-2xl font-serif text-charcoal font-medium">
               {pendingArchitects.length} Architect{pendingArchitects.length === 1 ? "" : "s"}
             </div>
             <span className="text-[10px] text-amber-700 font-mono mt-1 block">
-              Requires license validation
+              Audit for Super Admin Clearance
             </span>
           </div>
 
@@ -165,10 +174,20 @@ export default function AdminView() {
       {/* TAB 1: ARCHITECT VERIFICATION QUEUE */}
       {activeTab === "verification" && (
         <div className="space-y-6">
+          {/* Governance Notice */}
+          <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-300 text-amber-950 text-xs font-sans flex items-start gap-3">
+            <ShieldAlert className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
+            <div>
+              <strong className="font-semibold text-amber-900">Governance Policy: Super Admin Approval Only (Tier 1).</strong>
+              {" "}Under S-ARC protocol, only the Super Admin has the root authority to approve and activate architect licenses and admin accounts.
+              As a Platform Admin (Tier 2), conduct preliminary COA registry verification and forward recommended candidates to the Super Admin queue.
+            </div>
+          </div>
+
           <div>
-            <h3 className="text-lg font-serif text-charcoal">Pending COA Credential Approvals</h3>
+            <h3 className="text-lg font-serif text-charcoal">Architect COA Credential Audit</h3>
             <p className="text-xs text-secondaryText font-sans">
-              Verify architect registration numbers with the Council of Architecture (COA India) registry before activating their seller accounts.
+              Verify architect registration numbers with the Council of Architecture (COA India) registry before recommending to Super Admin for final seal issuance.
             </p>
           </div>
 
@@ -177,7 +196,7 @@ export default function AdminView() {
               <CheckCircle2 className="w-10 h-10 text-emerald-600 mx-auto mb-3" />
               <h4 className="text-base font-serif text-charcoal mb-1">Queue Clear!</h4>
               <p className="text-xs text-secondaryText font-sans">
-                All registered architects have been vetted and verified with the Council of Architecture.
+                All registered architects have been vetted and forwarded to Super Admin.
               </p>
             </div>
           ) : (
@@ -185,7 +204,7 @@ export default function AdminView() {
               {pendingArchitects.map((arch) => (
                 <div
                   key={arch.id}
-                  className="p-6 bg-white border border-amber-300 rounded-3xl shadow-sm flex flex-col justify-between"
+                  className="p-6 bg-white border border-warm-border hover:border-amber-300/80 rounded-3xl shadow-sm flex flex-col justify-between transition-colors"
                 >
                   <div>
                     <div className="flex items-center gap-3.5 mb-4">
@@ -198,7 +217,7 @@ export default function AdminView() {
                       </div>
                     </div>
 
-                    <div className="p-3.5 bg-amber-50/70 border border-amber-200/70 rounded-2xl mb-4 space-y-1.5 text-xs font-sans">
+                    <div className="p-3.5 bg-warm-grey/50 border border-warm-border rounded-2xl mb-4 space-y-1.5 text-xs font-sans">
                       <div className="flex items-center justify-between">
                         <span className="text-secondaryText">COA Reg. Number:</span>
                         <span className="font-mono font-bold text-charcoal">{arch.coaNumber || "CA/2023/94102"}</span>
@@ -213,25 +232,58 @@ export default function AdminView() {
                       </div>
                     </div>
 
+                    {/* Audit recommendation status */}
+                    {arch.reviewedByAdmin ? (
+                      <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl mb-4 flex items-center justify-between text-xs">
+                        <div className="flex items-center gap-2 text-emerald-800">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                          <span className="font-medium">Audited & Recommended to Super Admin</span>
+                        </div>
+                        <span className="font-mono text-[10px] text-amber-800 bg-amber-100/80 px-2 py-0.5 rounded-full font-medium">
+                          Awaiting Super Admin
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="p-3 bg-amber-50/70 border border-amber-200/70 rounded-xl mb-4 flex items-center gap-2 text-xs text-amber-900">
+                        <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+                        <span>COA credential submitted. Ready for Admin review.</span>
+                      </div>
+                    )}
+
                     <div className="text-xs text-secondaryText font-sans leading-relaxed mb-4">
-                      Applicant submitted valid COA digital certificate and degree transcript. Ready for administrative clearance.
+                      {arch.reviewNotes || "Applicant submitted COA digital certificate and degree transcript. Ready for administrative audit."}
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-3 pt-3 border-t border-warm-border/60">
-                    <button
-                      onClick={() => handleRejectArchitect(arch)}
-                      className="flex-1 py-2 rounded-xl border border-warm-border text-xs font-medium text-red-600 hover:bg-red-50 transition-colors"
-                    >
-                      Reject Application
-                    </button>
-                    <button
-                      onClick={() => handleApproveArchitect(arch)}
-                      className="flex-1 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-medium flex items-center justify-center gap-1.5 transition-colors shadow-sm"
-                    >
-                      <Check className="w-3.5 h-3.5" />
-                      <span>Approve & Issue Seal</span>
-                    </button>
+                  <div className="pt-3 border-t border-warm-border/60">
+                    <div className="flex items-center gap-2 mb-2">
+                      <button
+                        onClick={() => handleFlagArchitect(arch)}
+                        className="px-3 py-2 rounded-xl border border-warm-border text-xs font-medium text-red-600 hover:bg-red-50 transition-colors"
+                        title="Flag discrepancy for Super Admin"
+                      >
+                        Flag Issue
+                      </button>
+
+                      {arch.reviewedByAdmin ? (
+                        <div className="flex-1 py-2 px-3 rounded-xl bg-warm-grey border border-warm-border text-secondaryText text-xs font-mono flex items-center justify-center gap-1.5">
+                          <Clock className="w-3.5 h-3.5 text-amber-600" />
+                          <span>Forwarded to Super Admin Queue</span>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => handleRecommendArchitect(arch)}
+                          className="flex-1 py-2 px-3 rounded-xl bg-charcoal hover:bg-charcoal/90 text-white text-xs font-medium flex items-center justify-center gap-1.5 transition-colors shadow-sm"
+                        >
+                          <Check className="w-3.5 h-3.5 text-amber-400" />
+                          <span>Verify COA & Recommend to Super Admin</span>
+                        </button>
+                      )}
+                    </div>
+                    <div className="flex items-center justify-center gap-1 text-[11px] text-secondaryText/80 font-mono">
+                      <Lock className="w-3 h-3 text-secondaryText" />
+                      <span>Seal Approval: Super Admin (Tier 1) Only</span>
+                    </div>
                   </div>
                 </div>
               ))}

@@ -26,6 +26,19 @@ const USERS_STORE: any[] = [
     joinedDate: "Mar 2025",
   },
   {
+    id: "usr-admin-pending-01",
+    name: "Jayashankar Menon",
+    email: "jayashankar.nominee@s-arc.in",
+    role: "admin",
+    status: "pending_verification",
+    avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=400&q=80",
+    phone: "+91 94475 88990",
+    location: "Calicut, Kerala",
+    joinedDate: "Today",
+    permissions: ["moderate_listings", "manage_users"],
+    reviewNotes: "Nominated Regional Admin for Malabar operations. Awaiting Super Admin Tier 1 approval."
+  },
+  {
     id: "usr-arch-01",
     name: "Ar. Nikhil Rajan",
     email: "nikhil@studiovayu.arch",

@@ -144,3 +144,4 @@ model AuditLog {
 
   actor      User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
 }
+

@@ -26,13 +26,17 @@ export async function POST(req: NextRequest) {
     const passwordHash = await bcrypt.hash(password, salt);
 
     const isArchitect = subRole === "architect";
-    const status = isArchitect ? "pending_verification" : "active";
+    // Super Admin cannot be created via public register; Admin nomination starts as pending_verification
+    const safeRole: "user" | "admin" = role === "admin" ? "admin" : "user";
+    const isAdminNominee = safeRole === "admin";
+    // Only Super Admin can approve architects and admins
+    const status = (isArchitect || isAdminNominee) ? "pending_verification" : "active";
 
     const newUser = {
       id: `usr-${Date.now().toString().slice(-5)}`,
       name: name.trim(),
       email: cleanEmail,
-      role: role as "user" | "admin" | "super_admin",
+      role: safeRole,
       subRole: subRole as "homeowner" | "architect" | "contractor",
       status,
       coaNumber: coaNumber || null,
@@ -77,3 +81,4 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+

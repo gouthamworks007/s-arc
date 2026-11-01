@@ -60,3 +60,4 @@ export async function requireRole(
 
   return { user, errorResponse: null };
 }
+

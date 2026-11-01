@@ -109,6 +109,8 @@ export interface UserAccount {
   studioName?: string;
   joinedDate: string;
   permissions?: string[];
+  reviewNotes?: string;
+  reviewedByAdmin?: boolean;
 }
 
 export interface PlatformSettings {

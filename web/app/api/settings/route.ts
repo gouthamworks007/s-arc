@@ -29,3 +29,4 @@ export async function PUT(req: NextRequest) {
     settings: PLATFORM_SETTINGS,
   });
 }
+

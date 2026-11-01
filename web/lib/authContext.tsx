@@ -46,6 +46,19 @@ const DEFAULT_USERS: UserAccount[] = [
     permissions: ["moderate_listings", "manage_users"]
   },
   {
+    id: "usr-admin-pending-01",
+    name: "Jayashankar Menon",
+    email: "jayashankar.nominee@s-arc.in",
+    role: "admin",
+    status: "pending_verification",
+    avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=400&q=80",
+    phone: "+91 94475 88990",
+    location: "Calicut, Kerala",
+    joinedDate: "Today",
+    permissions: ["moderate_listings", "manage_users"],
+    reviewNotes: "Nominated Regional Admin for Malabar operations. Awaiting Super Admin Tier 1 approval."
+  },
+  {
     id: "usr-arch-01",
     name: "Ar. Nikhil Rajan",
     email: "nikhil@studiovayu.arch",
@@ -71,7 +84,8 @@ const DEFAULT_USERS: UserAccount[] = [
     location: "Calicut, Kerala",
     studioName: "Philip Habitat Design",
     coaNumber: "CA/2023/94102",
-    joinedDate: "Yesterday"
+    joinedDate: "Yesterday",
+    reviewNotes: "COA license CA/2023/94102 audited against COA India registry. Recommended by Admin Sarah Thomas."
   },
   {
     id: "usr-client-01",
@@ -141,7 +155,8 @@ interface AuthContextType {
   switchRole: (role: UserRole, subRole?: UserSubRole) => void;
   switchUser: (userId: string) => void;
   updateUserRole: (userId: string, newRole: UserRole) => void;
-  updateUserStatus: (userId: string, newStatus: UserAccount["status"]) => void;
+  updateUserStatus: (userId: string, newStatus: UserAccount["status"], notes?: string) => void;
+  forwardForApproval: (userId: string, notes: string) => void;
   createUser: (userData: Omit<UserAccount, "id" | "joinedDate">) => void;
   deleteUser: (userId: string) => void;
   settings: PlatformSettings;
@@ -266,17 +281,45 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     logAction(`Changed User Role to ${newRole.toUpperCase()}`, `User ID: ${userId}`);
   };
 
-  // Admin / Super Admin: Update user status
-  const updateUserStatus = (userId: string, newStatus: UserAccount["status"]) => {
+  // Only Super Admin can approve accounts (set status to active)
+  const updateUserStatus = (userId: string, newStatus: UserAccount["status"], notes?: string) => {
     const targetUser = users.find((u) => u.id === userId);
-    const updated = users.map((u) => (u.id === userId ? { ...u, status: newStatus } : u));
+
+    // Strict Enforcement: Only Super Admin can approve accounts
+    if (newStatus === "active" && currentUser.role !== "super_admin") {
+      alert("Permission Denied: Only Super Admin (Tier 1) has authority to approve and activate accounts.");
+      return;
+    }
+
+    const updated = users.map((u) => (u.id === userId ? {
+      ...u,
+      status: newStatus,
+      ...(notes ? { reviewNotes: notes } : {})
+    } : u));
     saveUsers(updated);
     if (currentUser.id === userId) {
       saveCurrentUser({ ...currentUser, status: newStatus });
     }
     logAction(
-      newStatus === "active" ? "Verified & Activated Account" : `Updated status to ${newStatus}`,
+      newStatus === "active"
+        ? `Super Admin Approved Account [${targetUser?.role === "admin" ? "Admin" : targetUser?.subRole || "User"}]`
+        : `Updated status to ${newStatus}`,
       targetUser ? `${targetUser.name} (${targetUser.email})` : userId
+    );
+  };
+
+  // Tier 2 Admins audit and forward recommendations to Super Admin for final approval
+  const forwardForApproval = (userId: string, notes: string) => {
+    const targetUser = users.find((u) => u.id === userId);
+    const updated = users.map((u) => (u.id === userId ? {
+      ...u,
+      reviewedByAdmin: true,
+      reviewNotes: notes
+    } : u));
+    saveUsers(updated);
+    logAction(
+      "Admin Audited & Forwarded Recommendation to Super Admin",
+      targetUser ? `${targetUser.name} (${targetUser.coaNumber || targetUser.email})` : userId
     );
   };
 
@@ -338,6 +381,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         switchUser,
         updateUserRole,
         updateUserStatus,
+        forwardForApproval,
         createUser,
         deleteUser,
         settings,

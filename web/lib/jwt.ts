@@ -61,3 +61,4 @@ export function getSessionCookieConfig(token: string) {
 }
 
 export const AUTH_COOKIE_NAME = TOKEN_COOKIE_NAME;
+

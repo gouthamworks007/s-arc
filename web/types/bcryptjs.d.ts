@@ -6,3 +6,4 @@ declare module "bcryptjs" {
   export function genSalt(rounds?: number): Promise<string>;
   export function genSaltSync(rounds?: number): string;
 }
+
