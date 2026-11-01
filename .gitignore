@@ -8,6 +8,7 @@ web/node_modules/
 .next/
 web/.next/
 out/
+web/out/
 build/
 dist/
 
@@ -27,3 +28,4 @@ Thumbs.db
 
 # Large archives
 *.zip
+
