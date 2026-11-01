@@ -92,6 +92,42 @@ export interface ArchitectProfile {
   specialty: string;
 }
 
+export type UserRole = "super_admin" | "admin" | "user";
+export type UserSubRole = "homeowner" | "architect" | "contractor";
+
+export interface UserAccount {
+  id: string;
+  name: string;
+  email: string;
+  role: UserRole;
+  subRole?: UserSubRole;
+  status: "active" | "suspended" | "pending_verification";
+  avatar: string;
+  phone?: string;
+  location?: string;
+  coaNumber?: string;
+  studioName?: string;
+  joinedDate: string;
+  permissions?: string[];
+}
+
+export interface PlatformSettings {
+  platformCommissionPercent: number;
+  autoApproveVerifiedArchitects: boolean;
+  maintenanceMode: boolean;
+  minListingPrice: number;
+  payoutEscrowHoldDays: number;
+}
+
+export interface AuditLog {
+  id: string;
+  actorName: string;
+  actorRole: UserRole;
+  action: string;
+  target: string;
+  timestamp: string;
+}
+
 export interface JournalArticle {
   id: string;
   category: string;

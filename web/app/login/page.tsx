@@ -7,7 +7,8 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Eye, EyeOff, ArrowRight, ShieldCheck, CheckCircle2 } from "lucide-react";
+import { Eye, EyeOff, ArrowRight, ShieldCheck, CheckCircle2, Crown, Shield, User, Home } from "lucide-react";
+import { useAuth } from "@/lib/authContext";
 
 const loginSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
@@ -19,8 +20,17 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
   const router = useRouter();
+  const { switchRole, switchUser, users } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [loginSuccess, setLoginSuccess] = useState(false);
+
+  const handleQuickLogin = (role: "super_admin" | "admin" | "user", subRole?: "homeowner" | "architect") => {
+    switchRole(role, subRole);
+    setLoginSuccess(true);
+    setTimeout(() => {
+      router.push("/dashboard");
+    }, 500);
+  };
 
   const {
     register,
@@ -163,6 +173,62 @@ export default function LoginPage() {
                 <span>{isSubmitting ? "Authenticating..." : "Sign In to Account"}</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
+
+              {/* 3-Tier One-Click Demo Access */}
+              <div className="p-4 bg-warm-grey/60 border border-warm-border rounded-2xl space-y-2.5">
+                <span className="text-[11px] font-mono text-secondaryText uppercase tracking-wider block font-medium">
+                  3-Tier Demo Quick Sign In:
+                </span>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleQuickLogin("super_admin")}
+                    className="p-2.5 bg-white border border-warm-border hover:border-amber-400 rounded-xl text-left transition-all group"
+                  >
+                    <div className="flex items-center gap-1.5 text-xs font-serif font-medium text-charcoal group-hover:text-amber-700">
+                      <Crown className="w-3.5 h-3.5 text-amber-500" />
+                      <span>Super Admin</span>
+                    </div>
+                    <div className="text-[10px] text-secondaryText font-mono">Tier 1 Root</div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleQuickLogin("admin")}
+                    className="p-2.5 bg-white border border-warm-border hover:border-sky-400 rounded-xl text-left transition-all group"
+                  >
+                    <div className="flex items-center gap-1.5 text-xs font-serif font-medium text-charcoal group-hover:text-sky-700">
+                      <Shield className="w-3.5 h-3.5 text-sky-500" />
+                      <span>Platform Admin</span>
+                    </div>
+                    <div className="text-[10px] text-secondaryText font-mono">Tier 2 Moderation</div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleQuickLogin("user", "architect")}
+                    className="p-2.5 bg-white border border-warm-border hover:border-copper rounded-xl text-left transition-all group"
+                  >
+                    <div className="flex items-center gap-1.5 text-xs font-serif font-medium text-charcoal group-hover:text-copper">
+                      <User className="w-3.5 h-3.5 text-copper" />
+                      <span>Architect User</span>
+                    </div>
+                    <div className="text-[10px] text-secondaryText font-mono">Tier 3 Studio</div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleQuickLogin("user", "homeowner")}
+                    className="p-2.5 bg-white border border-warm-border hover:border-charcoal rounded-xl text-left transition-all group"
+                  >
+                    <div className="flex items-center gap-1.5 text-xs font-serif font-medium text-charcoal group-hover:text-charcoal">
+                      <Home className="w-3.5 h-3.5 text-secondaryText" />
+                      <span>Homeowner User</span>
+                    </div>
+                    <div className="text-[10px] text-secondaryText font-mono">Tier 3 Client</div>
+                  </button>
+                </div>
+              </div>
 
               {/* Or Divider */}
               <div className="relative py-3 flex items-center justify-center">

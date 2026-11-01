@@ -3,6 +3,7 @@ import localFont from "next/font/local";
 import "./globals.css";
 import { SavedProjectsProvider } from "@/lib/savedProjectsContext";
 import { ProjectsProvider } from "@/lib/projectsContext";
+import { AuthProvider } from "@/lib/authContext";
 import CompareModal from "@/components/CompareModal";
 import ShortlistFloatingBar from "@/components/ShortlistFloatingBar";
 
@@ -104,13 +105,15 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${cormorantGaramond.variable} ${spaceGrotesk.variable}`}>
       <body className="bg-white text-charcoal font-sans font-light antialiased selection:bg-copper selection:text-white">
-        <ProjectsProvider>
-          <SavedProjectsProvider>
-            {children}
-            <CompareModal />
-            <ShortlistFloatingBar />
-          </SavedProjectsProvider>
-        </ProjectsProvider>
+        <AuthProvider>
+          <ProjectsProvider>
+            <SavedProjectsProvider>
+              {children}
+              <CompareModal />
+              <ShortlistFloatingBar />
+            </SavedProjectsProvider>
+          </ProjectsProvider>
+        </AuthProvider>
       </body>
     </html>
   );

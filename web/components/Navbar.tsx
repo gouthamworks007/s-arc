@@ -6,6 +6,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Search, Menu, X, ArrowRight, Bookmark } from "lucide-react";
 import { useSavedProjects } from "@/lib/savedProjectsContext";
+import { useAuth } from "@/lib/authContext";
 
 interface NavbarProps {
   onOpenSellerModal?: () => void;
@@ -15,6 +16,7 @@ interface NavbarProps {
 export default function Navbar({ onOpenSellerModal, onOpenSearch }: NavbarProps) {
   const pathname = usePathname();
   const { savedProjects, setIsCompareOpen } = useSavedProjects();
+  const { role, currentUser } = useAuth();
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -101,12 +103,22 @@ export default function Navbar({ onOpenSellerModal, onOpenSearch }: NavbarProps)
           </button>
 
           <Link
-            href="/login"
-            className={`font-medium transition-colors ${
-              pathname === "/login" ? "text-copper font-semibold" : "text-charcoal/80 hover:text-copper"
+            href="/dashboard"
+            className={`px-3 py-1.5 rounded-full text-xs font-mono font-medium flex items-center gap-1.5 transition-all ${
+              role === "super_admin"
+                ? "bg-amber-100 text-amber-900 border border-amber-300 hover:bg-amber-200"
+                : role === "admin"
+                ? "bg-sky-100 text-sky-900 border border-sky-300 hover:bg-sky-200"
+                : "bg-warm-grey text-charcoal border border-warm-border hover:border-copper"
             }`}
+            title="Open 3-Tier Dashboard"
           >
-            Sign In
+            <span className={`w-2 h-2 rounded-full ${
+              role === "super_admin" ? "bg-amber-500" : role === "admin" ? "bg-sky-500" : "bg-copper"
+            }`} />
+            <span>
+              {role === "super_admin" ? "Super Admin" : role === "admin" ? "Admin" : currentUser.subRole === "homeowner" ? "Client" : "Architect"}
+            </span>
           </Link>
 
           <Link
