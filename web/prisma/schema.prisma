@@ -1,0 +1,146 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum UserRole {
+  SUPER_ADMIN
+  ADMIN
+  USER
+}
+
+enum SubRole {
+  HOMEOWNER
+  ARCHITECT
+  CONTRACTOR
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  PENDING_VERIFICATION
+}
+
+enum ProjectStatus {
+  PUBLISHED
+  DRAFT
+  ARCHIVED
+}
+
+enum InquiryStatus {
+  NEW
+  IN_REVIEW
+  RESPONDED
+  COMPLETED
+}
+
+model User {
+  id           String      @id @default(cuid())
+  name         String
+  email        String      @unique
+  passwordHash String
+  role         UserRole    @default(USER)
+  subRole      SubRole?    @default(HOMEOWNER)
+  status       UserStatus  @default(ACTIVE)
+  coaNumber    String?
+  studioName   String?
+  phone        String?
+  location     String?
+  avatar       String?
+  bio          String?
+  permissions  String[]    @default([])
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  projects     Project[]   @relation("ArchitectProjects")
+  inquiries    Inquiry[]   @relation("ClientInquiries")
+  auditLogs    AuditLog[]
+}
+
+model Project {
+  id             String        @id @default(cuid())
+  slug           String        @unique
+  name           String
+  style          String
+  location       String
+  plotSize       String
+  cents          Float
+  builtUpArea    String
+  bedrooms       Int           @default(3)
+  floors         Int           @default(2)
+  facing         String?       @default("East")
+  vastuScore     Int?          @default(95)
+  price          String
+  priceNumeric   Float         @default(0)
+  sheetCount     Int           @default(42)
+  status         ProjectStatus @default(PUBLISHED)
+  featured       Boolean       @default(false)
+  image          String
+  gallery        String[]      @default([])
+  floorPlanImage String?
+  description    String
+  highlights     String[]      @default([])
+  plotWidth      String?
+  plotLength     String?
+  setbacks       String?
+  dwgAvailable   Boolean       @default(true)
+  bimAvailable   Boolean       @default(true)
+  boqAvailable   Boolean       @default(true)
+  mepAvailable   Boolean       @default(true)
+  views          Int           @default(0)
+  inquiriesCount Int           @default(0)
+  
+  architectId    String
+  architect      User          @relation("ArchitectProjects", fields: [architectId], references: [id], onDelete: Cascade)
+
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+}
+
+model Inquiry {
+  id             String        @id @default(cuid())
+  clientName     String
+  clientEmail    String
+  clientPhone    String?
+  projectName    String
+  projectId      String?
+  plotLocation   String
+  plotDimensions String
+  budgetRange    String
+  message        String
+  status         InquiryStatus @default(NEW)
+  replyText      String?
+  respondedAt    DateTime?
+
+  userId         String?
+  user           User?         @relation("ClientInquiries", fields: [userId], references: [id], onDelete: SetNull)
+
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+}
+
+model PlatformSetting {
+  id                         String   @id @default("global")
+  platformCommissionPercent  Float    @default(10.0)
+  autoApproveVerifiedArchitects Boolean @default(false)
+  maintenanceMode            Boolean  @default(false)
+  minListingPrice            Float    @default(25000.0)
+  payoutEscrowHoldDays       Int      @default(7)
+  updatedAt                  DateTime @updatedAt
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String?
+  actorName  String
+  actorRole  String
+  action     String
+  target     String
+  timestamp  DateTime @default(now())
+
+  actor      User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
+}

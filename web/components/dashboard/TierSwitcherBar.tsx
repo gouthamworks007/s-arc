@@ -97,3 +97,4 @@ export default function TierSwitcherBar() {
     </div>
   );
 }
+
