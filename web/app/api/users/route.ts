@@ -5,8 +5,8 @@ import { requireRole } from "@/lib/auth-middleware";
 const USERS_STORE: any[] = [
   {
     id: "usr-super-01",
-    name: "Vikram Sarabhai",
-    email: "superadmin@s-arc.in",
+    name: "Super Admin",
+    email: "superadmin@admin.com",
     role: "super_admin",
     status: "active",
     avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=400&q=80",

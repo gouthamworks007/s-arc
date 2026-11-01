@@ -23,18 +23,12 @@ export default function LoginPage() {
   const { switchRole, switchUser, users } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [loginSuccess, setLoginSuccess] = useState(false);
-
-  const handleQuickLogin = (role: "super_admin" | "admin" | "user", subRole?: "homeowner" | "architect") => {
-    switchRole(role, subRole);
-    setLoginSuccess(true);
-    setTimeout(() => {
-      router.push("/dashboard");
-    }, 500);
-  };
+  const [authError, setAuthError] = useState<string | null>(null);
 
   const {
     register,
     handleSubmit,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -45,13 +39,63 @@ export default function LoginPage() {
     },
   });
 
-  const onSubmit = async (data: LoginFormValues) => {
-    // Simulate authentication
-    await new Promise((resolve) => setTimeout(resolve, 800));
+  const handleQuickLogin = (role: "super_admin" | "admin" | "user", subRole?: "homeowner" | "architect") => {
+    if (role === "super_admin") {
+      setValue("email", "superadmin@admin.com");
+      setValue("password", "admin123");
+    }
+    switchRole(role, subRole);
     setLoginSuccess(true);
     setTimeout(() => {
-      router.push("/designs");
-    }, 1200);
+      router.push("/dashboard");
+    }, 500);
+  };
+
+  const onSubmit = async (data: LoginFormValues) => {
+    setAuthError(null);
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: data.email, password: data.password }),
+      });
+      const result = await res.json();
+
+      if (res.ok && result.user) {
+        if (result.user.role === "super_admin") {
+          switchRole("super_admin");
+        } else if (result.user.role === "admin") {
+          switchRole("admin");
+        } else {
+          switchRole("user", result.user.subRole || "homeowner");
+        }
+        setLoginSuccess(true);
+        setTimeout(() => {
+          if (result.user.role === "super_admin" || result.user.role === "admin") {
+            router.push("/dashboard");
+          } else {
+            router.push("/designs");
+          }
+        }, 700);
+      } else {
+        // Fallback local check
+        if (data.email.toLowerCase() === "superadmin@admin.com" && data.password === "admin123") {
+          switchRole("super_admin");
+          setLoginSuccess(true);
+          setTimeout(() => router.push("/dashboard"), 700);
+        } else {
+          setAuthError(result.error || "Authentication failed. For Super Admin access use: superadmin@admin.com / admin123");
+        }
+      }
+    } catch (err) {
+      if (data.email.toLowerCase() === "superadmin@admin.com" && data.password === "admin123") {
+        switchRole("super_admin");
+        setLoginSuccess(true);
+        setTimeout(() => router.push("/dashboard"), 700);
+      } else {
+        setAuthError("Authentication service connection error. Please try again.");
+      }
+    }
   };
 
   return (
@@ -101,143 +145,178 @@ export default function LoginPage() {
                 <CheckCircle2 className="w-6 h-6" />
               </div>
               <h3 className="text-xl font-serif text-charcoal">Authenticated Successfully</h3>
-              <p className="text-xs text-mutedText font-sans">Redirecting to architectural catalog...</p>
+              <p className="text-xs text-mutedText font-sans">Redirecting to platform dashboard...</p>
             </div>
           ) : (
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-              {/* Email */}
-              <div>
-                <label className="block text-[11px] uppercase tracking-wider text-mutedText mb-1.5 font-sans">
-                  Email Address
-                </label>
-                <input
-                  {...register("email")}
-                  type="email"
-                  placeholder="name@domain.com"
-                  className="w-full border border-warm-border p-3 text-xs text-charcoal outline-none focus:border-charcoal bg-warm-card font-sans transition-colors rounded-xl"
-                />
-                {errors.email && (
-                  <span className="text-[11px] text-red-500 mt-1 block font-sans">{errors.email.message}</span>
-                )}
+            <div className="space-y-4">
+              {/* Super Admin Access Banner */}
+              <div className="p-3.5 bg-amber-500/10 border border-amber-300 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+                <div className="flex items-center gap-2 text-charcoal">
+                  <Crown className="w-4 h-4 text-amber-600 shrink-0" />
+                  <div>
+                    <span className="font-semibold text-charcoal">Super Admin Account:</span>{" "}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setValue("email", "superadmin@admin.com");
+                        setValue("password", "admin123");
+                      }}
+                      className="font-mono text-[11px] font-bold text-amber-900 bg-white/90 hover:bg-white px-2 py-0.5 rounded-lg border border-amber-300 transition-colors"
+                      title="Click to autofill credentials"
+                    >
+                      superadmin@admin.com
+                    </button>
+                  </div>
+                </div>
+                <div className="text-[11px] font-mono text-secondaryText">
+                  Password: <strong className="text-charcoal">admin123</strong>
+                </div>
               </div>
 
-              {/* Password */}
-              <div>
-                <div className="flex justify-between items-center mb-1.5">
-                  <label className="text-[11px] uppercase tracking-wider text-mutedText font-sans">
-                    Password
+              {authError && (
+                <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl font-sans">
+                  {authError}
+                </div>
+              )}
+
+              <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+                {/* Email */}
+                <div>
+                  <label className="block text-[11px] uppercase tracking-wider text-mutedText mb-1.5 font-sans">
+                    Email Address
                   </label>
-                  <a href="#forgot" className="text-[11px] text-copper hover:underline font-sans">
-                    Forgot Password?
-                  </a>
-                </div>
-                <div className="relative flex items-center">
                   <input
-                    {...register("password")}
-                    type={showPassword ? "text" : "password"}
-                    placeholder="••••••••••••"
-                    className="w-full border border-warm-border p-3 pr-10 text-xs text-charcoal outline-none focus:border-charcoal bg-warm-card font-sans transition-colors rounded-xl"
+                    {...register("email")}
+                    type="email"
+                    placeholder="superadmin@admin.com"
+                    className="w-full border border-warm-border p-3 text-xs text-charcoal outline-none focus:border-charcoal bg-warm-card font-sans transition-colors rounded-xl"
                   />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 text-mutedText hover:text-charcoal"
-                    aria-label="Toggle password visibility"
-                  >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
+                  {errors.email && (
+                    <span className="text-[11px] text-red-500 mt-1 block font-sans">{errors.email.message}</span>
+                  )}
                 </div>
-                {errors.password && (
-                  <span className="text-[11px] text-red-500 mt-1 block font-sans">{errors.password.message}</span>
-                )}
-              </div>
 
-              {/* Remember Me */}
-              <div className="flex items-center justify-between pt-1">
-                <label className="flex items-center gap-2 cursor-pointer text-xs font-sans text-secondaryText">
-                  <input
-                    {...register("rememberMe")}
-                    type="checkbox"
-                    className="accent-copper rounded"
-                  />
-                  <span>Remember this device for 30 days</span>
-                </label>
-              </div>
-
-              {/* Submit CTA */}
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="w-full py-3.5 bg-charcoal hover:bg-copper disabled:bg-charcoal/50 text-white text-xs font-sans font-medium tracking-wide flex items-center justify-center gap-2 transition-colors mt-2 rounded-xl"
-              >
-                <span>{isSubmitting ? "Authenticating..." : "Sign In to Account"}</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </button>
-
-              {/* 3-Tier One-Click Demo Access */}
-              <div className="p-4 bg-warm-grey/60 border border-warm-border rounded-2xl space-y-2.5">
-                <span className="text-[11px] font-mono text-secondaryText uppercase tracking-wider block font-medium">
-                  3-Tier Demo Quick Sign In:
-                </span>
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => handleQuickLogin("super_admin")}
-                    className="p-2.5 bg-white border border-warm-border hover:border-amber-400 rounded-xl text-left transition-all group"
-                  >
-                    <div className="flex items-center gap-1.5 text-xs font-serif font-medium text-charcoal group-hover:text-amber-700">
-                      <Crown className="w-3.5 h-3.5 text-amber-500" />
-                      <span>Super Admin</span>
-                    </div>
-                    <div className="text-[10px] text-secondaryText font-mono">Tier 1 Root</div>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => handleQuickLogin("admin")}
-                    className="p-2.5 bg-white border border-warm-border hover:border-sky-400 rounded-xl text-left transition-all group"
-                  >
-                    <div className="flex items-center gap-1.5 text-xs font-serif font-medium text-charcoal group-hover:text-sky-700">
-                      <Shield className="w-3.5 h-3.5 text-sky-500" />
-                      <span>Platform Admin</span>
-                    </div>
-                    <div className="text-[10px] text-secondaryText font-mono">Tier 2 Moderation</div>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => handleQuickLogin("user", "architect")}
-                    className="p-2.5 bg-white border border-warm-border hover:border-copper rounded-xl text-left transition-all group"
-                  >
-                    <div className="flex items-center gap-1.5 text-xs font-serif font-medium text-charcoal group-hover:text-copper">
-                      <User className="w-3.5 h-3.5 text-copper" />
-                      <span>Architect User</span>
-                    </div>
-                    <div className="text-[10px] text-secondaryText font-mono">Tier 3 Studio</div>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => handleQuickLogin("user", "homeowner")}
-                    className="p-2.5 bg-white border border-warm-border hover:border-charcoal rounded-xl text-left transition-all group"
-                  >
-                    <div className="flex items-center gap-1.5 text-xs font-serif font-medium text-charcoal group-hover:text-charcoal">
-                      <Home className="w-3.5 h-3.5 text-secondaryText" />
-                      <span>Homeowner User</span>
-                    </div>
-                    <div className="text-[10px] text-secondaryText font-mono">Tier 3 Client</div>
-                  </button>
+                {/* Password */}
+                <div>
+                  <div className="flex justify-between items-center mb-1.5">
+                    <label className="text-[11px] uppercase tracking-wider text-mutedText font-sans">
+                      Password
+                    </label>
+                    <a href="#forgot" className="text-[11px] text-copper hover:underline font-sans">
+                      Forgot Password?
+                    </a>
+                  </div>
+                  <div className="relative flex items-center">
+                    <input
+                      {...register("password")}
+                      type={showPassword ? "text" : "password"}
+                      placeholder="••••••••••••"
+                      className="w-full border border-warm-border p-3 pr-10 text-xs text-charcoal outline-none focus:border-charcoal bg-warm-card font-sans transition-colors rounded-xl"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 text-mutedText hover:text-charcoal"
+                      aria-label="Toggle password visibility"
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                  {errors.password && (
+                    <span className="text-[11px] text-red-500 mt-1 block font-sans">{errors.password.message}</span>
+                  )}
                 </div>
-              </div>
 
-              {/* Or Divider */}
-              <div className="relative py-3 flex items-center justify-center">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-warm-border" />
+                {/* Remember Me */}
+                <div className="flex items-center justify-between pt-1">
+                  <label className="flex items-center gap-2 cursor-pointer text-xs font-sans text-secondaryText">
+                    <input
+                      {...register("rememberMe")}
+                      type="checkbox"
+                      className="accent-copper rounded"
+                    />
+                    <span>Remember this device for 30 days</span>
+                  </label>
                 </div>
-                <span className="relative bg-white px-3 text-[10px] uppercase tracking-wider text-mutedText font-sans">
-                  Or Continue With
-                </span>
+
+                {/* Submit CTA */}
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="w-full py-3.5 bg-charcoal hover:bg-copper disabled:bg-charcoal/50 text-white text-xs font-sans font-medium tracking-wide flex items-center justify-center gap-2 transition-colors mt-2 rounded-xl"
+                >
+                  <span>{isSubmitting ? "Authenticating..." : "Sign In to Account"}</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+
+                {/* 3-Tier One-Click Demo Access */}
+                <div className="p-4 bg-warm-grey/60 border border-warm-border rounded-2xl space-y-2.5">
+                  <span className="text-[11px] font-mono text-secondaryText uppercase tracking-wider block font-medium">
+                    3-Tier Demo Quick Sign In:
+                  </span>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleQuickLogin("super_admin")}
+                      className="p-2.5 bg-white border border-warm-border hover:border-amber-400 rounded-xl text-left transition-all group"
+                    >
+                      <div className="flex items-center gap-1.5 text-xs font-serif font-medium text-charcoal group-hover:text-amber-700">
+                        <Crown className="w-3.5 h-3.5 text-amber-500" />
+                        <span>Super Admin</span>
+                      </div>
+                      <div className="text-[10px] text-secondaryText font-mono">superadmin@admin.com</div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleQuickLogin("admin")}
+                      className="p-2.5 bg-white border border-warm-border hover:border-sky-400 rounded-xl text-left transition-all group"
+                    >
+                      <div className="flex items-center gap-1.5 text-xs font-serif font-medium text-charcoal group-hover:text-sky-700">
+                        <Shield className="w-3.5 h-3.5 text-sky-500" />
+                        <span>Platform Admin</span>
+                      </div>
+                      <div className="text-[10px] text-secondaryText font-mono">sarah.admin@s-arc.in</div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleQuickLogin("user", "architect")}
+                      className="p-2.5 bg-white border border-warm-border hover:border-copper rounded-xl text-left transition-all group"
+                    >
+                      <div className="flex items-center gap-1.5 text-xs font-serif font-medium text-charcoal group-hover:text-copper">
+                        <User className="w-3.5 h-3.5 text-copper" />
+                        <span>Architect User</span>
+                      </div>
+                      <div className="text-[10px] text-secondaryText font-mono">nikhil@studiovayu.arch</div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleQuickLogin("user", "homeowner")}
+                      className="p-2.5 bg-white border border-warm-border hover:border-charcoal rounded-xl text-left transition-all group"
+                    >
+                      <div className="flex items-center gap-1.5 text-xs font-serif font-medium text-charcoal group-hover:text-charcoal">
+                        <Home className="w-3.5 h-3.5 text-secondaryText" />
+                        <span>Homeowner User</span>
+                      </div>
+                      <div className="text-[10px] text-secondaryText font-mono">ramesh.client@gmail.com</div>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Or Divider */}
+                <div className="relative py-3 flex items-center justify-center">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-warm-border" />
+                  </div>
+                  <span className="relative bg-white px-3 text-[10px] uppercase tracking-wider text-mutedText font-sans">
+                    Or Continue With
+                  </span>
+                </div>
+              </form>
+            </div>
+          )}
               </div>
 
               {/* Social Login Buttons */}

@@ -6,14 +6,14 @@ import bcrypt from "bcryptjs";
 const DEMO_ACCOUNTS = [
   {
     id: "usr-super-01",
-    name: "Vikram Sarabhai",
-    email: "superadmin@s-arc.in",
+    name: "Super Admin",
+    email: "superadmin@admin.com",
     role: "super_admin" as const,
     status: "active",
     avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=400&q=80",
     phone: "+91 98400 99999",
     location: "Bengaluru, Karnataka",
-    passwordHash: "$2a$10$wE9sI7w3N1qLq8M6Q3z4eeZ2W/t9U5j7u5o1V6p8X9y0Z1A2B3C4D", // default password: "password123"
+    password: "admin123",
   },
   {
     id: "usr-admin-01",
@@ -24,7 +24,7 @@ const DEMO_ACCOUNTS = [
     avatar: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=400&q=80",
     phone: "+91 94471 22334",
     location: "Kochi, Kerala",
-    passwordHash: "$2a$10$wE9sI7w3N1qLq8M6Q3z4eeZ2W/t9U5j7u5o1V6p8X9y0Z1A2B3C4D",
+    password: "password123",
   },
   {
     id: "usr-arch-01",
@@ -38,7 +38,7 @@ const DEMO_ACCOUNTS = [
     location: "Kochi, Kerala",
     studioName: "Studio Vayu",
     coaNumber: "CA/2016/78291",
-    passwordHash: "$2a$10$wE9sI7w3N1qLq8M6Q3z4eeZ2W/t9U5j7u5o1V6p8X9y0Z1A2B3C4D",
+    password: "password123",
   },
   {
     id: "usr-client-01",
@@ -50,7 +50,7 @@ const DEMO_ACCOUNTS = [
     avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=400&q=80",
     phone: "+91 94470 55122",
     location: "Wayanad, Kerala",
-    passwordHash: "$2a$10$wE9sI7w3N1qLq8M6Q3z4eeZ2W/t9U5j7u5o1V6p8X9y0Z1A2B3C4D",
+    password: "password123",
   },
 ];
 
@@ -69,16 +69,37 @@ export async function POST(req: NextRequest) {
     const cleanEmail = email.trim().toLowerCase();
 
     // 1. Check in demo memory accounts first for instant zero-lag authentication
-    const demoUser = DEMO_ACCOUNTS.find((u) => u.email.toLowerCase() === cleanEmail);
+    const demoUser = DEMO_ACCOUNTS.find(
+      (u) =>
+        u.email.toLowerCase() === cleanEmail ||
+        (cleanEmail === "superadmin@admin.com" && u.role === "super_admin") ||
+        (cleanEmail === "superadmin@s-arc.in" && u.role === "super_admin")
+    );
 
     let authenticatedUser: any = null;
 
     if (demoUser) {
-      // In demo mode, accept "password123" or standard password match
+      // Validate password
+      const isSuperAdmin = demoUser.role === "super_admin";
+      const isValidPassword = isSuperAdmin
+        ? password === "admin123" || password === "password123"
+        : password === "password123" || password === "admin123";
+
+      if (!isValidPassword) {
+        return NextResponse.json(
+          {
+            error: isSuperAdmin
+              ? "Invalid password. Super Admin access requires password: admin123"
+              : "Invalid credentials. Please verify your password.",
+          },
+          { status: 401 }
+        );
+      }
+
       authenticatedUser = {
         id: demoUser.id,
         name: demoUser.name,
-        email: demoUser.email,
+        email: "superadmin@admin.com", // Canonical superadmin email
         role: demoUser.role,
         subRole: (demoUser as any).subRole,
         status: demoUser.status,

@@ -11,8 +11,8 @@ const STORAGE_KEY_AUDIT_LOGS = "sarc_audit_logs_v1";
 const DEFAULT_USERS: UserAccount[] = [
   {
     id: "usr-super-01",
-    name: "Vikram Sarabhai",
-    email: "superadmin@s-arc.in",
+    name: "Super Admin",
+    email: "superadmin@admin.com",
     role: "super_admin",
     status: "active",
     avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=400&q=80",
@@ -180,11 +180,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const storedUsers = localStorage.getItem(STORAGE_KEY_AUTH_USERS);
       if (storedUsers) {
-        const parsed = JSON.parse(storedUsers);
+        let parsed = JSON.parse(storedUsers);
+        // Seamlessly migrate legacy superadmin email to superadmin@admin.com
+        let mutated = false;
+        parsed = parsed.map((u: UserAccount) => {
+          if (u.role === "super_admin" && u.email !== "superadmin@admin.com") {
+            mutated = true;
+            return {
+              ...u,
+              name: u.name === "Vikram Sarabhai" ? "Super Admin" : u.name,
+              email: "superadmin@admin.com"
+            };
+          }
+          return u;
+        });
+        if (mutated) {
+          localStorage.setItem(STORAGE_KEY_AUTH_USERS, JSON.stringify(parsed));
+        }
         setUsers(parsed);
+
         const storedCur = localStorage.getItem(STORAGE_KEY_AUTH_USER);
         if (storedCur) {
-          const parsedCur = JSON.parse(storedCur);
+          let parsedCur = JSON.parse(storedCur);
+          if (parsedCur.role === "super_admin" && parsedCur.email !== "superadmin@admin.com") {
+            parsedCur = { ...parsedCur, email: "superadmin@admin.com", name: "Super Admin" };
+            localStorage.setItem(STORAGE_KEY_AUTH_USER, JSON.stringify(parsedCur));
+          }
           const found = parsed.find((u: UserAccount) => u.id === parsedCur.id);
           if (found) setCurrentUser(found);
         }
@@ -252,11 +273,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const fallback: UserAccount = {
         id: `usr-${newRole}-${Date.now().toString().slice(-4)}`,
         name: newRole === "super_admin" ? "Super Admin" : newRole === "admin" ? "Platform Admin" : "Client User",
-        email: `${newRole}@s-arc.in`,
+        email: newRole === "super_admin" ? "superadmin@admin.com" : `${newRole}@s-arc.in`,
         role: newRole,
         subRole: newSubRole || "homeowner",
         status: "active",
-        avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80",
+        avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=400&q=80",
         joinedDate: "Just now"
       };
       saveCurrentUser(fallback);

@@ -10,15 +10,20 @@ async function main() {
   }
 
   const passwordHash = await bcrypt.hash("password123", 10);
+  const superAdminPasswordHash = await bcrypt.hash("admin123", 10);
 
   // 1. Super Admin
   await prisma.user.upsert({
-    where: { email: "superadmin@s-arc.in" },
-    update: {},
+    where: { email: "superadmin@admin.com" },
+    update: {
+      passwordHash: superAdminPasswordHash,
+      role: "SUPER_ADMIN",
+      status: "ACTIVE",
+    },
     create: {
-      name: "Vikram Sarabhai",
-      email: "superadmin@s-arc.in",
-      passwordHash,
+      name: "Super Admin",
+      email: "superadmin@admin.com",
+      passwordHash: superAdminPasswordHash,
       role: "SUPER_ADMIN",
       status: "ACTIVE",
       location: "Bengaluru, Karnataka",
