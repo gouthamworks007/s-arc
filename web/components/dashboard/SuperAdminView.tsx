@@ -292,21 +292,23 @@ export default function SuperAdminView() {
             </div>
           </div>
 
-          {/* Section 1: Architect COA License Approvals */}
+          {/* Section 1: Freelance Architect & Architecture Firm Verification */}
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Building2 className="w-4 h-4 text-copper" />
-                <h4 className="font-serif text-base text-charcoal">Architect COA License Approvals ({pendingArchitects.length})</h4>
+                <h4 className="font-serif text-base text-charcoal">
+                  Freelance Architect & Architecture Agency Applications ({pendingArchitects.length})
+                </h4>
               </div>
-              <span className="text-[11px] font-mono text-secondaryText">Architects awaiting official verification seal</span>
+              <span className="text-[11px] font-mono text-secondaryText">Direct Super Admin Verification Queue</span>
             </div>
 
             {pendingArchitects.length === 0 ? (
               <div className="p-8 text-center bg-white border border-warm-border rounded-3xl">
                 <CheckCircle2 className="w-8 h-8 text-emerald-600 mx-auto mb-2" />
-                <div className="font-serif text-sm text-charcoal">All Architect Credentials Approved</div>
-                <p className="text-xs text-secondaryText font-sans mt-0.5">No pending COA submissions in the queue.</p>
+                <div className="font-serif text-sm text-charcoal">All Practice Credentials Approved</div>
+                <p className="text-xs text-secondaryText font-sans mt-0.5">No pending Freelance Architect or Agency Firm submissions.</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -323,54 +325,70 @@ export default function SuperAdminView() {
                           </div>
                           <div>
                             <h5 className="font-serif text-base text-charcoal font-medium">{arch.name}</h5>
-                            <span className="text-xs text-secondaryText">{arch.studioName} • {arch.location}</span>
+                            <span className="text-xs text-secondaryText">{arch.studioName || "Design Practice"} • {arch.location}</span>
                           </div>
                         </div>
-                        <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300 font-mono text-[10px] font-medium">
-                          Awaiting Super Admin
+                        <span className={`px-2.5 py-0.5 rounded-full font-mono text-[10px] font-semibold ${
+                          arch.practiceType === "agency"
+                            ? "bg-purple-100 text-purple-900 border border-purple-200"
+                            : "bg-copper/10 text-copper border border-copper/30"
+                        }`}>
+                          {arch.practiceType === "agency" ? "Architecture Agency Firm" : "Freelance Architect"}
                         </span>
                       </div>
 
-                      <div className="p-3 bg-warm-grey/50 border border-warm-border rounded-2xl mb-3 space-y-1 text-xs font-sans">
+                      <div className="p-3 bg-warm-grey/50 border border-warm-border rounded-2xl mb-3 space-y-1.5 text-xs font-sans">
                         <div className="flex items-center justify-between">
-                          <span className="text-secondaryText">COA Reg. Number:</span>
+                          <span className="text-secondaryText">Council of Architecture (CoA):</span>
                           <span className="font-mono font-bold text-copper">{arch.coaNumber || "CA/2023/94102"}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-secondaryText">Studio / Firm:</span>
+                          <span className="font-mono text-charcoal font-medium">{arch.studioName || "Independent Practice"}</span>
                         </div>
                         <div className="flex items-center justify-between">
                           <span className="text-secondaryText">Email:</span>
                           <span className="font-mono text-secondaryText">{arch.email}</span>
                         </div>
                         <div className="flex items-center justify-between">
-                          <span className="text-secondaryText">Phone:</span>
+                          <span className="text-secondaryText">Direct Phone:</span>
                           <span className="font-mono text-secondaryText">{arch.phone || "+91 94460 77889"}</span>
                         </div>
+                        {arch.portfolioUrl && (
+                          <div className="flex items-center justify-between">
+                            <span className="text-secondaryText">Portfolio:</span>
+                            <a href={arch.portfolioUrl} target="_blank" rel="noreferrer" className="text-copper hover:underline font-mono">
+                              View Work ↗
+                            </a>
+                          </div>
+                        )}
                       </div>
 
-                      {/* Admin Audit Trail / Notes */}
+                      {/* Application Note */}
                       <div className="p-3 bg-amber-50/70 border border-amber-200/80 rounded-2xl mb-4 text-xs font-sans">
                         <div className="text-[11px] font-mono font-semibold text-amber-900 flex items-center gap-1.5 mb-1">
-                          <ShieldCheck className="w-3.5 h-3.5 text-amber-700" />
-                          <span>Tier 2 Preliminary Audit:</span>
+                          <Crown className="w-3.5 h-3.5 text-amber-700" />
+                          <span>Direct Applicant Statement:</span>
                         </div>
                         <p className="text-amber-950/90 leading-relaxed text-[11px]">
-                          {arch.reviewNotes || "Admin verified COA registry records. Recommended for Tier 1 seal approval."}
+                          {arch.reviewNotes || "Registered user applied for verified architect marketplace publishing privileges."}
                         </p>
                       </div>
                     </div>
 
                     <div className="flex items-center gap-2.5 pt-3 border-t border-warm-border/60">
                       <button
-                        onClick={() => updateUserStatus(arch.id, "suspended")}
+                        onClick={() => updateUserStatus(arch.id, "suspended", "Application rejected by Super Admin.")}
                         className="px-4 py-2 rounded-xl border border-warm-border text-xs font-medium text-red-600 hover:bg-red-50 transition-colors"
                       >
                         Reject
                       </button>
                       <button
-                        onClick={() => updateUserStatus(arch.id, "active")}
+                        onClick={() => updateUserStatus(arch.id, "active", "Super Admin approved CoA statutory registration and issued Verified Practice Seal.")}
                         className="flex-1 py-2 px-4 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-medium flex items-center justify-center gap-2 transition-all shadow-sm"
                       >
                         <Crown className="w-3.5 h-3.5 text-amber-300" />
-                        <span>Approve & Issue COA Seal</span>
+                        <span>Approve & Grant Practice Seal</span>
                       </button>
                     </div>
                   </div>

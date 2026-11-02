@@ -101,12 +101,15 @@ export interface UserAccount {
   email: string;
   role: UserRole;
   subRole?: UserSubRole;
+  practiceType?: "freelance" | "agency";
+  portfolioUrl?: string;
   status: "active" | "suspended" | "pending_verification";
   avatar: string;
   phone?: string;
   location?: string;
   coaNumber?: string;
   studioName?: string;
+  bio?: string;
   joinedDate: string;
   permissions?: string[];
   reviewNotes?: string;

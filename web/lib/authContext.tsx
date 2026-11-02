@@ -163,6 +163,15 @@ interface AuthContextType {
   forwardForApproval: (userId: string, notes: string) => void;
   createUser: (userData: Omit<UserAccount, "id" | "joinedDate">) => void;
   deleteUser: (userId: string) => void;
+  applyForArchitectUpgrade: (data: {
+    practiceType: "freelance" | "agency";
+    studioName: string;
+    coaNumber: string;
+    location?: string;
+    phone?: string;
+    portfolioUrl?: string;
+    bio?: string;
+  }) => Promise<void>;
   settings: PlatformSettings;
   updateSettings: (newSettings: Partial<PlatformSettings>) => void;
   auditLogs: AuditLog[];
@@ -409,6 +418,54 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     logAction("Deleted User Account", targetUser ? `${targetUser.name} (${targetUser.email})` : userId);
   };
 
+  // User: Apply for Freelance Architect or Agency Firm verification (directly to Super Admin)
+  const applyForArchitectUpgrade = async (data: {
+    practiceType: "freelance" | "agency";
+    studioName: string;
+    coaNumber: string;
+    location?: string;
+    phone?: string;
+    portfolioUrl?: string;
+    bio?: string;
+  }) => {
+    if (!currentUser) return;
+    const cleanCoa = data.coaNumber.trim().toUpperCase();
+    const reviewNote = `Submitted application for ${data.practiceType === "agency" ? "Architecture Firm / Agency" : "Freelance Architect"}. CoA: ${cleanCoa}. Studio: ${data.studioName}. Awaiting Super Admin Tier 1 approval.`;
+
+    const updatedUser: UserAccount = {
+      ...currentUser,
+      subRole: "architect",
+      status: "pending_verification",
+      practiceType: data.practiceType,
+      studioName: data.studioName,
+      coaNumber: cleanCoa,
+      location: data.location || currentUser.location,
+      phone: data.phone || currentUser.phone,
+      portfolioUrl: data.portfolioUrl,
+      bio: data.bio || currentUser.bio,
+      reviewNotes: reviewNote,
+    };
+
+    saveCurrentUser(updatedUser);
+    const updatedUsers = users.map((u) => (u.id === currentUser.id ? updatedUser : u));
+    saveUsers(updatedUsers);
+
+    try {
+      await fetch("/api/users/upgrade-request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+    } catch (e) {
+      console.error("Upgrade API call error:", e);
+    }
+
+    logAction(
+      `Submitted Application for ${data.practiceType === "agency" ? "Architecture Firm" : "Freelance Architect"} Verification`,
+      `Super Admin Queue • CoA: ${cleanCoa}`
+    );
+  };
+
   // Update platform settings
   const updateSettings = (newSettings: Partial<PlatformSettings>) => {
     const next = { ...settings, ...newSettings };
@@ -453,6 +510,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         forwardForApproval,
         createUser,
         deleteUser,
+        applyForArchitectUpgrade,
         settings,
         updateSettings,
         auditLogs,
