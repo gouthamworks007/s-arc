@@ -341,7 +341,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const updateUserRole = (userId: string, newRole: UserRole) => {
     const updated = users.map((u) => (u.id === userId ? { ...u, role: newRole } : u));
     saveUsers(updated);
-    if (currentUser.id === userId) {
+    if (currentUser && currentUser.id === userId) {
       saveCurrentUser({ ...currentUser, role: newRole });
     }
     logAction(`Changed User Role to ${newRole.toUpperCase()}`, `User ID: ${userId}`);

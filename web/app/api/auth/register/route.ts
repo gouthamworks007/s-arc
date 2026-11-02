@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSessionToken, getSessionCookieConfig } from "@/lib/jwt";
+import { d1 } from "@/lib/d1";
 import bcrypt from "bcryptjs";
 
 export async function POST(req: NextRequest) {
@@ -22,6 +23,16 @@ export async function POST(req: NextRequest) {
     }
 
     const cleanEmail = email.trim().toLowerCase();
+
+    // Check if user already exists in D1
+    const existing = await d1.first("SELECT id FROM users WHERE lower(email) = lower(?)", [cleanEmail]);
+    if (existing) {
+      return NextResponse.json(
+        { error: "An account with this email address already exists." },
+        { status: 409 }
+      );
+    }
+
     const salt = await bcrypt.genSalt(10);
     const passwordHash = await bcrypt.hash(password, salt);
 
@@ -33,7 +44,7 @@ export async function POST(req: NextRequest) {
     const status = (isArchitect || isAdminNominee) ? "pending_verification" : "active";
 
     const newUser = {
-      id: `usr-${Date.now().toString().slice(-5)}`,
+      id: `usr-${Date.now().toString().slice(-6)}`,
       name: name.trim(),
       email: cleanEmail,
       role: safeRole,
@@ -46,6 +57,27 @@ export async function POST(req: NextRequest) {
       avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80",
       joinedDate: "Just now",
     };
+
+    // Save directly to Cloudflare D1
+    await d1.execute(
+      `INSERT INTO users (
+        id, name, email, password_hash, role, sub_role, status, coa_number, studio_name, phone, location, avatar
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        newUser.id,
+        newUser.name,
+        newUser.email,
+        passwordHash,
+        newUser.role,
+        newUser.subRole,
+        newUser.status,
+        newUser.coaNumber,
+        newUser.studioName,
+        newUser.phone,
+        newUser.location,
+        newUser.avatar,
+      ]
+    );
 
     // Generate JWT Token
     const token = await createSessionToken({
@@ -81,4 +113,3 @@ export async function POST(req: NextRequest) {
     );
   }
 }
-

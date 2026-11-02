@@ -9,6 +9,9 @@
     "build": "npm run build --workspace=web",
     "predeploy": "npm run build",
     "deploy": "wrangler deploy",
-    "dev": "npm run dev --workspace=web"
+    "dev": "npm run dev --workspace=web",
+    "d1:migrate": "wrangler d1 execute s-arc-db --remote --file=./migrations/0001_initial_schema.sql",
+    "d1:seed": "wrangler d1 execute s-arc-db --remote --file=./migrations/0002_seed.sql",
+    "d1:status": "wrangler d1 execute s-arc-db --remote --command=\"SELECT * FROM users;\""
   }
 }

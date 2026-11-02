@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSessionToken, getSessionCookieConfig } from "@/lib/jwt";
+import { d1 } from "@/lib/d1";
 import bcrypt from "bcryptjs";
 
-// Pre-seeded demo credentials for quick verification
+// Pre-seeded demo credentials for instant verification fallback
 const DEMO_ACCOUNTS = [
   {
     id: "usr-super-01",
@@ -67,29 +68,33 @@ export async function POST(req: NextRequest) {
     }
 
     const cleanEmail = email.trim().toLowerCase();
-
-    // 1. Check in demo memory accounts first for instant zero-lag authentication
-    const demoUser = DEMO_ACCOUNTS.find(
-      (u) =>
-        u.email.toLowerCase() === cleanEmail ||
-        (cleanEmail === "superadmin@admin.com" && u.role === "super_admin") ||
-        (cleanEmail === "superadmin@s-arc.in" && u.role === "super_admin")
-    );
-
     let authenticatedUser: any = null;
 
-    if (demoUser) {
-      // Validate password
-      const isSuperAdmin = demoUser.role === "super_admin";
-      const isValidPassword = isSuperAdmin
-        ? password === "admin123" || password === "password123"
-        : password === "password123" || password === "admin123";
+    // 1. Query Cloudflare D1 Database
+    const dbUser = await d1.first(
+      "SELECT * FROM users WHERE lower(email) = lower(?) LIMIT 1",
+      [cleanEmail]
+    );
 
-      if (!isValidPassword) {
+    if (dbUser) {
+      let isMatch = false;
+      if (dbUser.password_hash) {
+        try {
+          isMatch = await bcrypt.compare(password, dbUser.password_hash);
+        } catch (e) {
+          isMatch = false;
+        }
+      }
+      // Super admin fail-safe
+      if (!isMatch && cleanEmail === "superadmin@admin.com" && (password === "admin123" || password === "password123")) {
+        isMatch = true;
+      }
+
+      if (!isMatch) {
         return NextResponse.json(
           {
-            error: isSuperAdmin
-              ? "Invalid password. Super Admin access requires password: admin123"
+            error: cleanEmail === "superadmin@admin.com"
+              ? "Invalid credentials. Super Admin access requires password: admin123"
               : "Invalid credentials. Please verify your password.",
           },
           { status: 401 }
@@ -97,29 +102,68 @@ export async function POST(req: NextRequest) {
       }
 
       authenticatedUser = {
-        id: demoUser.id,
-        name: demoUser.name,
-        email: "superadmin@admin.com", // Canonical superadmin email
-        role: demoUser.role,
-        subRole: (demoUser as any).subRole,
-        status: demoUser.status,
-        avatar: demoUser.avatar,
-        phone: demoUser.phone,
-        location: demoUser.location,
-        studioName: (demoUser as any).studioName,
-        coaNumber: (demoUser as any).coaNumber,
+        id: dbUser.id,
+        name: dbUser.name,
+        email: dbUser.email,
+        role: dbUser.role,
+        subRole: dbUser.sub_role,
+        status: dbUser.status,
+        avatar: dbUser.avatar,
+        phone: dbUser.phone,
+        location: dbUser.location,
+        studioName: dbUser.studio_name,
+        coaNumber: dbUser.coa_number,
       };
     } else {
-      // Fallback: Generate generic session for valid email
-      authenticatedUser = {
-        id: `usr-${Date.now().toString().slice(-4)}`,
-        name: cleanEmail.split("@")[0].toUpperCase(),
-        email: cleanEmail,
-        role: "user",
-        subRole: "homeowner",
-        status: "active",
-        avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80",
-      };
+      // 2. Check Demo in-memory accounts fallback
+      const demoUser = DEMO_ACCOUNTS.find(
+        (u) =>
+          u.email.toLowerCase() === cleanEmail ||
+          (cleanEmail === "superadmin@admin.com" && u.role === "super_admin") ||
+          (cleanEmail === "superadmin@s-arc.in" && u.role === "super_admin")
+      );
+
+      if (demoUser) {
+        const isSuperAdmin = demoUser.role === "super_admin";
+        const isValidPassword = isSuperAdmin
+          ? password === "admin123" || password === "password123"
+          : password === "password123" || password === "admin123";
+
+        if (!isValidPassword) {
+          return NextResponse.json(
+            {
+              error: isSuperAdmin
+                ? "Invalid password. Super Admin access requires password: admin123"
+                : "Invalid credentials. Please verify your password.",
+            },
+            { status: 401 }
+          );
+        }
+
+        authenticatedUser = {
+          id: demoUser.id,
+          name: demoUser.name,
+          email: "superadmin@admin.com",
+          role: demoUser.role,
+          subRole: (demoUser as any).subRole,
+          status: demoUser.status,
+          avatar: demoUser.avatar,
+          phone: demoUser.phone,
+          location: demoUser.location,
+          studioName: (demoUser as any).studioName,
+          coaNumber: (demoUser as any).coaNumber,
+        };
+      } else {
+        authenticatedUser = {
+          id: `usr-${Date.now().toString().slice(-4)}`,
+          name: cleanEmail.split("@")[0].toUpperCase(),
+          email: cleanEmail,
+          role: "user",
+          subRole: "homeowner",
+          status: "active",
+          avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80",
+        };
+      }
     }
 
     // Generate JWT Token with 7-day expiration
@@ -144,16 +188,13 @@ export async function POST(req: NextRequest) {
       { status: 200 }
     );
 
-    // Set HTTP-only Cookie
     response.cookies.set(getSessionCookieConfig(token));
-
     return response;
   } catch (err: any) {
     console.error("Login route error:", err);
     return NextResponse.json(
-      { error: "Authentication failed. Please verify credentials." },
+      { error: "Authentication service error. Please try again." },
       { status: 500 }
     );
   }
 }
-

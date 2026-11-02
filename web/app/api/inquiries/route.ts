@@ -1,45 +1,38 @@
 import { NextRequest, NextResponse } from "next/server";
 import { authenticateRequest } from "@/lib/auth-middleware";
-
-const INQUIRIES_STORE = [
-  {
-    id: "inq-001",
-    clientName: "Adv. K. Ramesh & Sunitha",
-    clientEmail: "ramesh.legal@gmail.com",
-    clientPhone: "+91 94470 55122",
-    projectName: "The Ridge House",
-    projectId: "ridge-house",
-    plotLocation: "Wayanad, Kerala (Sloping Terrain)",
-    plotDimensions: "55ft x 92ft (11.5 Cents)",
-    budgetRange: "₹85L - ₹1.1 Cr",
-    message: "We love the cantilevered deck and central water court of The Ridge House. Our plot has an 8-degree slope facing North-East. Can this plan be adapted with minimal retaining wall work?",
-    date: "Today, 10:45 AM",
-    status: "new",
-  },
-  {
-    id: "inq-002",
-    clientName: "Dr. Ananya Menon",
-    clientEmail: "ananya.menon.cardio@amrita.edu",
-    clientPhone: "+91 98950 14890",
-    projectName: "Kerala Courtyard",
-    projectId: "kerala-courtyard",
-    plotLocation: "Thrissur town (East-Facing)",
-    plotDimensions: "62ft x 98ft (14 Cents)",
-    budgetRange: "₹1.2 Cr - ₹1.5 Cr",
-    message: "Interested in the complete 42-sheet CAD + Structural BOQ package. We want to verify if the puja room placement matches strict Padavinyasa Vastu for East orientation.",
-    date: "Yesterday",
-    status: "responded",
-    replyText: "Dr. Menon, thank you! The Kerala Courtyard is 100% compliant with Padavinyasa Vastu grid principles. I've sent the orientation diagram to your email.",
-  },
-];
+import { d1 } from "@/lib/d1";
 
 export async function GET(req: NextRequest) {
   const { user } = await authenticateRequest(req);
 
-  return NextResponse.json({
-    total: INQUIRIES_STORE.length,
-    inquiries: INQUIRIES_STORE,
-  });
+  try {
+    const rows = await d1.query(
+      `SELECT 
+        id, 
+        client_name AS clientName, 
+        client_email AS clientEmail, 
+        client_phone AS clientPhone, 
+        project_name AS projectName, 
+        project_id AS projectId, 
+        plot_location AS plotLocation, 
+        plot_dimensions AS plotDimensions, 
+        budget_range AS budgetRange, 
+        message, 
+        status, 
+        reply_text AS replyText, 
+        created_at AS date 
+      FROM inquiries 
+      ORDER BY created_at DESC`
+    );
+
+    return NextResponse.json({
+      total: rows.length,
+      inquiries: rows,
+    });
+  } catch (err: any) {
+    console.error("D1 inquiries query error:", err);
+    return NextResponse.json({ error: "Failed to fetch inquiries from Cloudflare D1" }, { status: 500 });
+  }
 }
 
 export async function POST(req: NextRequest) {
@@ -54,8 +47,30 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const newId = `inq-${Date.now().toString().slice(-4)}`;
+
+    await d1.execute(
+      `INSERT INTO inquiries (
+        id, client_name, client_email, client_phone, project_name, project_id,
+        plot_location, plot_dimensions, budget_range, message, status
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        newId,
+        clientName,
+        clientEmail,
+        body.clientPhone || null,
+        projectName || "Architectural Consultation",
+        body.projectId || null,
+        body.plotLocation || "Kerala",
+        body.plotDimensions || "Standard Plot",
+        body.budgetRange || "Flexible",
+        message,
+        "new",
+      ]
+    );
+
     const newInquiry = {
-      id: `inq-${Date.now().toString().slice(-4)}`,
+      id: newId,
       clientName,
       clientEmail,
       clientPhone: body.clientPhone || null,
@@ -69,18 +84,16 @@ export async function POST(req: NextRequest) {
       date: "Just now",
     };
 
-    INQUIRIES_STORE.unshift(newInquiry);
-
     return NextResponse.json(
       {
         success: true,
-        message: "Inquiry delivered to verified architect studio.",
+        message: "Inquiry registered and delivered to architect studio via Cloudflare D1.",
         inquiry: newInquiry,
       },
       { status: 201 }
     );
   } catch (err: any) {
-    return NextResponse.json({ error: "Failed to submit inquiry" }, { status: 500 });
+    console.error("D1 inquiry creation error:", err);
+    return NextResponse.json({ error: "Failed to submit inquiry to Cloudflare D1" }, { status: 500 });
   }
 }
-
