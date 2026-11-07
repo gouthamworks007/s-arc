@@ -77,6 +77,14 @@ export async function DELETE(
 
   const { id } = params;
 
+  // Security guard: Prevent self-deletion or deletion of the primary platform admin
+  if (id === user?.id || id === "usr-admin-01") {
+    return NextResponse.json(
+      { error: "Forbidden: The primary platform administrator account cannot be deleted." },
+      { status: 403 }
+    );
+  }
+
   try {
     await d1.execute("DELETE FROM users WHERE id = ?", [id]);
 

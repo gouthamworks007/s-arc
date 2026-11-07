@@ -3,11 +3,18 @@ import { authenticateRequest } from "@/lib/auth-middleware";
 import { d1 } from "@/lib/d1";
 
 export async function GET(req: NextRequest) {
-  const { user } = await authenticateRequest(req);
+  // Only authenticated users can access consultations/inquiries to protect client privacy
+  const { user, errorResponse } = await authenticateRequest(req);
+  if (errorResponse || !user) {
+    return (
+      errorResponse ||
+      NextResponse.json({ error: "Authentication required to view consultations." }, { status: 401 })
+    );
+  }
 
   try {
-    const rows = await d1.query(
-      `SELECT 
+    let sql = `
+      SELECT 
         id, 
         client_name AS clientName, 
         client_email AS clientEmail, 
@@ -22,8 +29,18 @@ export async function GET(req: NextRequest) {
         reply_text AS replyText, 
         created_at AS date 
       FROM inquiries 
-      ORDER BY created_at DESC`
-    );
+    `;
+    const params: any[] = [];
+
+    // Admins can see all inquiries; standard users can only view inquiries submitted under their email
+    if (user.role !== "admin") {
+      sql += " WHERE lower(client_email) = lower(?)";
+      params.push(user.email);
+    }
+
+    sql += " ORDER BY created_at DESC";
+
+    const rows = await d1.query(sql, params);
 
     return NextResponse.json({
       total: rows.length,
@@ -47,6 +64,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const cleanEmail = String(clientEmail).trim().toLowerCase();
     const newId = `inq-${Date.now().toString().slice(-4)}`;
 
     await d1.execute(
@@ -56,30 +74,30 @@ export async function POST(req: NextRequest) {
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         newId,
-        clientName,
-        clientEmail,
-        body.clientPhone || null,
-        projectName || "Architectural Consultation",
-        body.projectId || null,
-        body.plotLocation || "Kerala",
-        body.plotDimensions || "Standard Plot",
-        body.budgetRange || "Flexible",
-        message,
+        String(clientName).trim().slice(0, 100),
+        cleanEmail,
+        body.clientPhone ? String(body.clientPhone).trim().slice(0, 30) : null,
+        projectName ? String(projectName).trim().slice(0, 120) : "Architectural Consultation",
+        body.projectId ? String(body.projectId).trim() : null,
+        body.plotLocation ? String(body.plotLocation).trim().slice(0, 100) : "Kerala",
+        body.plotDimensions ? String(body.plotDimensions).trim().slice(0, 100) : "Standard Plot",
+        body.budgetRange ? String(body.budgetRange).trim().slice(0, 50) : "Flexible",
+        String(message).trim().slice(0, 1000),
         "new",
       ]
     );
 
     const newInquiry = {
       id: newId,
-      clientName,
-      clientEmail,
+      clientName: String(clientName).trim(),
+      clientEmail: cleanEmail,
       clientPhone: body.clientPhone || null,
       projectName: projectName || "Architectural Consultation",
       projectId: body.projectId || null,
       plotLocation: body.plotLocation || "Kerala",
       plotDimensions: body.plotDimensions || "Standard Plot",
       budgetRange: body.budgetRange || "Flexible",
-      message,
+      message: String(message).trim(),
       status: "new",
       date: "Just now",
     };

@@ -79,7 +79,11 @@ const spaceGrotesk = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "S-ARC — Southern Architecture | Turn Your Land Into A Home",
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://s-arc.pages.dev"),
+  title: {
+    default: "S-ARC — Southern Architecture | Turn Your Land Into A Home",
+    template: "%s | S-ARC — Southern Architecture",
+  },
   description:
     "A multi-vendor architectural marketplace connecting discerning homeowners with verified architects across South India. Curated designs, CAD packages, and verified professionals.",
   keywords: [
@@ -91,9 +95,54 @@ export const metadata: Metadata = {
     "CAD Drawings",
     "Modern Tropical",
     "Courtyard House",
+    "Tropical Architecture",
+    "Eco Friendly Home Designs",
   ],
+  authors: [{ name: "S-ARC Architectural Advisory" }],
+  creator: "S-ARC",
+  publisher: "S-ARC",
+  formatDetection: {
+    email: false,
+    address: false,
+    telephone: false,
+  },
+  openGraph: {
+    title: "S-ARC — Southern Architecture | Turn Your Land Into A Home",
+    description:
+      "Curated tropical residential architecture, ready-to-build CAD packages, and verified architects across South India.",
+    url: "https://s-arc.pages.dev",
+    siteName: "S-ARC Architecture Platform",
+    images: [
+      {
+        url: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&h=630&q=80",
+        width: 1200,
+        height: 630,
+        alt: "S-ARC Architectural Marketplace",
+      },
+    ],
+    locale: "en_US",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "S-ARC — Southern Architecture",
+    description: "Curated architectural blueprints & verified architects across South India.",
+    images: ["https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&h=630&q=80"],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
   icons: {
     icon: "/logo.png",
+    apple: "/logo.png",
   },
 };
 
