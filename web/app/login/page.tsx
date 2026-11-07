@@ -74,7 +74,11 @@ export default function LoginPage() {
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: data.email, password: data.password }),
+        body: JSON.stringify({
+          email: data.email,
+          password: data.password,
+          rememberMe: data.rememberMe ?? true,
+        }),
       });
       const result = await res.json();
 
@@ -88,31 +92,12 @@ export default function LoginPage() {
         setLoginSuccess(true);
         setTimeout(() => {
           router.push("/dashboard");
-        }, 600);
+        }, 500);
       } else {
-        // Fallback local check
-        if (
-          (data.email.toLowerCase() === "admin@admin.com" || data.email.toLowerCase() === "superadmin@admin.com") &&
-          (data.password === "admin123" || data.password === "password123")
-        ) {
-          switchRole("admin");
-          setLoginSuccess(true);
-          setTimeout(() => router.push("/dashboard"), 600);
-        } else {
-          setAuthError(result.error || "Invalid email or password. Please verify your credentials.");
-        }
+        setAuthError(result.error || "Invalid email or password. Please verify your credentials.");
       }
     } catch (err) {
-      if (
-        (data.email.toLowerCase() === "admin@admin.com" || data.email.toLowerCase() === "superadmin@admin.com") &&
-        (data.password === "admin123" || data.password === "password123")
-      ) {
-        switchRole("admin");
-        setLoginSuccess(true);
-        setTimeout(() => router.push("/dashboard"), 600);
-      } else {
-        setAuthError("Unable to connect to authentication server. Please try again.");
-      }
+      setAuthError("Authentication service connection error. Please verify your internet connection and try again.");
     }
   };
 

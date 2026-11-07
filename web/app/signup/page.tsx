@@ -21,14 +21,14 @@ import { useAuth } from "@/lib/authContext";
 
 const signupSchema = z
   .object({
-    fullName: z.string().min(2, "Full name must be at least 2 characters"),
-    email: z.string().email("Please enter a valid email address"),
+    fullName: z.string().min(2, "Full name must be at least 2 characters").max(100, "Full name is too long"),
+    email: z.string().email("Please enter a valid email address").max(254),
     phone: z
       .string()
       .min(10, "Please enter a valid 10-digit mobile number")
       .regex(/^[0-9+\s-]{10,15}$/, "Please enter a valid phone number"),
-    password: z.string().min(6, "Password must be at least 6 characters"),
-    confirmPassword: z.string().min(6, "Please confirm your password"),
+    password: z.string().min(6, "Password must be at least 6 characters").max(128, "Password must not exceed 128 characters"),
+    confirmPassword: z.string().min(6, "Please confirm your password").max(128),
     termsAgreed: z.literal(true, {
       errorMap: () => ({ message: "You must accept the terms & marketplace license agreement" }),
     }),

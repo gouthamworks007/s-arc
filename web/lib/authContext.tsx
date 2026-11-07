@@ -202,6 +202,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       const storedLogs = localStorage.getItem(STORAGE_KEY_AUDIT_LOGS);
       if (storedLogs) setAuditLogs(JSON.parse(storedLogs));
+
+      // Validate session against server to keep security state synchronized
+      fetch("/api/auth/me")
+        .then((res) => {
+          if (res.ok) return res.json();
+          if (res.status === 403) {
+            // Account suspended on server
+            logout();
+          }
+          return null;
+        })
+        .then((data) => {
+          if (data && data.authenticated && data.user) {
+            setCurrentUser(data.user);
+            setIsLoggedIn(true);
+            try {
+              localStorage.setItem(STORAGE_KEY_AUTH_USER, JSON.stringify(data.user));
+              localStorage.setItem(STORAGE_KEY_IS_LOGGED_IN, "true");
+            } catch (err) {}
+          }
+        })
+        .catch(() => {
+          // Offline / build environment resilience
+        });
     } catch (e) {
       console.error(e);
     }
@@ -237,6 +261,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (e) {
       console.error(e);
     }
+    // Securely clear server HttpOnly cookie
+    try {
+      fetch("/api/auth/logout", { method: "POST" }).catch(() => {});
+    } catch (err) {}
   };
 
   const saveCurrentUser = (user: UserAccount) => {
