@@ -108,21 +108,17 @@ export default function Navbar({ onOpenSellerModal, onOpenSearch }: NavbarProps)
               <Link
                 href="/dashboard"
                 className={`px-3.5 py-1.5 rounded-full text-xs font-mono font-medium flex items-center gap-2 transition-all shadow-sm ${
-                  role === "super_admin"
+                  role === "admin"
                     ? "bg-amber-100 text-amber-900 border border-amber-300 hover:bg-amber-200"
-                    : role === "admin"
-                    ? "bg-sky-100 text-sky-900 border border-sky-300 hover:bg-sky-200"
                     : "bg-warm-grey text-charcoal border border-warm-border hover:border-copper"
                 }`}
                 title="Open Private Dashboard"
               >
                 <span className={`w-2 h-2 rounded-full ${
-                  role === "super_admin" ? "bg-amber-500" : role === "admin" ? "bg-sky-500" : "bg-copper"
+                  role === "admin" ? "bg-amber-500" : "bg-copper"
                 }`} />
                 <span>
-                  {role === "super_admin"
-                    ? "Super Admin"
-                    : role === "admin"
+                  {role === "admin"
                     ? "Admin"
                     : currentUser.subRole === "homeowner"
                     ? "Client"
@@ -207,8 +203,8 @@ export default function Navbar({ onOpenSellerModal, onOpenSearch }: NavbarProps)
                     className="py-2.5 px-3 bg-warm-grey rounded-xl text-charcoal font-medium text-xs flex items-center justify-between"
                   >
                     <div className="flex items-center gap-2">
-                      <span className={`w-2 h-2 rounded-full ${role === "super_admin" ? "bg-amber-500" : "bg-copper"}`} />
-                      <span>{currentUser.name} ({role === "super_admin" ? "Super Admin" : role === "admin" ? "Admin" : "User"})</span>
+                      <span className={`w-2 h-2 rounded-full ${role === "admin" ? "bg-copper" : "bg-charcoal"}`} />
+                      <span>{currentUser.name} ({role === "admin" ? "Admin" : "User"})</span>
                     </div>
                     <span className="font-mono text-copper text-[11px]">Dashboard →</span>
                   </Link>

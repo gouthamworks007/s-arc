@@ -92,7 +92,7 @@ export interface ArchitectProfile {
   specialty: string;
 }
 
-export type UserRole = "super_admin" | "admin" | "user";
+export type UserRole = "admin" | "user";
 export type UserSubRole = "homeowner" | "architect" | "contractor";
 
 export interface UserAccount {

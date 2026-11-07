@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function PUT(req: NextRequest) {
-  const { user, errorResponse } = await requireRole(req, ["super_admin"]);
+  const { user, errorResponse } = await requireRole(req, ["admin"]);
   if (errorResponse) return errorResponse;
 
   try {
@@ -50,7 +50,7 @@ export async function PUT(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: "Platform settings updated in Cloudflare D1 by Super Admin",
+      message: "Platform settings updated in Cloudflare D1 by Admin",
       settings: PLATFORM_SETTINGS,
     });
   } catch (err: any) {

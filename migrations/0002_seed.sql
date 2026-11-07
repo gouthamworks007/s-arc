@@ -1,16 +1,16 @@
 -- S-ARC Cloudflare D1 Database Seed Data
--- 3-Tier RBAC Default Accounts, Initial Projects, Inquiries & Settings
+-- RBAC Default Accounts, Initial Projects, Inquiries & Settings
 
 -- 1. Users
 INSERT OR REPLACE INTO users (
   id, name, email, password_hash, role, sub_role, status, coa_number, studio_name, phone, location, avatar, bio, permissions, review_notes
 ) VALUES
 (
-  'usr-super-01',
-  'Super Admin',
-  'superadmin@admin.com',
+  'usr-admin-01',
+  'Admin',
+  'admin@admin.com',
   '$2b$10$Zo4XQOnpPMvvouGRri14geN0slEoZ7cYVO3ku9W/dWS1K7LJ71/82',
-  'super_admin',
+  'admin',
   NULL,
   'active',
   NULL,
@@ -18,8 +18,8 @@ INSERT OR REPLACE INTO users (
   '+91 98400 99999',
   'Bengaluru, Karnataka',
   'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=400&q=80',
-  'Lead System Administrator & Council of Architecture Auditor',
-  '["all", "manage_admins", "manage_finances", "system_settings"]',
+  'Platform Administrator & Council of Architecture Auditor',
+  '["all", "manage_users", "manage_finances", "system_settings", "audit_logs", "approve_architects"]',
   NULL
 ),
 (
@@ -54,7 +54,7 @@ INSERT OR REPLACE INTO users (
   'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=400&q=80',
   'Regional Operations Candidate',
   '["moderate_listings", "manage_users"]',
-  'Nominated Regional Admin for Malabar operations. Awaiting Super Admin Tier 1 approval.'
+  'Nominated candidate for operations. Awaiting Admin verification.'
 ),
 (
   'usr-arch-01',
@@ -230,14 +230,14 @@ INSERT OR REPLACE INTO audit_logs (
 ) VALUES
 (
   'aud-001',
-  'usr-super-01',
-  'Super Admin',
-  'superadmin@admin.com',
-  'super_admin',
+  'usr-admin-01',
+  'Admin',
+  'admin@admin.com',
+  'admin',
   'SYSTEM_INITIALIZE',
   's-arc-db',
   'd1_database',
-  '{"event": "Cloudflare D1 edge database initialized with 3-tier RBAC architecture"}'
+  '{"event": "Cloudflare D1 edge database initialized with single admin RBAC architecture"}'
 );
 
 -- 5. Platform Settings

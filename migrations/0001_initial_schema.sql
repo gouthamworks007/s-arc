@@ -1,12 +1,12 @@
 -- S-ARC Cloudflare D1 Database Schema
--- Distributed Edge Database for Southern Architectural Marketplace & 3-Tier RBAC
+-- Distributed Edge Database for Southern Architectural Marketplace & RBAC
 
 CREATE TABLE IF NOT EXISTS users (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
   email TEXT UNIQUE NOT NULL,
   password_hash TEXT NOT NULL,
-  role TEXT NOT NULL DEFAULT 'user' CHECK(role IN ('super_admin', 'admin', 'user')),
+  role TEXT NOT NULL DEFAULT 'user' CHECK(role IN ('admin', 'user')),
   sub_role TEXT DEFAULT 'homeowner' CHECK(sub_role IN ('homeowner', 'architect', 'contractor')),
   status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active', 'suspended', 'pending_verification')),
   coa_number TEXT,

@@ -13,13 +13,11 @@ import {
   ArrowRight, 
   ShieldCheck, 
   CheckCircle2, 
-  Crown, 
-  Shield, 
   User, 
   Home, 
-  ChevronDown,
-  Loader2,
-  Lock
+  ChevronDown, 
+  Loader2, 
+  Lock 
 } from "lucide-react";
 import { useAuth } from "@/lib/authContext";
 
@@ -58,9 +56,9 @@ export default function LoginPage() {
     setValue("password", pass);
   };
 
-  const handleQuickLogin = (role: "super_admin" | "admin" | "user", subRole?: "homeowner" | "architect") => {
-    if (role === "super_admin") {
-      setValue("email", "superadmin@admin.com");
+  const handleQuickLogin = (role: "admin" | "user", subRole?: "homeowner" | "architect") => {
+    if (role === "admin") {
+      setValue("email", "admin@admin.com");
       setValue("password", "admin123");
     }
     switchRole(role, subRole);
@@ -82,25 +80,22 @@ export default function LoginPage() {
 
       if (res.ok && result.user) {
         login(result.user);
-        if (result.user.role === "super_admin") {
-          switchRole("super_admin");
-        } else if (result.user.role === "admin") {
+        if (result.user.role === "admin") {
           switchRole("admin");
         } else {
           switchRole("user", result.user.subRole || "homeowner");
         }
         setLoginSuccess(true);
         setTimeout(() => {
-          if (result.user.role === "super_admin" || result.user.role === "admin") {
-            router.push("/dashboard");
-          } else {
-            router.push("/dashboard");
-          }
+          router.push("/dashboard");
         }, 600);
       } else {
         // Fallback local check
-        if (data.email.toLowerCase() === "superadmin@admin.com" && data.password === "admin123") {
-          switchRole("super_admin");
+        if (
+          (data.email.toLowerCase() === "admin@admin.com" || data.email.toLowerCase() === "superadmin@admin.com") &&
+          (data.password === "admin123" || data.password === "password123")
+        ) {
+          switchRole("admin");
           setLoginSuccess(true);
           setTimeout(() => router.push("/dashboard"), 600);
         } else {
@@ -108,8 +103,11 @@ export default function LoginPage() {
         }
       }
     } catch (err) {
-      if (data.email.toLowerCase() === "superadmin@admin.com" && data.password === "admin123") {
-        switchRole("super_admin");
+      if (
+        (data.email.toLowerCase() === "admin@admin.com" || data.email.toLowerCase() === "superadmin@admin.com") &&
+        (data.password === "admin123" || data.password === "password123")
+      ) {
+        switchRole("admin");
         setLoginSuccess(true);
         setTimeout(() => router.push("/dashboard"), 600);
       } else {
@@ -278,30 +276,17 @@ export default function LoginPage() {
                       Click below to fill test credentials:
                     </span>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                      {/* Super Admin */}
+                      {/* Admin */}
                       <button
                         type="button"
-                        onClick={() => handleAutofill("superadmin@admin.com", "admin123")}
-                        className="p-2 border border-amber-300 bg-amber-50/50 hover:bg-amber-100/50 rounded-lg text-left transition-colors"
+                        onClick={() => handleAutofill("admin@admin.com", "admin123")}
+                        className="p-2 border border-stone-300 bg-stone-100 hover:bg-stone-200/70 rounded-lg text-left transition-colors sm:col-span-2"
                       >
-                        <div className="flex items-center gap-1.5 font-serif font-medium text-amber-900 text-xs">
-                          <Crown className="w-3.5 h-3.5 text-amber-600" />
-                          <span>Super Admin</span>
+                        <div className="flex items-center gap-1.5 font-serif font-medium text-charcoal text-xs">
+                          <ShieldCheck className="w-3.5 h-3.5 text-copper" />
+                          <span>Admin Access</span>
                         </div>
-                        <div className="text-[10px] font-mono text-stone-500">superadmin@admin.com</div>
-                      </button>
-
-                      {/* Platform Admin */}
-                      <button
-                        type="button"
-                        onClick={() => handleAutofill("sarah.admin@s-arc.in", "password123")}
-                        className="p-2 border border-sky-200 bg-sky-50/50 hover:bg-sky-100/50 rounded-lg text-left transition-colors"
-                      >
-                        <div className="flex items-center gap-1.5 font-serif font-medium text-sky-900 text-xs">
-                          <Shield className="w-3.5 h-3.5 text-sky-600" />
-                          <span>Platform Admin</span>
-                        </div>
-                        <div className="text-[10px] font-mono text-stone-500">sarah.admin@s-arc.in</div>
+                        <div className="text-[10px] font-mono text-stone-600">admin@admin.com / admin123</div>
                       </button>
 
                       {/* Architect */}

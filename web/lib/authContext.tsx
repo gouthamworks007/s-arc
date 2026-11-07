@@ -11,53 +11,16 @@ const STORAGE_KEY_IS_LOGGED_IN = "sarc_is_logged_in_v1";
 
 const DEFAULT_USERS: UserAccount[] = [
   {
-    id: "usr-super-01",
-    name: "Super Admin",
-    email: "superadmin@admin.com",
-    role: "super_admin",
+    id: "usr-admin-01",
+    name: "Admin",
+    email: "admin@admin.com",
+    role: "admin",
     status: "active",
     avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=400&q=80",
     phone: "+91 98400 99999",
     location: "Bengaluru, Karnataka",
     joinedDate: "Jan 2025",
-    permissions: ["all", "manage_admins", "manage_finances", "system_settings", "audit_logs"]
-  },
-  {
-    id: "usr-admin-01",
-    name: "Sarah Thomas",
-    email: "sarah.admin@s-arc.in",
-    role: "admin",
-    status: "active",
-    avatar: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=400&q=80",
-    phone: "+91 94471 22334",
-    location: "Kochi, Kerala",
-    joinedDate: "Mar 2025",
-    permissions: ["verify_architects", "moderate_listings", "manage_users", "view_reports"]
-  },
-  {
-    id: "usr-admin-02",
-    name: "Rajesh Nair",
-    email: "rajesh.moderator@s-arc.in",
-    role: "admin",
-    status: "active",
-    avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=400&q=80",
-    phone: "+91 98950 44556",
-    location: "Trivandrum, Kerala",
-    joinedDate: "Apr 2025",
-    permissions: ["moderate_listings", "manage_users"]
-  },
-  {
-    id: "usr-admin-pending-01",
-    name: "Jayashankar Menon",
-    email: "jayashankar.nominee@s-arc.in",
-    role: "admin",
-    status: "pending_verification",
-    avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=400&q=80",
-    phone: "+91 94475 88990",
-    location: "Calicut, Kerala",
-    joinedDate: "Today",
-    permissions: ["moderate_listings", "manage_users"],
-    reviewNotes: "Nominated Regional Admin for Malabar operations. Awaiting Super Admin Tier 1 approval."
+    permissions: ["all", "manage_users", "manage_finances", "system_settings", "audit_logs", "approve_architects"]
   },
   {
     id: "usr-arch-01",
@@ -86,7 +49,7 @@ const DEFAULT_USERS: UserAccount[] = [
     studioName: "Philip Habitat Design",
     coaNumber: "CA/2023/94102",
     joinedDate: "Yesterday",
-    reviewNotes: "COA license CA/2023/94102 audited against COA India registry. Recommended by Admin Sarah Thomas."
+    reviewNotes: "COA license CA/2023/94102 submitted. Awaiting Admin verification."
   },
   {
     id: "usr-client-01",
@@ -125,7 +88,7 @@ const DEFAULT_SETTINGS: PlatformSettings = {
 const DEFAULT_AUDIT_LOGS: AuditLog[] = [
   {
     id: "log-001",
-    actorName: "Sarah Thomas",
+    actorName: "Admin",
     actorRole: "admin",
     action: "Approved Architect COA Verification",
     target: "Studio Vayu (CA/2016/78291)",
@@ -133,19 +96,11 @@ const DEFAULT_AUDIT_LOGS: AuditLog[] = [
   },
   {
     id: "log-002",
-    actorName: "Vikram Sarabhai",
-    actorRole: "super_admin",
+    actorName: "Admin",
+    actorRole: "admin",
     action: "Updated Platform Commission",
     target: "Set marketplace commission fee to 10%",
     timestamp: "Yesterday, 04:15 PM"
-  },
-  {
-    id: "log-003",
-    actorName: "Rajesh Nair",
-    actorRole: "admin",
-    action: "Approved Blueprint Package",
-    target: "The Ridge House (42 sheets validated)",
-    timestamp: "Oct 29, 2026"
   }
 ];
 
@@ -198,15 +153,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (storedUsers) {
         let parsed = JSON.parse(storedUsers);
-        // Seamlessly migrate legacy superadmin email to superadmin@admin.com
+        // Seamlessly migrate legacy superadmin to single admin
         let mutated = false;
-        parsed = parsed.map((u: UserAccount) => {
-          if (u.role === "super_admin" && u.email !== "superadmin@admin.com") {
+        parsed = parsed.map((u: any) => {
+          if (u.role === "super_admin" || u.email === "superadmin@admin.com") {
             mutated = true;
             return {
               ...u,
-              name: u.name === "Vikram Sarabhai" ? "Super Admin" : u.name,
-              email: "superadmin@admin.com"
+              id: "usr-admin-01",
+              name: "Admin",
+              email: "admin@admin.com",
+              role: "admin"
             };
           }
           return u;
@@ -222,8 +179,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const storedCur = localStorage.getItem(STORAGE_KEY_AUTH_USER);
         if (storedCur) {
           let parsedCur = JSON.parse(storedCur);
-          if (parsedCur.role === "super_admin" && parsedCur.email !== "superadmin@admin.com") {
-            parsedCur = { ...parsedCur, email: "superadmin@admin.com", name: "Super Admin" };
+          if (parsedCur.role === "super_admin" || parsedCur.email === "superadmin@admin.com") {
+            parsedCur = { ...parsedCur, id: "usr-admin-01", email: "admin@admin.com", name: "Admin", role: "admin" };
             localStorage.setItem(STORAGE_KEY_AUTH_USER, JSON.stringify(parsedCur));
           }
           const found = activeUsers.find((u: UserAccount) => u.id === parsedCur.id);
@@ -296,8 +253,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logAction = (action: string, target: string) => {
     const newLog: AuditLog = {
       id: `log-${Date.now().toString().slice(-4)}`,
-      actorName: currentUser ? currentUser.name : "System Operator",
-      actorRole: currentUser ? currentUser.role : "super_admin",
+      actorName: currentUser ? currentUser.name : "Admin",
+      actorRole: currentUser ? currentUser.role : "admin",
       action,
       target,
       timestamp: "Just now"
@@ -326,8 +283,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Fallback
       const fallback: UserAccount = {
         id: `usr-${newRole}-${Date.now().toString().slice(-4)}`,
-        name: newRole === "super_admin" ? "Super Admin" : newRole === "admin" ? "Platform Admin" : "Client User",
-        email: newRole === "super_admin" ? "superadmin@admin.com" : `${newRole}@s-arc.in`,
+        name: newRole === "admin" ? "Admin" : "Client User",
+        email: newRole === "admin" ? "admin@admin.com" : "client@gmail.com",
         role: newRole,
         subRole: newSubRole || "homeowner",
         status: "active",
@@ -346,7 +303,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // Super Admin: Update user role
+  // Admin: Update user role
   const updateUserRole = (userId: string, newRole: UserRole) => {
     const updated = users.map((u) => (u.id === userId ? { ...u, role: newRole } : u));
     saveUsers(updated);
@@ -356,13 +313,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     logAction(`Changed User Role to ${newRole.toUpperCase()}`, `User ID: ${userId}`);
   };
 
-  // Only Super Admin can approve accounts (set status to active)
+  // Admin can approve accounts (set status to active)
   const updateUserStatus = (userId: string, newStatus: UserAccount["status"], notes?: string) => {
     const targetUser = users.find((u) => u.id === userId);
 
-    // Strict Enforcement: Only Super Admin can approve accounts
-    if (newStatus === "active" && (!currentUser || currentUser.role !== "super_admin")) {
-      alert("Permission Denied: Only Super Admin (Tier 1) has authority to approve and activate accounts.");
+    // Only Admin can approve accounts
+    if (newStatus === "active" && (!currentUser || currentUser.role !== "admin")) {
+      alert("Permission Denied: Only Admin has authority to approve and activate accounts.");
       return;
     }
 
@@ -377,13 +334,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     logAction(
       newStatus === "active"
-        ? `Super Admin Approved Account [${targetUser?.role === "admin" ? "Admin" : targetUser?.subRole || "User"}]`
+        ? `Admin Approved Account [${targetUser?.subRole || "User"}]`
         : `Updated status to ${newStatus}`,
       targetUser ? `${targetUser.name} (${targetUser.email})` : userId
     );
   };
 
-  // Tier 2 Admins audit and forward recommendations to Super Admin for final approval
+  // Forward recommendations / notes
   const forwardForApproval = (userId: string, notes: string) => {
     const targetUser = users.find((u) => u.id === userId);
     const updated = users.map((u) => (u.id === userId ? {
@@ -393,7 +350,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } : u));
     saveUsers(updated);
     logAction(
-      "Admin Audited & Forwarded Recommendation to Super Admin",
+      "Admin Recorded Practice Audit Note",
       targetUser ? `${targetUser.name} (${targetUser.coaNumber || targetUser.email})` : userId
     );
   };
@@ -410,7 +367,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     logAction(`Created New Account [${userData.role.toUpperCase()}]`, `${userData.name} (${userData.email})`);
   };
 
-  // Super Admin: Delete user
+  // Admin: Delete user
   const deleteUser = (userId: string) => {
     const targetUser = users.find((u) => u.id === userId);
     const updated = users.filter((u) => u.id !== userId);
@@ -418,7 +375,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     logAction("Deleted User Account", targetUser ? `${targetUser.name} (${targetUser.email})` : userId);
   };
 
-  // User: Apply for Freelance Architect or Agency Firm verification (directly to Super Admin)
+  // User: Apply for Freelance Architect or Agency Firm verification (directly to Admin)
   const applyForArchitectUpgrade = async (data: {
     practiceType: "freelance" | "agency";
     studioName: string;
@@ -430,7 +387,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }) => {
     if (!currentUser) return;
     const cleanCoa = data.coaNumber.trim().toUpperCase();
-    const reviewNote = `Submitted application for ${data.practiceType === "agency" ? "Architecture Firm / Agency" : "Freelance Architect"}. CoA: ${cleanCoa}. Studio: ${data.studioName}. Awaiting Super Admin Tier 1 approval.`;
+    const reviewNote = `Submitted application for ${data.practiceType === "agency" ? "Architecture Firm / Agency" : "Freelance Architect"}. CoA: ${cleanCoa}. Studio: ${data.studioName}. Awaiting Admin verification.`;
 
     const updatedUser: UserAccount = {
       ...currentUser,
@@ -462,7 +419,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     logAction(
       `Submitted Application for ${data.practiceType === "agency" ? "Architecture Firm" : "Freelance Architect"} Verification`,
-      `Super Admin Queue • CoA: ${cleanCoa}`
+      `Admin Queue • CoA: ${cleanCoa}`
     );
   };
 

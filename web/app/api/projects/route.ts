@@ -114,7 +114,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const { user, errorResponse } = await requireRole(req, ["super_admin", "admin", "user"]);
+  const { user, errorResponse } = await requireRole(req, ["admin", "user"]);
   if (errorResponse) return errorResponse;
 
   try {

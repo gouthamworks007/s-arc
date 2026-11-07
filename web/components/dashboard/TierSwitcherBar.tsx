@@ -3,10 +3,10 @@
 import React from "react";
 import Image from "next/image";
 import { useAuth } from "@/lib/authContext";
-import { Crown, Shield, User, Home, Sparkles, LogOut } from "lucide-react";
+import { ShieldCheck, User, Home, LogOut } from "lucide-react";
 
 export default function TierSwitcherBar() {
-  const { currentUser, role, switchRole, switchUser, users, logout } = useAuth();
+  const { currentUser, role, switchRole, logout } = useAuth();
 
   if (!currentUser) return null;
 
@@ -22,13 +22,11 @@ export default function TierSwitcherBar() {
             <div className="flex items-center gap-2 flex-wrap">
               <span className="font-serif text-lg text-white font-normal">{currentUser.name}</span>
               <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-mono tracking-wider font-semibold uppercase ${
-                role === "super_admin"
-                  ? "bg-amber-400 text-charcoal"
-                  : role === "admin"
-                  ? "bg-sky-400 text-charcoal"
-                  : "bg-copper text-white"
+                role === "admin"
+                  ? "bg-copper text-white"
+                  : "bg-white/20 text-white"
               }`}>
-                {role === "super_admin" ? "Super Admin" : role === "admin" ? "Platform Admin" : `User (${currentUser.subRole || "client"})`}
+                {role === "admin" ? "Platform Admin" : `User (${currentUser.subRole || "client"})`}
               </span>
             </div>
             <div className="text-xs text-white/60 font-sans mt-0.5">
@@ -37,52 +35,39 @@ export default function TierSwitcherBar() {
           </div>
         </div>
 
-        {/* Tier Switcher Controls */}
+        {/* Role Switcher Controls */}
         <div className="flex items-center gap-2 overflow-x-auto pb-1 lg:pb-0 scrollbar-none">
           <span className="text-[11px] font-mono text-white/40 uppercase tracking-widest hidden sm:inline mr-1">
-            Switch Tier:
+            Demo Persona:
           </span>
 
-          {/* Super Admin Pill */}
-          <button
-            onClick={() => switchRole("super_admin")}
-            className={`px-3.5 py-2 rounded-2xl text-xs font-sans font-medium flex items-center gap-2 transition-all shrink-0 ${
-              role === "super_admin"
-                ? "bg-amber-400 text-charcoal font-semibold shadow-md scale-102"
-                : "bg-white/10 text-white/80 hover:bg-white/20 hover:text-white"
-            }`}
-          >
-            <Crown className="w-3.5 h-3.5 text-amber-500" />
-            <span>Tier 1: Super Admin</span>
-          </button>
-
-          {/* Admin Pill */}
+          {/* Admin Workspace */}
           <button
             onClick={() => switchRole("admin")}
             className={`px-3.5 py-2 rounded-2xl text-xs font-sans font-medium flex items-center gap-2 transition-all shrink-0 ${
               role === "admin"
-                ? "bg-sky-400 text-charcoal font-semibold shadow-md scale-102"
-                : "bg-white/10 text-white/80 hover:bg-white/20 hover:text-white"
-            }`}
-          >
-            <Shield className="w-3.5 h-3.5 text-sky-400" />
-            <span>Tier 2: Admin</span>
-          </button>
-
-          {/* User (Architect) Pill */}
-          <button
-            onClick={() => switchRole("user", "architect")}
-            className={`px-3.5 py-2 rounded-2xl text-xs font-sans font-medium flex items-center gap-2 transition-all shrink-0 ${
-              role === "user" && currentUser.subRole === "architect"
                 ? "bg-copper text-white font-semibold shadow-md scale-102"
                 : "bg-white/10 text-white/80 hover:bg-white/20 hover:text-white"
             }`}
           >
-            <User className="w-3.5 h-3.5 text-copper-light" />
-            <span>Tier 3: Architect</span>
+            <ShieldCheck className="w-3.5 h-3.5 text-copper-light" />
+            <span>Admin Workspace</span>
           </button>
 
-          {/* User (Homeowner) Pill */}
+          {/* Architect Studio */}
+          <button
+            onClick={() => switchRole("user", "architect")}
+            className={`px-3.5 py-2 rounded-2xl text-xs font-sans font-medium flex items-center gap-2 transition-all shrink-0 ${
+              role === "user" && currentUser.subRole === "architect"
+                ? "bg-white text-charcoal font-semibold shadow-md scale-102"
+                : "bg-white/10 text-white/80 hover:bg-white/20 hover:text-white"
+            }`}
+          >
+            <User className="w-3.5 h-3.5 text-copper-light" />
+            <span>Architect Studio</span>
+          </button>
+
+          {/* Homeowner Client */}
           <button
             onClick={() => switchRole("user", "homeowner")}
             className={`px-3.5 py-2 rounded-2xl text-xs font-sans font-medium flex items-center gap-2 transition-all shrink-0 ${
@@ -91,8 +76,8 @@ export default function TierSwitcherBar() {
                 : "bg-white/10 text-white/80 hover:bg-white/20 hover:text-white"
             }`}
           >
-            <Home className="w-3.5 h-3.5 text-secondaryText" />
-            <span>Tier 3: Homeowner</span>
+            <Home className="w-3.5 h-3.5 text-stone-400" />
+            <span>Homeowner Client</span>
           </button>
 
           {/* Sign Out Button */}
@@ -109,4 +94,3 @@ export default function TierSwitcherBar() {
     </div>
   );
 }
-

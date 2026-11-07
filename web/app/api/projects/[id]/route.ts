@@ -20,7 +20,7 @@ export async function PUT(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const { user, errorResponse } = await requireRole(req, ["super_admin", "admin", "user"]);
+  const { user, errorResponse } = await requireRole(req, ["admin", "user"]);
   if (errorResponse) return errorResponse;
 
   const { id } = params;
@@ -37,7 +37,7 @@ export async function DELETE(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const { user, errorResponse } = await requireRole(req, ["super_admin", "admin", "user"]);
+  const { user, errorResponse } = await requireRole(req, ["admin", "user"]);
   if (errorResponse) return errorResponse;
 
   const { id } = params;

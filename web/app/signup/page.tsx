@@ -142,7 +142,7 @@ export default function SignupPage() {
             <Building className="w-4 h-4 text-copper shrink-0 mt-0.5" />
             <div className="text-secondaryText leading-relaxed">
               <span className="font-semibold text-charcoal">Are you a Freelance Architect or Firm?</span>{" "}
-              Create your user account first. Once signed in, you can apply directly for Super Admin verification to publish blueprints.
+              Create your user account first. Once signed in, you can apply directly for Admin verification to publish blueprints.
             </div>
           </div>
 

@@ -12,14 +12,13 @@ import {
   ArrowRight, 
   CheckCircle2, 
   Clock, 
-  Building,
-  ShieldCheck,
-  Briefcase,
-  X,
-  FileCheck,
-  Send,
-  Loader2,
-  Crown
+  Building, 
+  ShieldCheck, 
+  Briefcase, 
+  X, 
+  FileCheck, 
+  Send, 
+  Loader2 
 } from "lucide-react";
 
 export default function HomeownerView() {
@@ -139,11 +138,11 @@ export default function HomeownerView() {
                   Architectural Practice Verification Under Review
                 </h3>
                 <span className="px-2.5 py-0.5 rounded-full bg-amber-200/60 text-amber-900 border border-amber-300 text-[10px] font-mono font-medium">
-                  Direct Super Admin Audit
+                  Admin Verification
                 </span>
               </div>
               <p className="text-xs text-secondaryText font-sans leading-relaxed">
-                Your application as a <strong className="text-charcoal">{currentUser?.practiceType === "agency" ? "Architecture Agency Firm" : "Freelance Architect"}</strong> ({currentUser?.studioName || "Studio"} • CoA: {currentUser?.coaNumber || "Submitted"}) is currently being audited directly by the Super Admin. You will receive publishing privileges once your Council of Architecture credentials are verified.
+                Your application as a <strong className="text-charcoal">{currentUser?.practiceType === "agency" ? "Architecture Agency Firm" : "Freelance Architect"}</strong> ({currentUser?.studioName || "Studio"} • CoA: {currentUser?.coaNumber || "Submitted"}) is currently being audited by the S-ARC Administration. You will receive publishing privileges once your Council of Architecture credentials are verified.
               </p>
             </div>
           </div>
@@ -155,13 +154,13 @@ export default function HomeownerView() {
               <span className="px-2.5 py-0.5 rounded-full bg-copper/30 text-copper-light border border-copper/40 text-[10px] font-mono uppercase tracking-wider">
                 Practice Partnership
               </span>
-              <span className="text-[11px] text-stone-400 font-sans">Direct Super Admin Clearance</span>
+              <span className="text-[11px] text-stone-400 font-sans">Admin Verification</span>
             </div>
             <h3 className="text-xl sm:text-2xl font-serif text-white">
               Are you a Freelance Architect or Architecture Agency Firm?
             </h3>
             <p className="text-xs text-stone-300 font-sans leading-relaxed">
-              Apply directly to the Super Admin to license your verified residential plans to over 10,000 South Indian clients and receive direct design commissions.
+              Apply for administrative verification to license your verified residential plans to over 10,000 South Indian clients and receive direct design commissions.
             </p>
           </div>
 
@@ -349,7 +348,7 @@ export default function HomeownerView() {
         )}
       </div>
 
-      {/* Application Modal: Direct Super Admin Review */}
+      {/* Application Modal: Admin Review */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
           <div className="bg-white border border-warm-border rounded-3xl max-w-lg w-full p-6 sm:p-8 space-y-6 shadow-2xl relative my-8 animate-in fade-in zoom-in-95">
@@ -362,16 +361,16 @@ export default function HomeownerView() {
 
             <div className="space-y-1.5">
               <div className="flex items-center gap-2">
-                <Crown className="w-4 h-4 text-amber-600" />
-                <span className="text-[10px] font-mono uppercase tracking-wider text-amber-900 font-semibold">
-                  Super Admin Direct Application
+                <ShieldCheck className="w-4 h-4 text-copper" />
+                <span className="text-[10px] font-mono uppercase tracking-wider text-copper font-semibold">
+                  Practice Verification Application
                 </span>
               </div>
               <h3 className="text-2xl font-serif text-charcoal">
                 Apply for Practice Verification
               </h3>
               <p className="text-xs text-secondaryText font-sans">
-                Freelance architects and design agencies undergo direct statutory compliance review by the Super Admin before publishing blueprints.
+                Freelance architects and design agencies undergo statutory compliance review by the S-ARC Administration before publishing blueprints.
               </p>
             </div>
 
@@ -380,7 +379,7 @@ export default function HomeownerView() {
                 <CheckCircle2 className="w-10 h-10 text-emerald-600 mx-auto" />
                 <h4 className="font-serif text-lg text-emerald-950 font-medium">Application Dispatched</h4>
                 <p className="text-xs text-emerald-800 font-sans">
-                  Your credentials have been placed directly in the Super Admin Tier 1 compliance queue.
+                  Your credentials have been submitted to the Admin verification queue.
                 </p>
               </div>
             ) : (
@@ -512,7 +511,7 @@ export default function HomeownerView() {
                 <div className="p-3 bg-amber-50/70 border border-amber-200/80 rounded-xl text-[11px] text-amber-900 font-sans flex items-start gap-2">
                   <ShieldCheck className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
                   <span>
-                    By submitting, you certify that all Council of Architecture credentials are valid and active. Super Admin verifies registrations against official statutory gazettes.
+                    By submitting, you certify that all Council of Architecture credentials are valid and active. The Administration verifies registrations against official statutory gazettes.
                   </span>
                 </div>
 
@@ -525,12 +524,12 @@ export default function HomeownerView() {
                   {isSubmitting ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin text-white/80" />
-                      <span>Submitting to Super Admin...</span>
+                      <span>Submitting to Admin...</span>
                     </>
                   ) : (
                     <>
                       <Send className="w-3.5 h-3.5 text-copper" />
-                      <span>Submit Application to Super Admin</span>
+                      <span>Submit Application for Admin Verification</span>
                     </>
                   )}
                 </button>

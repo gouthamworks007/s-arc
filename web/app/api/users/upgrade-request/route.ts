@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
     }
 
     const cleanCoa = coaNumber.trim().toUpperCase();
-    const reviewNote = `Application submitted for ${practiceType === "agency" ? "Architecture Firm / Agency" : "Freelance Architect"}. CoA: ${cleanCoa}. Studio: ${studioName}. Awaiting Super Admin Tier 1 approval.`;
+    const reviewNote = `Application submitted for ${practiceType === "agency" ? "Architecture Firm / Agency" : "Freelance Architect"}. CoA: ${cleanCoa}. Studio: ${studioName}. Awaiting Admin verification.`;
 
     // Update user record in Cloudflare D1
     await d1.execute(
@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
       [cleanCoa, studioName.trim(), phone || null, location || null, bio || null, reviewNote, user.id]
     );
 
-    // Record audit log for Super Admin in Cloudflare D1
+    // Record audit log in Cloudflare D1
     await d1.execute(
       `INSERT INTO audit_logs (id, actor_id, actor_name, actor_email, actor_role, action, target_id, target_type, details)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: "Application submitted successfully. It is now awaiting direct Super Admin verification.",
+      message: "Application submitted successfully. It is now awaiting Admin verification.",
       application: {
         userId: user.id,
         practiceType,

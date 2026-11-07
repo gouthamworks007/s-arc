@@ -4,7 +4,7 @@ import { d1 } from "@/lib/d1";
 import bcrypt from "bcryptjs";
 
 export async function GET(req: NextRequest) {
-  const { user, errorResponse } = await requireRole(req, ["super_admin", "admin"]);
+  const { user, errorResponse } = await requireRole(req, ["admin"]);
   if (errorResponse) return errorResponse;
 
   const url = new URL(req.url);
@@ -50,6 +50,7 @@ export async function GET(req: NextRequest) {
 
     const users = rows.map((u: any) => ({
       ...u,
+      role: u.role === "super_admin" ? "admin" : u.role,
       permissions: typeof u.permissions === "string" ? JSON.parse(u.permissions || "[]") : (u.permissions || []),
     }));
 
@@ -64,17 +65,16 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  // Only Super Admin (Tier 1) can appoint new admins
-  const { user, errorResponse } = await requireRole(req, ["super_admin"]);
+  const { user, errorResponse } = await requireRole(req, ["admin"]);
   if (errorResponse) return errorResponse;
 
   try {
     const body = await req.json();
-    const { name, email, role = "admin", location = "Kochi, Kerala", password = "password123" } = body;
+    const { name, email, role = "user", subRole = null, location = "Kochi, Kerala", password = "password123" } = body;
 
     if (!name || !email) {
       return NextResponse.json(
-        { error: "Name and email are required to create an admin account." },
+        { error: "Name and email are required to create an account." },
         { status: 400 }
       );
     }
@@ -82,7 +82,8 @@ export async function POST(req: NextRequest) {
     const cleanEmail = email.trim().toLowerCase();
     const salt = await bcrypt.genSalt(10);
     const passwordHash = await bcrypt.hash(password, salt);
-    const newId = `usr-admin-${Date.now().toString().slice(-4)}`;
+    const newId = `usr-${Date.now().toString().slice(-4)}`;
+    const effectiveSubRole = subRole || (role === "admin" ? null : "homeowner");
 
     await d1.execute(
       `INSERT INTO users (
@@ -94,7 +95,7 @@ export async function POST(req: NextRequest) {
         cleanEmail,
         passwordHash,
         role,
-        null,
+        effectiveSubRole,
         "active",
         location,
         "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=400&q=80",
@@ -107,22 +108,23 @@ export async function POST(req: NextRequest) {
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         `aud-${Date.now()}`,
-        user?.id || "super-admin",
-        user?.name || "Super Admin",
-        user?.email || "superadmin@admin.com",
-        "super_admin",
-        "CREATE_ADMIN",
+        user?.id || "admin",
+        user?.name || "Admin",
+        user?.email || "admin@admin.com",
+        "admin",
+        "CREATE_USER",
         newId,
         "user",
         JSON.stringify({ createdEmail: cleanEmail, role }),
       ]
     );
 
-    const newAdmin = {
+    const createdUser = {
       id: newId,
       name,
       email: cleanEmail,
       role,
+      subRole: effectiveSubRole,
       status: "active",
       location,
       avatar: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=400&q=80",
@@ -132,13 +134,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(
       {
         success: true,
-        message: `Admin appointment confirmed for ${name}`,
-        user: newAdmin,
+        message: `Account created for ${name}`,
+        user: createdUser,
       },
       { status: 201 }
     );
   } catch (err: any) {
-    console.error("D1 create admin error:", err);
-    return NextResponse.json({ error: "Failed to create admin in Cloudflare D1" }, { status: 500 });
+    console.error("D1 create user error:", err);
+    return NextResponse.json({ error: "Failed to create user in Cloudflare D1" }, { status: 500 });
   }
 }

@@ -6,41 +6,12 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const { user, errorResponse } = await requireRole(req, ["super_admin", "admin"]);
+  const { user, errorResponse } = await requireRole(req, ["admin"]);
   if (errorResponse) return errorResponse;
 
   const { id } = params;
   const body = await req.json();
   const { status, role, reviewNotes } = body;
-
-  // Strict Rule: ONLY Super Admin (Tier 1) has approval authority for admin and other accounts
-  if (status === "active" && user?.role !== "super_admin") {
-    return NextResponse.json(
-      {
-        error: "Forbidden. Only Super Admin (Tier 1) has approval authority for admin and other accounts.",
-        userRole: user?.role,
-      },
-      { status: 403 }
-    );
-  }
-
-  // Only Super Admin can change user role
-  if (role && user?.role !== "super_admin") {
-    return NextResponse.json(
-      { error: "Forbidden. Only Super Admin (Tier 1) can reassign user roles." },
-      { status: 403 }
-    );
-  }
-
-  // Admins (Tier 2) can only submit audit/review notes for Super Admin consideration
-  if (user?.role === "admin" && status && status !== "pending_verification") {
-    return NextResponse.json(
-      {
-        error: "Admins (Tier 2) cannot approve or activate accounts. You may only audit credentials and forward to Super Admin.",
-      },
-      { status: 403 }
-    );
-  }
 
   try {
     const updateClauses: string[] = [];
@@ -74,11 +45,11 @@ export async function PATCH(
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         `aud-${Date.now()}`,
-        user?.id || "unknown",
-        user?.name || "User",
-        user?.email || "unknown@s-arc.in",
-        user?.role || "user",
-        user?.role === "super_admin" ? "SUPER_ADMIN_APPROVAL" : "ADMIN_AUDIT_NOTE",
+        user?.id || "admin",
+        user?.name || "Admin",
+        user?.email || "admin@admin.com",
+        "admin",
+        status === "active" ? "ADMIN_APPROVAL" : "ADMIN_UPDATE_USER",
         id,
         "user",
         JSON.stringify({ status, role, reviewNotes }),
@@ -87,10 +58,7 @@ export async function PATCH(
 
     return NextResponse.json({
       success: true,
-      message:
-        user?.role === "super_admin"
-          ? `User ${id} status/role successfully approved & updated by Super Admin in Cloudflare D1.`
-          : `Audit note recorded in Cloudflare D1 for User ${id} and forwarded to Super Admin for approval.`,
+      message: `User ${id} status/role successfully approved & updated by Admin in Cloudflare D1.`,
       updatedFields: { status, role, reviewNotes },
     });
   } catch (err: any) {
@@ -103,8 +71,8 @@ export async function DELETE(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  // Only Super Admin can delete users
-  const { user, errorResponse } = await requireRole(req, ["super_admin"]);
+  // Admin can delete users
+  const { user, errorResponse } = await requireRole(req, ["admin"]);
   if (errorResponse) return errorResponse;
 
   const { id } = params;
@@ -117,10 +85,10 @@ export async function DELETE(
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         `aud-${Date.now()}`,
-        user?.id || "super-admin",
-        user?.name || "Super Admin",
-        user?.email || "superadmin@admin.com",
-        "super_admin",
+        user?.id || "admin",
+        user?.name || "Admin",
+        user?.email || "admin@admin.com",
+        "admin",
         "DELETE_USER",
         id,
         "user",
@@ -130,7 +98,7 @@ export async function DELETE(
 
     return NextResponse.json({
       success: true,
-      message: `User ${id} deleted from Cloudflare D1 by Super Admin`,
+      message: `User ${id} deleted from Cloudflare D1 by Admin`,
     });
   } catch (err: any) {
     console.error("D1 delete user error:", err);
