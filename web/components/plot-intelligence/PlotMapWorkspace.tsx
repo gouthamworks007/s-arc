@@ -648,140 +648,44 @@ export default function PlotMapWorkspace({
     placeLocationPin(lat, lng, label || "Selected Property");
   }, [focusLocation, placeLocationPin]);
 
-  // 7. Live Geolocation with High-Accuracy & Graceful Fallback
+  // 7. Native Device Geolocation Tracking (Original First-Version Implementation)
   const handleCurrentLocation = () => {
-    setGeoLocating(true);
-    setGeoNotice(null);
-
-    const applyLocation = (
-      lat: number,
-      lng: number,
-      placeLabel: string,
-      accuracyM?: number,
-      isIpFallback = false
-    ) => {
-      setGeoLocating(false);
-
-      if (isIpFallback) {
-        setGeoNotice(
-          "⚠️ Desktop broadband IP routed via Kochi exchange. If your property is in East Desam or Aluva, search it above or click the 'East Desam' button to jump directly!"
-        );
-      } else {
-        const accInfo =
-          accuracyM && accuracyM <= 50
-            ? `GPS (±${Math.round(accuracyM)}m)`
-            : "Network Wi-Fi";
-        setGeoNotice(`📍 Located near ${placeLabel} (${accInfo}). Drag pin to your exact land.`);
-      }
-      setTimeout(() => setGeoNotice(null), 8000);
-
-      const map = mapRef.current;
-      if (!map) return;
-
-      map.flyTo({
-        center: [lng, lat],
-        zoom: 18,
-        pitch: 0,
-        bearing: 0,
-        duration: 1500,
-      });
-
-      placeLocationPin(
-        lat,
-        lng,
-        isIpFallback
-          ? "Broadband Gateway (Search East Desam above to jump)"
-          : placeLabel
-      );
-    };
-
-    // Check Permissions Policy first to silence iframe/webview Chrome violations
-    const isPolicyBlocked =
-      typeof document !== "undefined" &&
-      (((document as any).permissionsPolicy?.allowsFeature &&
-        !(document as any).permissionsPolicy.allowsFeature("geolocation")) ||
-       ((document as any).featurePolicy?.allowsFeature &&
-        !(document as any).featurePolicy.allowsFeature("geolocation")));
-
-    const queryIpLocation = async () => {
-      try {
-        const res = await fetch("/api/geolocation");
-        if (res.ok) {
-          const data = await res.json();
-          if (data?.latitude && data?.longitude) {
-            applyLocation(
-              data.latitude,
-              data.longitude,
-              `${data.city || "Kerala"}, ${data.region || "India"}`,
-              5000,
-              true
-            );
-            return;
-          }
-        }
-      } catch {}
-
-      try {
-        const pubRes = await fetch("https://freeipapi.com/api/json");
-        if (pubRes.ok) {
-          const pubData = await pubRes.json();
-          if (pubData?.latitude && pubData?.longitude) {
-            applyLocation(
-              pubData.latitude,
-              pubData.longitude,
-              `${pubData.cityName || "Kerala"}, ${pubData.regionName || "India"}`,
-              5000,
-              true
-            );
-            return;
-          }
-        }
-      } catch {}
-
-      applyLocation(
-        KERALA_DEFAULT_CENTER[1],
-        KERALA_DEFAULT_CENTER[0],
-        "Kerala Survey Hub (Kochi)",
-        10000,
-        true
-      );
-    };
-
-    if (isPolicyBlocked || !navigator.geolocation) {
-      queryIpLocation();
+    if (!navigator.geolocation) {
+      setGeoNotice("Geolocation is not supported by your browser.");
+      setTimeout(() => setGeoNotice(null), 4000);
       return;
     }
 
-    // Try High-Accuracy GPS First
+    setGeoLocating(true);
+    setGeoNotice(null);
+
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        applyLocation(
-          pos.coords.latitude,
-          pos.coords.longitude,
-          "Your Location",
-          pos.coords.accuracy,
-          false
-        );
+        setGeoLocating(false);
+        const { longitude, latitude } = pos.coords;
+        const map = mapRef.current;
+        if (map) {
+          map.flyTo({
+            center: [longitude, latitude],
+            zoom: 18,
+            pitch: 0,
+            bearing: 0,
+            duration: 1500,
+            essential: true,
+          });
+        }
+        placeLocationPin(latitude, longitude, "Your Location");
       },
-      () => {
-        // Fallback to low-power standard accuracy
-        navigator.geolocation.getCurrentPosition(
-          (pos) => {
-            applyLocation(
-              pos.coords.latitude,
-              pos.coords.longitude,
-              "Device Location",
-              pos.coords.accuracy,
-              false
-            );
-          },
-          () => {
-            queryIpLocation();
-          },
-          { enableHighAccuracy: false, timeout: 5000, maximumAge: 60000 }
+      (err) => {
+        setGeoLocating(false);
+        setGeoNotice(
+          err.code === 1
+            ? "Location permission denied. Please allow location access in your browser or search your place above."
+            : "Unable to retrieve device location. Please search your place or PIN above."
         );
+        setTimeout(() => setGeoNotice(null), 6000);
       },
-      { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );
   };
 

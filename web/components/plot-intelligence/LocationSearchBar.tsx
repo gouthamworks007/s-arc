@@ -41,74 +41,17 @@ export default function LocationSearchBar({
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const handleLocateMe = () => {
+    if (!navigator.geolocation) return;
     setLocating(true);
-
-    const applyPos = (lat: number, lng: number, label: string) => {
-      setLocating(false);
-      setQuery(label);
-      onSelectLocation(lat, lng, label);
-    };
-
-    // Check Permissions Policy first to prevent Chromium [Violation] warnings
-    const isPolicyBlocked =
-      typeof document !== "undefined" &&
-      (((document as any).permissionsPolicy?.allowsFeature &&
-        !(document as any).permissionsPolicy.allowsFeature("geolocation")) ||
-       ((document as any).featurePolicy?.allowsFeature &&
-        !(document as any).featurePolicy.allowsFeature("geolocation")));
-
-    const queryIpLocation = async () => {
-      try {
-        const res = await fetch("/api/geolocation");
-        if (res.ok) {
-          const data = await res.json();
-          if (data && data.latitude && data.longitude) {
-            applyPos(data.latitude, data.longitude, `${data.city || "Kerala"}, ${data.region || "India"}`);
-            return;
-          }
-        }
-      } catch {}
-
-      try {
-        const pubRes = await fetch("https://freeipapi.com/api/json");
-        if (pubRes.ok) {
-          const pubData = await pubRes.json();
-          if (pubData && pubData.latitude && pubData.longitude) {
-            applyPos(
-              pubData.latitude,
-              pubData.longitude,
-              `${pubData.cityName || "Kerala"}, ${pubData.regionName || "India"}`
-            );
-            return;
-          }
-        }
-      } catch {}
-
-      applyPos(9.9816, 76.3264, "Kochi, Kerala (Default)");
-    };
-
-    if (isPolicyBlocked || !navigator.geolocation) {
-      queryIpLocation();
-      return;
-    }
 
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        const acc = pos.coords.accuracy;
-        const accText = acc && acc <= 35 ? `GPS (±${Math.round(acc)}m)` : `Location (±${Math.round(acc || 50)}m)`;
-        applyPos(pos.coords.latitude, pos.coords.longitude, `Current ${accText}`);
+        setLocating(false);
+        setQuery("Your Location");
+        onSelectLocation(pos.coords.latitude, pos.coords.longitude, "Your Location");
       },
       () => {
-        // Fallback to standard accuracy
-        navigator.geolocation.getCurrentPosition(
-          (pos) => {
-            applyPos(pos.coords.latitude, pos.coords.longitude, "Device Location");
-          },
-          () => {
-            queryIpLocation();
-          },
-          { enableHighAccuracy: false, timeout: 5000, maximumAge: 60000 }
-        );
+        setLocating(false);
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );
