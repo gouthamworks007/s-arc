@@ -33,9 +33,48 @@ export default function LocationSearchBar({
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<LocationResult[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [locating, setLocating] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const handleLocateMe = () => {
+    setLocating(true);
+
+    const applyPos = (lat: number, lng: number, label: string) => {
+      setLocating(false);
+      setQuery(label);
+      onSelectLocation(lat, lng, label);
+    };
+
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          applyPos(pos.coords.latitude, pos.coords.longitude, "Your Current Location");
+        },
+        async () => {
+          // Fallback to IP geolocation
+          try {
+            const res = await fetch("/api/geolocation");
+            if (res.ok) {
+              const data = await res.json();
+              applyPos(data.latitude, data.longitude, `${data.city}, ${data.region}`);
+              return;
+            }
+          } catch (e) {
+            // Ignore
+          }
+          applyPos(9.9816, 76.3264, "Kochi, Kerala (Default)");
+        },
+        { enableHighAccuracy: false, timeout: 4000 }
+      );
+    } else {
+      fetch("/api/geolocation")
+        .then((r) => r.json())
+        .then((data) => applyPos(data.latitude, data.longitude, `${data.city}, ${data.region}`))
+        .catch(() => applyPos(9.9816, 76.3264, "Kochi, Kerala (Default)"));
+    }
+  };
 
   // Close dropdown on click outside
   useEffect(() => {
@@ -121,8 +160,22 @@ export default function LocationSearchBar({
         )}
       </div>
 
-      {/* Quick Kerala Hub Pills */}
+      {/* Quick Kerala Hub Pills & Live Location */}
       <div className="flex items-center gap-1.5 mt-2 overflow-x-auto pb-1 no-scrollbar text-[11px] font-sans">
+        <button
+          onClick={handleLocateMe}
+          disabled={locating}
+          className="px-2.5 py-1 rounded-lg bg-copper-subtle border border-copper/40 text-copper hover:bg-copper hover:text-white transition-all shrink-0 font-medium flex items-center gap-1 shadow-xs disabled:opacity-50"
+          title="Detect my location on the map"
+        >
+          {locating ? (
+            <Loader2 className="w-3 h-3 animate-spin text-copper" />
+          ) : (
+            <Navigation className="w-3 h-3" />
+          )}
+          <span>{locating ? "Locating..." : "Locate Me"}</span>
+        </button>
+
         <span className="text-[10px] tracking-wider uppercase text-charcoal/40 font-semibold shrink-0 pl-1">
           Hubs:
         </span>

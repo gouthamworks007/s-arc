@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState, useCallback } from "react";
+import * as turf from "@turf/turf";
 import {
   Map as MapLibreMap,
   Marker,
@@ -27,6 +28,10 @@ import {
   Move,
   Eye,
   Info,
+  Play,
+  Square,
+  Crosshair,
+  Sparkles,
 } from "lucide-react";
 import {
   buildMapStyle,
@@ -60,21 +65,41 @@ export default function PlotMapWorkspace({
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
 
+  // Map Modes & 3D Google Earth Perspective
   const [mapMode, setMapMode] = useState<MapMode>("satellite");
+  const [is3D, setIs3D] = useState(false);
+  const [isOrbiting, setIsOrbiting] = useState(false);
+  const [currentBearing, setCurrentBearing] = useState(0);
+  const [currentPitch, setCurrentPitch] = useState(0);
+  const [mapTelemetry, setMapTelemetry] = useState({
+    lat: KERALA_DEFAULT_CENTER[1],
+    lng: KERALA_DEFAULT_CENTER[0],
+    zoom: KERALA_DEFAULT_ZOOM,
+  });
+
+  // Drawing & Precision Reticle
   const [isDrawing, setIsDrawing] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [cursorPos, setCursorPos] = useState<[number, number] | null>(null);
+  const [mouseScreenPos, setMouseScreenPos] = useState<{ x: number; y: number } | null>(null);
+  const [liveDistanceFt, setLiveDistanceFt] = useState<number | null>(null);
+  const [liveBearingDeg, setLiveBearingDeg] = useState<number | null>(null);
+  const [isNearStartPoint, setIsNearStartPoint] = useState(false);
+
+  // History & State
   const [history, setHistory] = useState<[number, number][][]>([[]]);
   const [historyIdx, setHistoryIdx] = useState(0);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [geoLocating, setGeoLocating] = useState(false);
-  const [geoError, setGeoError] = useState<string | null>(null);
+  const [geoNotice, setGeoNotice] = useState<string | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
-  // References for live markers
+  // References for live markers and animations
   const cornerMarkersRef = useRef<Marker[]>([]);
   const segmentMarkersRef = useRef<Marker[]>([]);
   const midpointMarkersRef = useRef<Marker[]>([]);
+  const userLocationMarkerRef = useRef<Marker[]>([]);
+  const orbitAnimRef = useRef<number | null>(null);
 
   // Push to undo/redo history
   const pushHistory = useCallback(
@@ -106,7 +131,7 @@ export default function PlotMapWorkspace({
     }
   };
 
-  // Initialize MapLibre
+  // Initialize MapLibre with 3D capabilities
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return;
 
@@ -118,6 +143,7 @@ export default function PlotMapWorkspace({
       center: KERALA_DEFAULT_CENTER,
       zoom: KERALA_DEFAULT_ZOOM,
       pitch: 0,
+      maxPitch: 75,
       bearing: 0,
       attributionControl: false,
     });
@@ -128,28 +154,38 @@ export default function PlotMapWorkspace({
     );
 
     map.on("load", () => {
-      // Add Sources and Layers for Plot Polygon and Edges
+      // 1. Plot Polygon Source
       if (!map.getSource("plot-polygon-source")) {
         map.addSource("plot-polygon-source", {
           type: "geojson",
-          data: {
-            type: "FeatureCollection",
-            features: [],
-          },
+          data: { type: "FeatureCollection", features: [] },
         });
 
-        // Polygon Fill
+        // Polygon Fill with blueprint styling
         map.addLayer({
           id: "plot-polygon-fill",
           type: "fill",
           source: "plot-polygon-source",
           paint: {
-            "fill-color": "#ad8065",
-            "fill-opacity": 0.28,
+            "fill-color": "#38bdf8",
+            "fill-opacity": 0.22,
           },
         });
 
-        // Outer Boundary Stroke
+        // Boundary Glow Stroke
+        map.addLayer({
+          id: "plot-boundary-stroke-glow",
+          type: "line",
+          source: "plot-polygon-source",
+          paint: {
+            "line-color": "#38bdf8",
+            "line-width": 5,
+            "line-opacity": 0.4,
+            "line-blur": 3,
+          },
+        });
+
+        // Crisp White Boundary Laser
         map.addLayer({
           id: "plot-boundary-stroke",
           type: "line",
@@ -157,11 +193,11 @@ export default function PlotMapWorkspace({
           paint: {
             "line-color": "#ffffff",
             "line-width": 2.5,
-            "line-opacity": 0.95,
+            "line-opacity": 1.0,
           },
         });
 
-        // Road Frontage Highlight Stroke
+        // Glowing Road Frontage Laser (Amber)
         map.addLayer({
           id: "plot-road-frontage-stroke",
           type: "line",
@@ -174,44 +210,169 @@ export default function PlotMapWorkspace({
           },
         });
       }
+
+      // 2. Google Earth Live Measuring Rubberband Line Source
+      if (!map.getSource("rubberband-source")) {
+        map.addSource("rubberband-source", {
+          type: "geojson",
+          data: { type: "FeatureCollection", features: [] },
+        });
+
+        // Live Measuring Guide Line
+        map.addLayer({
+          id: "rubberband-line-glow",
+          type: "line",
+          source: "rubberband-source",
+          paint: {
+            "line-color": "#38bdf8",
+            "line-width": 4,
+            "line-opacity": 0.5,
+            "line-blur": 2,
+          },
+        });
+
+        map.addLayer({
+          id: "rubberband-line",
+          type: "line",
+          source: "rubberband-source",
+          paint: {
+            "line-color": "#ffffff",
+            "line-width": 2,
+            "line-dasharray": [3, 2],
+          },
+        });
+      }
+
+      // 3. Live Polygon Area Preview Source
+      if (!map.getSource("rubberband-poly-source")) {
+        map.addSource("rubberband-poly-source", {
+          type: "geojson",
+          data: { type: "FeatureCollection", features: [] },
+        });
+
+        map.addLayer({
+          id: "rubberband-poly-fill",
+          type: "fill",
+          source: "rubberband-poly-source",
+          paint: {
+            "fill-color": "#38bdf8",
+            "fill-opacity": 0.12,
+          },
+        });
+      }
+    });
+
+    // Real-time HUD Telemetry listeners
+    map.on("move", () => {
+      const center = map.getCenter();
+      setMapTelemetry({
+        lat: center.lat,
+        lng: center.lng,
+        zoom: map.getZoom(),
+      });
+    });
+
+    map.on("rotate", () => {
+      setCurrentBearing(map.getBearing());
+    });
+
+    map.on("pitch", () => {
+      setCurrentPitch(map.getPitch());
     });
 
     mapRef.current = map;
 
     return () => {
+      if (orbitAnimRef.current) cancelAnimationFrame(orbitAnimRef.current);
       map.remove();
       mapRef.current = null;
     };
   }, []);
 
-  // Handle Map Mode switch
+  // 3D / 2D Perspective Toggle
+  const toggle3DMode = () => {
+    const map = mapRef.current;
+    if (!map) return;
+    const nextState = !is3D;
+    setIs3D(nextState);
+
+    map.easeTo({
+      pitch: nextState ? 55 : 0,
+      duration: 1000,
+      essential: true,
+    });
+  };
+
+  // Google Earth 3D Fly-Around (Orbit Animation)
+  const toggleOrbit = () => {
+    if (isOrbiting) {
+      if (orbitAnimRef.current) cancelAnimationFrame(orbitAnimRef.current);
+      setIsOrbiting(false);
+      return;
+    }
+
+    if (!mapRef.current || coordinates.length < 3 || !analysis) return;
+
+    setIsOrbiting(true);
+    setIs3D(true);
+    const map = mapRef.current;
+
+    map.easeTo({
+      center: analysis.center,
+      pitch: 58,
+      zoom: Math.max(17.8, map.getZoom()),
+      duration: 1400,
+    });
+
+    const rotateCamera = () => {
+      if (!mapRef.current) return;
+      const currentRot = mapRef.current.getBearing();
+      mapRef.current.setBearing((currentRot + 0.35) % 360);
+      orbitAnimRef.current = requestAnimationFrame(rotateCamera);
+    };
+
+    setTimeout(() => {
+      orbitAnimRef.current = requestAnimationFrame(rotateCamera);
+    }, 1400);
+  };
+
+  // Reset Bearing to North
+  const handleResetNorth = () => {
+    if (!mapRef.current) return;
+    mapRef.current.easeTo({ bearing: 0, pitch: is3D ? 55 : 0, duration: 800 });
+  };
+
+  // Switch Map Mode (Satellite / Standard)
   const switchMapMode = (newMode: MapMode) => {
     setMapMode(newMode);
     if (mapRef.current) {
       mapRef.current.setStyle(buildMapStyle(newMode));
       mapRef.current.once("style.load", () => {
-        // Re-inject sources and layers after style reload
         const map = mapRef.current;
         if (!map) return;
+        // Re-inject sources after style reload
         if (!map.getSource("plot-polygon-source")) {
           map.addSource("plot-polygon-source", {
             type: "geojson",
-            data: {
-              type: "FeatureCollection",
-              features: [],
-            },
+            data: { type: "FeatureCollection", features: [] },
           });
           map.addLayer({
             id: "plot-polygon-fill",
             type: "fill",
             source: "plot-polygon-source",
-            paint: { "fill-color": "#ad8065", "fill-opacity": 0.28 },
+            paint: { "fill-color": "#38bdf8", "fill-opacity": 0.22 },
+          });
+          map.addLayer({
+            id: "plot-boundary-stroke-glow",
+            type: "line",
+            source: "plot-polygon-source",
+            paint: { "line-color": "#38bdf8", "line-width": 5, "line-opacity": 0.4, "line-blur": 3 },
           });
           map.addLayer({
             id: "plot-boundary-stroke",
             type: "line",
             source: "plot-polygon-source",
-            paint: { "line-color": "#ffffff", "line-width": 2.5, "line-opacity": 0.95 },
+            paint: { "line-color": "#ffffff", "line-width": 2.5, "line-opacity": 1.0 },
           });
           map.addLayer({
             id: "plot-road-frontage-stroke",
@@ -221,12 +382,42 @@ export default function PlotMapWorkspace({
             paint: { "line-color": "#f59e0b", "line-width": 5, "line-dasharray": [2, 1] },
           });
         }
+        if (!map.getSource("rubberband-source")) {
+          map.addSource("rubberband-source", {
+            type: "geojson",
+            data: { type: "FeatureCollection", features: [] },
+          });
+          map.addLayer({
+            id: "rubberband-line-glow",
+            type: "line",
+            source: "rubberband-source",
+            paint: { "line-color": "#38bdf8", "line-width": 4, "line-opacity": 0.5, "line-blur": 2 },
+          });
+          map.addLayer({
+            id: "rubberband-line",
+            type: "line",
+            source: "rubberband-source",
+            paint: { "line-color": "#ffffff", "line-width": 2, "line-dasharray": [3, 2] },
+          });
+        }
+        if (!map.getSource("rubberband-poly-source")) {
+          map.addSource("rubberband-poly-source", {
+            type: "geojson",
+            data: { type: "FeatureCollection", features: [] },
+          });
+          map.addLayer({
+            id: "rubberband-poly-fill",
+            type: "fill",
+            source: "rubberband-poly-source",
+            paint: { "fill-color": "#38bdf8", "fill-opacity": 0.12 },
+          });
+        }
         updateMapLayers(coordinates);
       });
     }
   };
 
-  // Update GeoJSON Layers & Markers whenever coordinates or roadFacingIndex change
+  // Update GeoJSON Layers & Markers
   const updateMapLayers = useCallback(
     (coords: [number, number][]) => {
       const map = mapRef.current;
@@ -239,17 +430,12 @@ export default function PlotMapWorkspace({
 
       if (coords.length >= 3) {
         const closed = [...coords, coords[0]];
-        // Polygon Feature
         features.push({
           type: "Feature",
           properties: { type: "plot-fill" },
-          geometry: {
-            type: "Polygon",
-            coordinates: [closed],
-          },
+          geometry: { type: "Polygon", coordinates: [closed] },
         });
 
-        // Segments with road frontage attribute
         for (let i = 0; i < coords.length; i++) {
           const nextIdx = (i + 1) % coords.length;
           features.push({
@@ -269,10 +455,7 @@ export default function PlotMapWorkspace({
         features.push({
           type: "Feature",
           properties: { type: "line" },
-          geometry: {
-            type: "LineString",
-            coordinates: coords,
-          },
+          geometry: { type: "LineString", coordinates: coords },
         });
       }
 
@@ -281,7 +464,7 @@ export default function PlotMapWorkspace({
         features,
       });
 
-      // Clear existing DOM markers
+      // Clear existing markers
       cornerMarkersRef.current.forEach((m) => m.remove());
       cornerMarkersRef.current = [];
       segmentMarkersRef.current.forEach((m) => m.remove());
@@ -289,17 +472,30 @@ export default function PlotMapWorkspace({
       midpointMarkersRef.current.forEach((m) => m.remove());
       midpointMarkersRef.current = [];
 
-      // Add Corner Markers
+      // Google Earth Illuminated Corner Pins
       coords.forEach((coord, i) => {
+        const isStart = i === 0;
         const el = document.createElement("div");
-        el.className =
-          "w-7 h-7 rounded-full bg-charcoal text-white font-mono text-[11px] font-bold flex items-center justify-center border-2 border-white shadow-lg cursor-pointer transform -translate-x-1/2 -translate-y-1/2 transition-transform hover:scale-125 hover:bg-copper";
-        el.innerHTML = `P${i + 1}`;
+        el.className = `group relative cursor-pointer transform -translate-x-1/2 -translate-y-1/2 transition-transform duration-200 ${
+          isEditMode ? "hover:scale-125" : ""
+        }`;
 
-        if (isDrawing && i === 0 && coords.length >= 3) {
-          el.title = "Click to close boundary polygon";
-          el.classList.add("ring-4", "ring-copper", "animate-pulse");
-        }
+        el.innerHTML = `
+          <div class="relative flex items-center justify-center">
+            ${
+              isStart && isDrawing && coords.length >= 3
+                ? `<div class="absolute w-10 h-10 rounded-full bg-cyan-400/40 animate-ping"></div>
+                   <div class="absolute w-8 h-8 rounded-full border-2 border-cyan-300 animate-spin"></div>`
+                : ""
+            }
+            <div class="w-6 h-6 rounded-full bg-charcoal-dark text-cyan-300 font-mono text-[10px] font-bold flex items-center justify-center border-2 border-white shadow-xl group-hover:bg-cyan-500 group-hover:text-black transition-colors">
+              ${i + 1}
+            </div>
+            <div class="absolute -bottom-5 opacity-0 group-hover:opacity-100 transition-opacity bg-black/85 text-white font-mono text-[9px] px-1.5 py-0.5 rounded shadow pointer-events-none whitespace-nowrap">
+              Corner P${i + 1}
+            </div>
+          </div>
+        `;
 
         const marker = new Marker({
           element: el,
@@ -308,7 +504,6 @@ export default function PlotMapWorkspace({
           .setLngLat(coord)
           .addTo(map);
 
-        // Handle Dragging in Edit Mode
         marker.on("dragend", () => {
           const newPos = marker.getLngLat();
           const nextCoords = [...coords];
@@ -316,10 +511,9 @@ export default function PlotMapWorkspace({
           pushHistory(nextCoords);
         });
 
-        // Click to close polygon if clicking initial point while drawing
         el.addEventListener("click", (e) => {
           e.stopPropagation();
-          if (isDrawing && i === 0 && coords.length >= 3) {
+          if (isDrawing && isStart && coords.length >= 3) {
             setIsDrawing(false);
           }
         });
@@ -327,52 +521,46 @@ export default function PlotMapWorkspace({
         cornerMarkersRef.current.push(marker);
       });
 
-      // Add Segment Labels if Analysis exists
+      // Segment Labels with Bearing and Elevation Flair
       if (analysis && analysis.segments.length > 0 && coords.length >= 3) {
         analysis.segments.forEach((seg, i) => {
           const midLng = (seg.startPoint[0] + seg.endPoint[0]) / 2;
           const midLat = (seg.startPoint[1] + seg.endPoint[1]) / 2;
-
           const isRoad = i === roadFacingIndex;
 
           const segEl = document.createElement("div");
-          segEl.className = `px-2 py-0.5 rounded-md text-[10px] font-mono font-semibold tracking-wide border shadow-md whitespace-nowrap cursor-pointer transition-all transform -translate-x-1/2 -translate-y-1/2 ${
+          segEl.className = `px-2 py-0.5 rounded-lg text-[10px] font-mono tracking-wider border shadow-xl whitespace-nowrap cursor-pointer transition-all transform -translate-x-1/2 -translate-y-1/2 ${
             isRoad
-              ? "bg-amber-500 text-charcoal-dark border-amber-300 font-bold scale-105"
-              : "bg-white/95 text-charcoal border-warm-border hover:border-copper hover:text-copper"
+              ? "bg-amber-500 text-black border-amber-300 font-bold scale-105 shadow-amber-500/30"
+              : "bg-black/80 text-white/90 border-white/20 hover:border-cyan-400 hover:text-cyan-300 backdrop-blur-md"
           }`;
           segEl.innerHTML = `${seg.label}: ${seg.lengthFeet.toFixed(1)} ft ${
             isRoad ? "★ ROAD" : ""
           }`;
-          segEl.title = isRoad
-            ? "Primary Road Frontage"
-            : "Click to designate this side as Road-Facing Frontage";
 
           segEl.addEventListener("click", (e) => {
             e.stopPropagation();
             onRoadFacingIndexChange(i);
           });
 
-          const segMarker = new Marker({
-            element: segEl,
-          })
+          const segMarker = new Marker({ element: segEl })
             .setLngLat([midLng, midLat])
             .addTo(map);
 
           segmentMarkersRef.current.push(segMarker);
 
-          // In Edit mode, show midpoint handle to insert vertices
+          // Midpoint handle in Edit mode
           if (isEditMode) {
             const midHandle = document.createElement("div");
             midHandle.className =
-              "w-3.5 h-3.5 rounded-full bg-white border-2 border-copper shadow-md cursor-pointer hover:scale-150 transition-transform -translate-x-1/2 -translate-y-1/2";
-            midHandle.title = "Click to insert a new corner point here";
+              "w-3.5 h-3.5 rounded-full bg-cyan-400 border-2 border-white shadow-lg cursor-pointer hover:scale-150 transition-transform -translate-x-1/2 -translate-y-1/2";
+            midHandle.title = "Insert new corner here";
 
             midHandle.addEventListener("click", (e) => {
               e.stopPropagation();
-              const newCoords = [...coords];
-              newCoords.splice(i + 1, 0, [midLng, midLat]);
-              pushHistory(newCoords);
+              const nextCoords = [...coords];
+              nextCoords.splice(i + 1, 0, [midLng, midLat]);
+              pushHistory(nextCoords);
             });
 
             const midMarker = new Marker({ element: midHandle })
@@ -398,77 +586,215 @@ export default function PlotMapWorkspace({
     updateMapLayers(coordinates);
   }, [coordinates, roadFacingIndex, analysis, isEditMode, isDrawing, updateMapLayers]);
 
-  // Click on Map Handler (Drawing mode)
+  // Google Earth Live Rubberband & Reticle Follower
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
 
+    const handleMouseMove = (e: MapMouseEvent) => {
+      setCursorPos([e.lngLat.lng, e.lngLat.lat]);
+      setMouseScreenPos({ x: e.point.x, y: e.point.y });
+
+      if (isDrawing && coordinates.length > 0) {
+        const lastPt = coordinates[coordinates.length - 1];
+        const curPt = [e.lngLat.lng, e.lngLat.lat] as [number, number];
+
+        // Live Geodesic Distance
+        const fromPt = turf.point(lastPt);
+        const toPt = turf.point(curPt);
+        const distKm = turf.distance(fromPt, toPt, { units: "kilometers" });
+        const distFeet = distKm * 1000 * 3.28084;
+        const bearing = turf.bearing(fromPt, toPt);
+
+        setLiveDistanceFt(distFeet);
+        setLiveBearingDeg(bearing >= 0 ? bearing : 360 + bearing);
+
+        // Snap check to Start Point (P1)
+        if (coordinates.length >= 3) {
+          const startPt = turf.point(coordinates[0]);
+          const distToStartKm = turf.distance(startPt, toPt, { units: "kilometers" });
+          const isNear = distToStartKm * 1000 < 12; // Within 12 meters
+          setIsNearStartPoint(isNear);
+        } else {
+          setIsNearStartPoint(false);
+        }
+
+        // Update Dynamic Rubberband GeoJSON Line
+        const rubberLineSrc = map.getSource("rubberband-source") as GeoJSONSource;
+        if (rubberLineSrc) {
+          rubberLineSrc.setData({
+            type: "FeatureCollection",
+            features: [
+              {
+                type: "Feature",
+                properties: {},
+                geometry: {
+                  type: "LineString",
+                  coordinates: [lastPt, curPt],
+                },
+              },
+            ],
+          });
+        }
+
+        // Update Dynamic Area Preview Polygon
+        if (coordinates.length >= 2) {
+          const polySrc = map.getSource("rubberband-poly-source") as GeoJSONSource;
+          if (polySrc) {
+            const previewRing = [...coordinates, curPt, coordinates[0]];
+            polySrc.setData({
+              type: "FeatureCollection",
+              features: [
+                {
+                  type: "Feature",
+                  properties: {},
+                  geometry: {
+                    type: "Polygon",
+                    coordinates: [previewRing],
+                  },
+                },
+              ],
+            });
+          }
+        }
+      }
+    };
+
     const handleMapClick = (e: MapMouseEvent) => {
       if (!isDrawing) return;
+
+      // If near start point, close loop
+      if (isNearStartPoint && coordinates.length >= 3) {
+        setIsDrawing(false);
+        clearRubberband();
+        return;
+      }
 
       const newPoint: [number, number] = [e.lngLat.lng, e.lngLat.lat];
       const newCoords = [...coordinates, newPoint];
       pushHistory(newCoords);
     };
 
-    const handleMouseMove = (e: MapMouseEvent) => {
-      if (isDrawing && coordinates.length > 0) {
-        setCursorPos([e.lngLat.lng, e.lngLat.lat]);
-      }
-    };
-
-    map.on("click", handleMapClick);
     map.on("mousemove", handleMouseMove);
+    map.on("click", handleMapClick);
 
     return () => {
-      map.off("click", handleMapClick);
       map.off("mousemove", handleMouseMove);
+      map.off("click", handleMapClick);
     };
-  }, [isDrawing, coordinates, pushHistory]);
+  }, [isDrawing, coordinates, isNearStartPoint, pushHistory]);
+
+  const clearRubberband = () => {
+    const map = mapRef.current;
+    if (!map) return;
+    const lineSrc = map.getSource("rubberband-source") as GeoJSONSource;
+    if (lineSrc) lineSrc.setData({ type: "FeatureCollection", features: [] });
+    const polySrc = map.getSource("rubberband-poly-source") as GeoJSONSource;
+    if (polySrc) polySrc.setData({ type: "FeatureCollection", features: [] });
+    setLiveDistanceFt(null);
+    setLiveBearingDeg(null);
+  };
+
+  useEffect(() => {
+    if (!isDrawing) {
+      clearRubberband();
+    }
+  }, [isDrawing]);
 
   // Zoom to Fit Plot
   const fitPlotBounds = () => {
     if (!mapRef.current || coordinates.length < 2) return;
     const bounds = new LngLatBounds(coordinates[0], coordinates[0]);
     coordinates.forEach((coord) => bounds.extend(coord));
-    mapRef.current.fitBounds(bounds, { padding: 60, maxZoom: 19 });
+    mapRef.current.fitBounds(bounds, {
+      padding: 80,
+      maxZoom: 19,
+      pitch: is3D ? 52 : 0,
+      duration: 1200,
+    });
   };
 
-  // Geolocation trigger with explicit permission
+  // Robust Multi-Tier Live Geolocation
   const handleCurrentLocation = () => {
-    if (!navigator.geolocation) {
-      setGeoError("Geolocation is not supported by your browser.");
-      return;
-    }
-
     setGeoLocating(true);
-    setGeoError(null);
+    setGeoNotice(null);
 
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setGeoLocating(false);
-        const { longitude, latitude } = pos.coords;
-        if (mapRef.current) {
-          mapRef.current.flyTo({
-            center: [longitude, latitude],
-            zoom: 18,
-            essential: true,
-          });
-        }
-      },
-      (err) => {
-        setGeoLocating(false);
-        if (err.code === err.PERMISSION_DENIED) {
-          setGeoError("Location permission denied. You can search your town or address above.");
-        } else {
-          setGeoError("Unable to retrieve current location. Please use search.");
-        }
-      },
-      { enableHighAccuracy: true, timeout: 8000 }
-    );
+    const applyLocation = (lat: number, lng: number, placeLabel: string) => {
+      setGeoLocating(false);
+      setGeoNotice(`Located at ${placeLabel}`);
+      setTimeout(() => setGeoNotice(null), 4000);
+
+      const map = mapRef.current;
+      if (!map) return;
+
+      // Clear previous location beacon
+      userLocationMarkerRef.current.forEach((m) => m.remove());
+      userLocationMarkerRef.current = [];
+
+      // Glowing Google Earth GPS radar beacon
+      const el = document.createElement("div");
+      el.className = "relative flex items-center justify-center";
+      el.innerHTML = `
+        <div class="absolute w-12 h-12 bg-cyan-400/30 rounded-full animate-ping"></div>
+        <div class="absolute w-8 h-8 bg-cyan-400/50 rounded-full animate-pulse"></div>
+        <div class="w-4 h-4 bg-cyan-400 border-2 border-white rounded-full shadow-lg relative z-10"></div>
+      `;
+
+      const beaconMarker = new Marker({ element: el })
+        .setLngLat([lng, lat])
+        .addTo(map);
+
+      userLocationMarkerRef.current.push(beaconMarker);
+
+      // Google Earth Cinematic Fly-To
+      map.flyTo({
+        center: [lng, lat],
+        zoom: 18,
+        pitch: is3D ? 55 : 30,
+        bearing: 15,
+        duration: 2500,
+        essential: true,
+      });
+    };
+
+    // Tier 1: Fast device GPS / WiFi position
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          applyLocation(pos.coords.latitude, pos.coords.longitude, "Device GPS Position");
+        },
+        async () => {
+          // Tier 2: IP-based edge geolocation fallback (works on desktop WiFi/Ethernet)
+          try {
+            const res = await fetch("/api/geolocation");
+            if (res.ok) {
+              const data = await res.json();
+              if (data && data.latitude && data.longitude) {
+                applyLocation(data.latitude, data.longitude, `${data.city}, ${data.region}`);
+                return;
+              }
+            }
+          } catch (e) {
+            // Ignore
+          }
+          setGeoLocating(false);
+          setGeoNotice("Location permission blocked. Please search your place or PIN above.");
+        },
+        { enableHighAccuracy: false, timeout: 4500, maximumAge: 300000 }
+      );
+    } else {
+      // Tier 3: Direct API
+      fetch("/api/geolocation")
+        .then((r) => r.json())
+        .then((data) => applyLocation(data.latitude, data.longitude, data.city))
+        .catch(() => {
+          setGeoLocating(false);
+          setGeoNotice("Unable to detect location. Please search your location.");
+        });
+    }
   };
 
-  // Fullscreen toggle
+  // Fullscreen Toggle
   const toggleFullscreen = () => {
     if (!mapContainerRef.current) return;
     if (!document.fullscreenElement) {
@@ -480,77 +806,197 @@ export default function PlotMapWorkspace({
     }
   };
 
-  // Clear Boundary
-  const handleClearBoundary = () => {
-    pushHistory([]);
-    setIsDrawing(false);
-    setIsEditMode(false);
-    setShowClearConfirm(false);
-  };
-
   const validation = validatePolygonCoordinates(coordinates);
 
   return (
     <div
-      className={`relative w-full h-full min-h-[500px] overflow-hidden rounded-3xl border border-warm-border shadow-card bg-charcoal ${className}`}
+      className={`relative w-full h-full min-h-[550px] overflow-hidden rounded-3xl border border-warm-border shadow-2xl bg-charcoal select-none ${className}`}
     >
       {/* MapLibre WebGL Canvas Container */}
-      <div ref={mapContainerRef} className="w-full h-full" />
+      <div
+        ref={mapContainerRef}
+        className={`w-full h-full ${isDrawing ? "cursor-crosshair" : "cursor-grab active:cursor-grabbing"}`}
+      />
 
-      {/* Top Left Floating Toolbar: Map Controls */}
-      <div className="absolute top-4 left-4 z-20 flex flex-col gap-2">
-        {/* Layer Mode Switcher */}
-        <div className="bg-white/95 backdrop-blur-md rounded-2xl p-1 border border-warm-border shadow-floating flex items-center gap-1">
+      {/* 1. Google Earth Dark Glass HUD Top Telemetry Bar */}
+      <div className="absolute top-4 left-4 right-4 z-20 pointer-events-none flex items-center justify-between gap-3">
+        {/* Left: Layer Mode Switcher & Coordinate Readout */}
+        <div className="pointer-events-auto flex items-center gap-2">
+          {/* Satellite / Street Switcher */}
+          <div className="bg-black/75 backdrop-blur-md rounded-2xl p-1 border border-white/15 shadow-2xl flex items-center gap-1">
+            <button
+              onClick={() => switchMapMode("satellite")}
+              className={`px-3 py-1.5 rounded-xl text-xs font-sans font-medium transition-all ${
+                mapMode === "satellite"
+                  ? "bg-cyan-500 text-black font-bold shadow-md"
+                  : "text-white/80 hover:text-white hover:bg-white/10"
+              }`}
+            >
+              Satellite
+            </button>
+            <button
+              onClick={() => switchMapMode("standard")}
+              className={`px-3 py-1.5 rounded-xl text-xs font-sans font-medium transition-all ${
+                mapMode === "standard"
+                  ? "bg-white text-black font-bold shadow-md"
+                  : "text-white/80 hover:text-white hover:bg-white/10"
+              }`}
+            >
+              Vector Map
+            </button>
+          </div>
+
+          {/* 3D / 2D Perspective Toggle */}
           <button
-            onClick={() => switchMapMode("satellite")}
-            className={`px-3 py-1.5 rounded-xl text-xs font-sans font-medium transition-all ${
-              mapMode === "satellite"
-                ? "bg-charcoal text-white shadow-sm"
-                : "text-charcoal/70 hover:text-charcoal hover:bg-warm-grey"
+            onClick={toggle3DMode}
+            className={`pointer-events-auto px-3 py-2 rounded-2xl text-xs font-mono font-bold border backdrop-blur-md shadow-2xl transition-all flex items-center gap-1.5 ${
+              is3D
+                ? "bg-cyan-500/20 text-cyan-300 border-cyan-400 shadow-cyan-500/30"
+                : "bg-black/75 text-white/80 border-white/15 hover:text-white hover:border-white/30"
             }`}
+            title="Toggle 3D Perspective Tilt"
           >
-            Satellite
-          </button>
-          <button
-            onClick={() => switchMapMode("standard")}
-            className={`px-3 py-1.5 rounded-xl text-xs font-sans font-medium transition-all ${
-              mapMode === "standard"
-                ? "bg-charcoal text-white shadow-sm"
-                : "text-charcoal/70 hover:text-charcoal hover:bg-warm-grey"
-            }`}
-          >
-            Street Map
+            <span>{is3D ? "3D Perspective (55°)" : "2D Survey (Top-Down)"}</span>
           </button>
         </div>
 
-        {/* Draw / Edit Action Buttons */}
-        <div className="bg-white/95 backdrop-blur-md rounded-2xl p-1.5 border border-warm-border shadow-floating flex items-center gap-1.5">
+        {/* Right: Live Google Earth Telemetry Ticker (Hidden on Mobile) */}
+        <div className="hidden md:flex items-center gap-2 bg-black/75 backdrop-blur-md px-3.5 py-2 rounded-2xl border border-white/15 text-[11px] font-mono text-white/70 shadow-2xl">
+          <span className="text-cyan-400 font-bold">GIS HUD</span>
+          <span>•</span>
+          <span>{mapTelemetry.lat.toFixed(5)}°N</span>
+          <span>{mapTelemetry.lng.toFixed(5)}°E</span>
+          <span>•</span>
+          <span>Pitch: {currentPitch.toFixed(0)}°</span>
+          <span>•</span>
+          <span>Z: {mapTelemetry.zoom.toFixed(1)}</span>
+        </div>
+      </div>
+
+      {/* 2. Top Right Floating Controls: 3D Compass, 3D Orbit, Zoom & Geolocation */}
+      <div className="absolute top-16 right-4 z-20 flex flex-col items-center gap-2.5">
+        {/* Google Earth 3D Compass Rose Button */}
+        <div className="bg-black/75 backdrop-blur-md rounded-2xl p-1 border border-white/15 shadow-2xl flex flex-col items-center">
+          <button
+            onClick={handleResetNorth}
+            className="w-10 h-10 rounded-xl relative flex items-center justify-center text-white/80 hover:text-white hover:bg-white/10 transition-colors group"
+            title="Reset to True North (Click to face North)"
+          >
+            <div
+              className="w-6 h-6 transition-transform duration-200 flex items-center justify-center"
+              style={{ transform: `rotate(${-currentBearing}deg)` }}
+            >
+              <Compass className="w-5 h-5 text-cyan-400 group-hover:scale-110 transition-transform" />
+            </div>
+            <span className="absolute top-0.5 text-[8px] font-mono font-bold text-red-500">
+              N
+            </span>
+          </button>
+        </div>
+
+        {/* 3D Cinematic Orbit Plot Button */}
+        {coordinates.length >= 3 && (
+          <button
+            onClick={toggleOrbit}
+            className={`p-2.5 rounded-2xl border backdrop-blur-md text-xs font-sans font-medium flex items-center justify-center shadow-2xl transition-all ${
+              isOrbiting
+                ? "bg-amber-500 text-black border-amber-300 font-bold animate-pulse shadow-amber-500/40"
+                : "bg-black/75 text-white/80 border-white/15 hover:text-white hover:border-cyan-400"
+            }`}
+            title={isOrbiting ? "Stop 3D Orbit" : "Cinematic 3D Fly-Around Plot"}
+          >
+            {isOrbiting ? (
+              <Square className="w-4 h-4 fill-current" />
+            ) : (
+              <Play className="w-4 h-4 text-cyan-400" />
+            )}
+          </button>
+        )}
+
+        {/* Zoom Controls */}
+        <div className="bg-black/75 backdrop-blur-md rounded-2xl p-1 border border-white/15 shadow-2xl flex flex-col items-center">
+          <button
+            onClick={() => mapRef.current?.zoomIn()}
+            className="p-2.5 rounded-xl text-white/80 hover:text-white hover:bg-white/10 transition-colors"
+            title="Zoom In"
+          >
+            <ZoomIn className="w-4 h-4" />
+          </button>
+          <div className="w-4 h-px bg-white/15" />
+          <button
+            onClick={() => mapRef.current?.zoomOut()}
+            className="p-2.5 rounded-xl text-white/80 hover:text-white hover:bg-white/10 transition-colors"
+            title="Zoom Out"
+          >
+            <ZoomOut className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Geolocation Button */}
+        <button
+          onClick={handleCurrentLocation}
+          disabled={geoLocating}
+          className={`p-2.5 rounded-2xl border backdrop-blur-md shadow-2xl transition-all ${
+            geoLocating
+              ? "bg-cyan-500/20 text-cyan-300 border-cyan-400 animate-spin"
+              : "bg-black/75 text-white/80 border-white/15 hover:text-white hover:border-cyan-400"
+          }`}
+          title="Detect Current Live Location (GPS / Network)"
+        >
+          <Locate className="w-4 h-4" />
+        </button>
+
+        {/* Fit Bounds */}
+        {coordinates.length >= 2 && (
+          <button
+            onClick={fitPlotBounds}
+            className="p-2.5 rounded-2xl bg-black/75 backdrop-blur-md border border-white/15 text-white/80 hover:text-white hover:border-cyan-400 shadow-2xl transition-colors"
+            title="Fit Plot to View"
+          >
+            <Crosshair className="w-4 h-4 text-cyan-400" />
+          </button>
+        )}
+
+        {/* Fullscreen */}
+        <button
+          onClick={toggleFullscreen}
+          className="p-2.5 rounded-2xl bg-black/75 backdrop-blur-md border border-white/15 text-white/80 hover:text-white hover:border-cyan-400 shadow-2xl transition-colors"
+          title={isFullscreen ? "Exit Fullscreen" : "Fullscreen View"}
+        >
+          {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+        </button>
+      </div>
+
+      {/* 3. Measurement Tool Action Palette (Bottom Left) */}
+      <div className="absolute bottom-6 left-4 z-20 flex flex-wrap items-center gap-2">
+        <div className="bg-black/80 backdrop-blur-md rounded-2xl p-1.5 border border-white/15 shadow-2xl flex items-center gap-1.5">
+          {/* Draw / Finish */}
           <button
             onClick={() => {
               setIsDrawing((prev) => !prev);
               if (!isDrawing) setIsEditMode(false);
             }}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-sans font-medium transition-all ${
+            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-sans font-medium transition-all ${
               isDrawing
-                ? "bg-copper text-white shadow-sm"
-                : "text-charcoal/80 hover:bg-warm-grey hover:text-charcoal"
+                ? "bg-cyan-500 text-black font-bold shadow-lg shadow-cyan-500/30 animate-pulse"
+                : "text-white/90 hover:bg-white/15 hover:text-white"
             }`}
-            title="Click on the map to place corner markers"
           >
             <Pencil className="w-3.5 h-3.5" />
-            <span>{isDrawing ? "Finish Drawing" : "Draw Plot"}</span>
+            <span>{isDrawing ? "Finish Measuring" : "Measure / Draw Plot"}</span>
           </button>
 
+          {/* Edit Handles */}
           {coordinates.length >= 3 && (
             <button
               onClick={() => {
                 setIsEditMode((prev) => !prev);
                 if (!isEditMode) setIsDrawing(false);
               }}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-sans font-medium transition-all ${
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-sans font-medium transition-all ${
                 isEditMode
-                  ? "bg-charcoal text-white shadow-sm"
-                  : "text-charcoal/80 hover:bg-warm-grey hover:text-charcoal"
+                  ? "bg-white text-black font-bold shadow-md"
+                  : "text-white/80 hover:bg-white/15 hover:text-white"
               }`}
               title="Drag corner handles to fine-tune shape"
             >
@@ -560,11 +1006,11 @@ export default function PlotMapWorkspace({
           )}
 
           {/* Undo / Redo */}
-          <div className="flex items-center border-l border-warm-border pl-1 ml-0.5">
+          <div className="flex items-center border-l border-white/15 pl-1 ml-0.5">
             <button
               onClick={handleUndo}
               disabled={historyIdx <= 0}
-              className="p-1.5 rounded-lg text-charcoal/60 hover:text-charcoal hover:bg-warm-grey disabled:opacity-30 disabled:hover:bg-transparent"
+              className="p-2 rounded-lg text-white/70 hover:text-white hover:bg-white/15 disabled:opacity-30"
               title="Undo last point"
             >
               <RotateCcw className="w-3.5 h-3.5" />
@@ -572,7 +1018,7 @@ export default function PlotMapWorkspace({
             <button
               onClick={handleRedo}
               disabled={historyIdx >= history.length - 1}
-              className="p-1.5 rounded-lg text-charcoal/60 hover:text-charcoal hover:bg-warm-grey disabled:opacity-30 disabled:hover:bg-transparent"
+              className="p-2 rounded-lg text-white/70 hover:text-white hover:bg-white/15 disabled:opacity-30"
               title="Redo action"
             >
               <RotateCw className="w-3.5 h-3.5" />
@@ -583,7 +1029,7 @@ export default function PlotMapWorkspace({
           {coordinates.length > 0 && (
             <button
               onClick={() => setShowClearConfirm(true)}
-              className="p-1.5 rounded-lg text-red-500/80 hover:text-red-600 hover:bg-red-50 transition-colors"
+              className="p-2 rounded-lg text-rose-400 hover:text-rose-300 hover:bg-rose-500/20 transition-colors"
               title="Clear plot boundary"
             >
               <Trash2 className="w-3.5 h-3.5" />
@@ -592,117 +1038,78 @@ export default function PlotMapWorkspace({
         </div>
       </div>
 
-      {/* Top Right Floating Toolbar: Zoom & View Navigation */}
-      <div className="absolute top-4 right-4 z-20 flex flex-col gap-2">
-        <div className="bg-white/95 backdrop-blur-md rounded-2xl p-1 border border-warm-border shadow-floating flex flex-col items-center">
-          <button
-            onClick={() => mapRef.current?.zoomIn()}
-            className="p-2 rounded-xl text-charcoal/70 hover:text-charcoal hover:bg-warm-grey transition-colors"
-            title="Zoom In"
-          >
-            <ZoomIn className="w-4 h-4" />
-          </button>
-          <div className="w-4 h-px bg-warm-border" />
-          <button
-            onClick={() => mapRef.current?.zoomOut()}
-            className="p-2 rounded-xl text-charcoal/70 hover:text-charcoal hover:bg-warm-grey transition-colors"
-            title="Zoom Out"
-          >
-            <ZoomOut className="w-4 h-4" />
-          </button>
-        </div>
-
-        <div className="bg-white/95 backdrop-blur-md rounded-2xl p-1 border border-warm-border shadow-floating flex flex-col items-center gap-1">
-          <button
-            onClick={handleCurrentLocation}
-            disabled={geoLocating}
-            className={`p-2 rounded-xl transition-colors ${
-              geoLocating
-                ? "text-copper animate-spin"
-                : "text-charcoal/70 hover:text-charcoal hover:bg-warm-grey"
-            }`}
-            title="Fly to Current Location"
-          >
-            <Locate className="w-4 h-4" />
-          </button>
-
-          {coordinates.length >= 2 && (
-            <button
-              onClick={fitPlotBounds}
-              className="p-2 rounded-xl text-charcoal/70 hover:text-charcoal hover:bg-warm-grey transition-colors"
-              title="Fit Plot in View"
-            >
-              <Compass className="w-4 h-4" />
-            </button>
-          )}
-
-          <button
-            onClick={toggleFullscreen}
-            className="p-2 rounded-xl text-charcoal/70 hover:text-charcoal hover:bg-warm-grey transition-colors"
-            title={isFullscreen ? "Exit Fullscreen" : "Fullscreen View"}
-          >
-            {isFullscreen ? (
-              <Minimize2 className="w-4 h-4" />
+      {/* 4. Google Earth Dynamic Reticle Floating Measurement Badge (Follows Mouse Cursor while Drawing) */}
+      {isDrawing && mouseScreenPos && (
+        <div
+          className="pointer-events-none absolute z-30 transform -translate-x-1/2 -translate-y-12 transition-transform duration-75"
+          style={{ left: mouseScreenPos.x, top: mouseScreenPos.y }}
+        >
+          <div className="bg-black/90 backdrop-blur-md px-3 py-1.5 rounded-xl border border-cyan-400/60 shadow-2xl text-[11px] font-mono text-white flex items-center gap-2 whitespace-nowrap">
+            {isNearStartPoint ? (
+              <span className="text-cyan-300 font-bold flex items-center gap-1 animate-pulse">
+                <Check className="w-3.5 h-3.5" />
+                <span>Snap to Close Boundary Loop!</span>
+              </span>
+            ) : liveDistanceFt !== null ? (
+              <>
+                <span className="text-cyan-300 font-bold">{liveDistanceFt.toFixed(1)} ft</span>
+                {liveBearingDeg !== null && (
+                  <span className="text-white/60">∠{liveBearingDeg.toFixed(0)}°</span>
+                )}
+                <span className="text-white/40">• Point #{coordinates.length + 1}</span>
+              </>
             ) : (
-              <Maximize2 className="w-4 h-4" />
+              <span className="text-cyan-300">Click to place Corner #1</span>
             )}
-          </button>
-        </div>
-      </div>
-
-      {/* Bottom Center Prompt or Drawing Hint */}
-      {isDrawing && (
-        <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 z-20 bg-charcoal/90 text-white backdrop-blur-md px-4 py-2 rounded-full border border-white/20 text-xs font-sans shadow-floating flex items-center gap-2 animate-bounce">
-          <Pencil className="w-3.5 h-3.5 text-copper" />
-          <span>
-            {coordinates.length === 0
-              ? "Click on the satellite map to place the 1st corner of your property."
-              : coordinates.length < 3
-              ? `Place corner #${coordinates.length + 1} along the boundary.`
-              : "Click P1 to close boundary, or click next corner."}
-          </span>
-          {coordinates.length >= 3 && (
-            <button
-              onClick={() => setIsDrawing(false)}
-              className="ml-2 px-2.5 py-0.5 rounded-full bg-copper text-white text-[11px] font-semibold hover:bg-copper-dark transition-colors"
-            >
-              Done
-            </button>
-          )}
-        </div>
-      )}
-
-      {/* Geometry Validation Warning */}
-      {!validation.valid && coordinates.length >= 3 && (
-        <div className="absolute bottom-6 left-6 right-6 sm:left-auto sm:right-6 sm:max-w-md z-20 bg-red-50/95 border border-red-200 text-red-800 backdrop-blur-md p-3.5 rounded-2xl shadow-floating flex items-start gap-2.5">
-          <AlertTriangle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
-          <div className="text-xs font-sans">
-            <span className="font-semibold">Invalid Boundary: </span>
-            {validation.error}
           </div>
         </div>
       )}
 
-      {/* Geolocation Error Toast */}
-      {geoError && (
-        <div className="absolute top-20 left-1/2 transform -translate-x-1/2 z-30 bg-amber-50 border border-amber-200 text-amber-900 px-4 py-2 rounded-2xl shadow-floating text-xs font-sans flex items-center gap-2">
-          <Info className="w-4 h-4 text-amber-600 shrink-0" />
-          <span>{geoError}</span>
+      {/* 5. Bottom Center Orbiting Indicator / Instructions */}
+      {isOrbiting && (
+        <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 z-20 bg-amber-500/90 text-black px-4 py-2 rounded-full font-sans text-xs font-bold shadow-2xl flex items-center gap-2 backdrop-blur-md animate-bounce">
+          <Play className="w-3.5 h-3.5 fill-current" />
+          <span>3D Cinematic Plot Inspection in Progress</span>
           <button
-            onClick={() => setGeoError(null)}
-            className="ml-2 font-bold hover:text-amber-700"
+            onClick={toggleOrbit}
+            className="ml-2 px-2.5 py-0.5 rounded-full bg-black text-white text-[10px] font-mono font-bold"
+          >
+            Stop
+          </button>
+        </div>
+      )}
+
+      {/* 6. Geolocation Notification Toast */}
+      {geoNotice && (
+        <div className="absolute top-20 left-1/2 transform -translate-x-1/2 z-30 bg-cyan-950/90 border border-cyan-400/60 text-cyan-200 px-4 py-2 rounded-2xl shadow-2xl text-xs font-sans flex items-center gap-2 backdrop-blur-md">
+          <Locate className="w-4 h-4 text-cyan-400 shrink-0" />
+          <span>{geoNotice}</span>
+          <button
+            onClick={() => setGeoNotice(null)}
+            className="ml-2 font-bold hover:text-white"
           >
             ×
           </button>
         </div>
       )}
 
-      {/* Clear Confirmation Modal */}
+      {/* 7. Invalid Boundary Warning */}
+      {!validation.valid && coordinates.length >= 3 && (
+        <div className="absolute bottom-20 left-4 right-4 sm:left-auto sm:right-4 sm:max-w-md z-20 bg-rose-950/90 border border-rose-500/60 text-rose-200 backdrop-blur-md p-3.5 rounded-2xl shadow-2xl flex items-start gap-2.5">
+          <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+          <div className="text-xs font-sans">
+            <span className="font-semibold text-white">Boundary Loop Error: </span>
+            {validation.error}
+          </div>
+        </div>
+      )}
+
+      {/* 8. Clear Confirmation Dialog */}
       {showClearConfirm && (
-        <div className="absolute inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+        <div className="absolute inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl p-6 max-w-sm w-full border border-warm-border shadow-2xl space-y-4">
             <h3 className="text-lg font-serif text-charcoal font-normal">
-              Clear Property Boundary?
+              Clear Measured Parcel?
             </h3>
             <p className="text-xs text-charcoal/70 font-sans leading-relaxed">
               This will remove all {coordinates.length} marked corner points and
@@ -716,8 +1123,13 @@ export default function PlotMapWorkspace({
                 Cancel
               </button>
               <button
-                onClick={handleClearBoundary}
-                className="px-4 py-2 rounded-xl text-xs font-sans font-medium bg-red-600 text-white hover:bg-red-700 transition-colors"
+                onClick={() => {
+                  pushHistory([]);
+                  setIsDrawing(false);
+                  setIsEditMode(false);
+                  setShowClearConfirm(false);
+                }}
+                className="px-4 py-2 rounded-xl text-xs font-sans font-medium bg-rose-600 text-white hover:bg-rose-700 transition-colors shadow-sm"
               >
                 Clear Boundary
               </button>
@@ -728,4 +1140,3 @@ export default function PlotMapWorkspace({
     </div>
   );
 }
-
