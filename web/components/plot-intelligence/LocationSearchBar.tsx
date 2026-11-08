@@ -18,6 +18,8 @@ interface LocationSearchBarProps {
 }
 
 const QUICK_HUBS = [
+  { name: "East Desam", lat: 10.1287, lng: 76.3493 },
+  { name: "Aluva", lat: 10.1076, lng: 76.3516 },
   { name: "Kochi", lat: 9.9312, lng: 76.2673 },
   { name: "Trivandrum", lat: 8.5241, lng: 76.9366 },
   { name: "Kozhikode", lat: 11.2588, lng: 75.7804 },

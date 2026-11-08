@@ -16,6 +16,22 @@ const CACHE_TTL_MS = 1000 * 60 * 60; // 1 hour
 // Instant pre-seeded major locations in South India / Kerala
 const PRESEEDED_LOCATIONS: GeocodeResult[] = [
   {
+    placeId: "loc-east-desam",
+    name: "East Desam (Desom, Aluva)",
+    displayName: "East Desam, Desom, Aluva, Ernakulam District, Kerala 683102",
+    lat: 10.1287,
+    lng: 76.3493,
+    type: "locality",
+  },
+  {
+    placeId: "loc-aluva",
+    name: "Aluva",
+    displayName: "Aluva Municipality, Ernakulam District, Kerala",
+    lat: 10.1076,
+    lng: 76.3516,
+    type: "city",
+  },
+  {
     placeId: "loc-kochi",
     name: "Kochi (Cochin)",
     displayName: "Kochi, Ernakulam District, Kerala, India",
@@ -48,11 +64,19 @@ const PRESEEDED_LOCATIONS: GeocodeResult[] = [
     type: "city",
   },
   {
-    placeId: "loc-wayanad",
-    name: "Wayanad (Kalpetta)",
-    displayName: "Kalpetta, Wayanad District, Kerala, India",
-    lat: 11.6103,
-    lng: 76.0827,
+    placeId: "loc-angamaly",
+    name: "Angamaly",
+    displayName: "Angamaly, Ernakulam District, Kerala",
+    lat: 10.1960,
+    lng: 76.3860,
+    type: "city",
+  },
+  {
+    placeId: "loc-kalamassery",
+    name: "Kalamassery",
+    displayName: "Kalamassery, Kochi, Kerala",
+    lat: 10.0538,
+    lng: 76.3213,
     type: "city",
   },
   {
@@ -64,11 +88,35 @@ const PRESEEDED_LOCATIONS: GeocodeResult[] = [
     type: "city",
   },
   {
+    placeId: "loc-wayanad",
+    name: "Wayanad (Kalpetta)",
+    displayName: "Kalpetta, Wayanad District, Kerala, India",
+    lat: 11.6103,
+    lng: 76.0827,
+    type: "city",
+  },
+  {
     placeId: "loc-alappuzha",
     name: "Alappuzha (Alleppey)",
     displayName: "Alappuzha, Kerala, India",
     lat: 9.4981,
     lng: 76.3388,
+    type: "city",
+  },
+  {
+    placeId: "loc-kollam",
+    name: "Kollam",
+    displayName: "Kollam, Kerala, India",
+    lat: 8.8932,
+    lng: 76.6141,
+    type: "city",
+  },
+  {
+    placeId: "loc-palakkad",
+    name: "Palakkad",
+    displayName: "Palakkad, Kerala, India",
+    lat: 10.7867,
+    lng: 76.6548,
     type: "city",
   },
   {
@@ -125,17 +173,31 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ results: cached.data });
   }
 
-  // Check pre-seeded matches first
-  const preseededMatches = PRESEEDED_LOCATIONS.filter(
-    (loc) =>
-      loc.name.toLowerCase().includes(cacheKey) ||
-      loc.displayName.toLowerCase().includes(cacheKey)
-  );
+  // Check pre-seeded matches first (supports fuzzy terms like 'desam', 'desom', 'aluva', etc.)
+  const preseededMatches = PRESEEDED_LOCATIONS.filter((loc) => {
+    const locName = loc.name.toLowerCase();
+    const locDisplay = loc.displayName.toLowerCase();
+    if (locName.includes(cacheKey) || locDisplay.includes(cacheKey)) return true;
+    if (
+      (cacheKey.includes("desam") || cacheKey.includes("desom")) &&
+      (locName.includes("desam") || locName.includes("desom"))
+    ) {
+      return true;
+    }
+    return false;
+  });
 
   try {
     // OpenStreetMap Nominatim request with compliance
     const nominatimUrl = new URL("https://nominatim.openstreetmap.org/search");
-    nominatimUrl.searchParams.set("q", q);
+    
+    // Normalize known Kerala variant transliterations (e.g. East Desam -> Desom Aluva)
+    let queryToSearch = q;
+    if (cacheKey.includes("desam") || cacheKey.includes("desom")) {
+      queryToSearch = "Desom, Aluva, Kerala";
+    }
+
+    nominatimUrl.searchParams.set("q", queryToSearch);
     nominatimUrl.searchParams.set("format", "json");
     nominatimUrl.searchParams.set("addressdetails", "1");
     nominatimUrl.searchParams.set("limit", "6");

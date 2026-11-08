@@ -653,15 +653,27 @@ export default function PlotMapWorkspace({
     setGeoLocating(true);
     setGeoNotice(null);
 
-    const applyLocation = (lat: number, lng: number, placeLabel: string, accuracyM?: number) => {
+    const applyLocation = (
+      lat: number,
+      lng: number,
+      placeLabel: string,
+      accuracyM?: number,
+      isIpFallback = false
+    ) => {
       setGeoLocating(false);
 
-      const accInfo = accuracyM && accuracyM <= 50
-        ? `GPS (±${Math.round(accuracyM)}m)`
-        : "Network/Wi-Fi";
-
-      setGeoNotice(`📍 Located near ${placeLabel} (${accInfo}). Drag pin to your exact land.`);
-      setTimeout(() => setGeoNotice(null), 6000);
+      if (isIpFallback) {
+        setGeoNotice(
+          "⚠️ Desktop broadband IP routed via Kochi exchange. If your property is in East Desam or Aluva, search it above or click the 'East Desam' button to jump directly!"
+        );
+      } else {
+        const accInfo =
+          accuracyM && accuracyM <= 50
+            ? `GPS (±${Math.round(accuracyM)}m)`
+            : "Network Wi-Fi";
+        setGeoNotice(`📍 Located near ${placeLabel} (${accInfo}). Drag pin to your exact land.`);
+      }
+      setTimeout(() => setGeoNotice(null), 8000);
 
       const map = mapRef.current;
       if (!map) return;
@@ -674,7 +686,13 @@ export default function PlotMapWorkspace({
         duration: 1500,
       });
 
-      placeLocationPin(lat, lng, placeLabel);
+      placeLocationPin(
+        lat,
+        lng,
+        isIpFallback
+          ? "Broadband Gateway (Search East Desam above to jump)"
+          : placeLabel
+      );
     };
 
     // Check Permissions Policy first to silence iframe/webview Chrome violations
@@ -691,7 +709,13 @@ export default function PlotMapWorkspace({
         if (res.ok) {
           const data = await res.json();
           if (data?.latitude && data?.longitude) {
-            applyLocation(data.latitude, data.longitude, `${data.city || "Kerala"}, ${data.region || "India"}`);
+            applyLocation(
+              data.latitude,
+              data.longitude,
+              `${data.city || "Kerala"}, ${data.region || "India"}`,
+              5000,
+              true
+            );
             return;
           }
         }
@@ -702,13 +726,25 @@ export default function PlotMapWorkspace({
         if (pubRes.ok) {
           const pubData = await pubRes.json();
           if (pubData?.latitude && pubData?.longitude) {
-            applyLocation(pubData.latitude, pubData.longitude, `${pubData.cityName || "Kerala"}, ${pubData.regionName || "India"}`);
+            applyLocation(
+              pubData.latitude,
+              pubData.longitude,
+              `${pubData.cityName || "Kerala"}, ${pubData.regionName || "India"}`,
+              5000,
+              true
+            );
             return;
           }
         }
       } catch {}
 
-      applyLocation(KERALA_DEFAULT_CENTER[1], KERALA_DEFAULT_CENTER[0], "Kerala Survey Hub (Kochi)");
+      applyLocation(
+        KERALA_DEFAULT_CENTER[1],
+        KERALA_DEFAULT_CENTER[0],
+        "Kerala Survey Hub (Kochi)",
+        10000,
+        true
+      );
     };
 
     if (isPolicyBlocked || !navigator.geolocation) {
@@ -719,13 +755,25 @@ export default function PlotMapWorkspace({
     // Try High-Accuracy GPS First
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        applyLocation(pos.coords.latitude, pos.coords.longitude, "Your Location", pos.coords.accuracy);
+        applyLocation(
+          pos.coords.latitude,
+          pos.coords.longitude,
+          "Your Location",
+          pos.coords.accuracy,
+          false
+        );
       },
       () => {
         // Fallback to low-power standard accuracy
         navigator.geolocation.getCurrentPosition(
           (pos) => {
-            applyLocation(pos.coords.latitude, pos.coords.longitude, "Device Location", pos.coords.accuracy);
+            applyLocation(
+              pos.coords.latitude,
+              pos.coords.longitude,
+              "Device Location",
+              pos.coords.accuracy,
+              false
+            );
           },
           () => {
             queryIpLocation();
