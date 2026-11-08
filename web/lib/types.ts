@@ -25,6 +25,16 @@ export interface ArchitecturalProject {
     plotLength: string;
     setbacks: string;
   };
+  bathrooms?: number;
+  builtUpAreaSqft?: number;
+  buildingFootprintSqft?: number;
+  minimumPlotAreaCent?: number;
+  minimumFrontageFt?: number;
+  minimumDepthFt?: number;
+  requiredParking?: number;
+  estimatedConstructionCost?: number;
+  requiredAccessWidthFt?: number;
+  applicableRegulations?: string;
   floorPlanImage?: string;
   featured?: boolean;
   status?: "published" | "draft";
@@ -142,4 +152,100 @@ export interface JournalArticle {
   image: string;
   summary: string;
 }
+
+export type KeralaLandUnit = "cent" | "sqft" | "sqm" | "acre" | "hectare";
+
+export interface BoundarySegment {
+  index: number;
+  label: string; // e.g. "Side A", "Side B"
+  lengthMeters: number;
+  lengthFeet: number;
+  startPoint: [number, number]; // [lng, lat]
+  endPoint: [number, number]; // [lng, lat]
+  bearingDeg: number;
+}
+
+export interface PlotCornerPoint {
+  index: number;
+  label: string;
+  coordinates: [number, number]; // [lng, lat]
+}
+
+export interface PlotAnalysisData {
+  geojson: GeoJSON.Feature<GeoJSON.Polygon>;
+  areaSqMeters: number;
+  areaSqFt: number;
+  areaCents: number;
+  areaAcres: number;
+  areaHectares: number;
+  perimeterMeters: number;
+  perimeterFeet: number;
+  segments: BoundarySegment[];
+  corners: PlotCornerPoint[];
+  roadFacingSegmentIndex: number;
+  frontageFeet: number;
+  depthFeet: number;
+  aspectRatio: number; // frontage to depth ratio
+  shapeCategory: "regular" | "irregular" | "narrow" | "corner";
+  center: [number, number]; // [lng, lat]
+  boundingBox: [number, number, number, number]; // [minLng, minLat, maxLng, maxLat]
+  locationName?: string;
+  userInputs?: {
+    roadAccessWidthFt?: number;
+    preferredFloors?: number;
+    preferredBedrooms?: number;
+    preferredStyle?: string;
+    parkingCount?: number;
+  };
+}
+
+export interface CompatibilityCheckItem {
+  id: string;
+  label: string;
+  status: "pass" | "warn" | "fail";
+  detail: string;
+}
+
+export interface PlanCompatibilityResult {
+  project: ArchitecturalProject;
+  category: "good" | "possible" | "not_suitable";
+  score: number; // 0 to 100
+  checklist: CompatibilityCheckItem[];
+  areaRatio: number; // plot area / required plot area
+  footprintFits: boolean;
+  frontageFits: boolean;
+  depthFits: boolean;
+  requiredSetbacks: {
+    frontFt: number;
+    rearFt: number;
+    sidesFt: number;
+  };
+  buildableEnvelope: {
+    widthFt: number;
+    lengthFt: number;
+    areaSqFt: number;
+  };
+}
+
+export interface SavedPlotRecord {
+  id: string;
+  user_id: string;
+  name: string;
+  geojson: string;
+  area_cents: number;
+  area_sqft: number;
+  area_sqm: number;
+  perimeter_m: number;
+  perimeter_ft: number;
+  frontage_ft?: number;
+  depth_ft?: number;
+  road_side_index: number;
+  location_name?: string;
+  center_lat?: number;
+  center_lng?: number;
+  metadata?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
 

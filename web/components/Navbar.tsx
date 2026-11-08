@@ -31,6 +31,7 @@ export default function Navbar({ onOpenSellerModal, onOpenSearch }: NavbarProps)
   // Public navigation: Dashboard is protected and accessible only with an account
   const navLinks = [
     { name: "Explore Designs", href: "/designs", active: pathname === "/designs" },
+    { name: "Plot Intelligence", href: "/plot-intelligence", active: pathname === "/plot-intelligence", isNew: true },
     { name: "Styles", href: "/styles", active: pathname === "/styles" },
     { name: "Architects", href: "/architects", active: pathname === "/architects" },
     { name: "How It Works", href: "/how-it-works", active: pathname === "/how-it-works" },
@@ -64,11 +65,16 @@ export default function Navbar({ onOpenSellerModal, onOpenSearch }: NavbarProps)
             <Link
               key={link.name}
               href={link.href}
-              className={`py-1 relative group transition-colors ${
+              className={`py-1 relative group transition-colors flex items-center ${
                 link.active ? "text-copper font-semibold" : "text-charcoal/80 hover:text-copper"
               }`}
             >
-              {link.name}
+              <span>{link.name}</span>
+              {link.isNew && (
+                <span className="ml-1.5 px-1.5 py-0.2 rounded-full text-[9px] bg-copper-subtle text-copper font-mono uppercase font-bold border border-copper/30">
+                  GIS
+                </span>
+              )}
               <span
                 className={`absolute bottom-0 left-0 h-[1.5px] bg-copper transition-all duration-300 ${
                   link.active ? "w-full" : "w-0 group-hover:w-full"
@@ -186,11 +192,16 @@ export default function Navbar({ onOpenSellerModal, onOpenSearch }: NavbarProps)
                 key={link.name}
                 href={link.href}
                 onClick={() => setMobileMenuOpen(false)}
-                className={`py-1 transition-colors ${
+                className={`py-1 transition-colors flex items-center justify-between ${
                   link.active ? "text-copper font-semibold" : "hover:text-copper"
                 }`}
               >
-                {link.name}
+                <span>{link.name}</span>
+                {link.isNew && (
+                  <span className="px-2 py-0.5 rounded-full text-[9px] bg-copper-subtle text-copper font-mono uppercase font-bold border border-copper/30">
+                    GIS Tool
+                  </span>
+                )}
               </Link>
             ))}
 

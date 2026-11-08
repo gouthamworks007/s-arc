@@ -54,13 +54,19 @@ export default function SmartSearch({ onSearch }: SmartSearchProps) {
               Tell us about your land and get architectural designs that actually fit your topography, orientation, and building bylaws.
             </p>
 
-            <a
-              href="#explore"
-              className="inline-flex items-center gap-2 text-[13px] font-medium text-charcoal hover:text-copper transition-colors group"
-            >
-              <span>Advanced Search</span>
-              <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
-            </a>
+            <div className="pt-2 space-y-3">
+              <a
+                href="/plot-intelligence"
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-copper text-white text-xs font-sans font-medium hover:bg-copper-dark transition-all shadow-sm group"
+              >
+                <Compass className="w-4 h-4 text-white" />
+                <span>Launch Satellite Plot Intelligence</span>
+                <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
+              </a>
+              <div className="text-[11px] text-charcoal/50 font-sans">
+                Mark your property corners on live satellite imagery & calculate Cents.
+              </div>
+            </div>
           </div>
 
           {/* Right Column: Search Card + Interactive Plot Diagram */}

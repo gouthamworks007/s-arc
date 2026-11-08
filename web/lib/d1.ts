@@ -198,6 +198,7 @@ const FALLBACK_INQUIRIES: any[] = [
 ];
 
 const FALLBACK_AUDIT_LOGS: any[] = [];
+const FALLBACK_SAVED_PLOTS: any[] = [];
 
 /**
  * Access the Cloudflare D1 Native binding if available
@@ -381,6 +382,19 @@ function queryFallbackStore<T>(sql: string, params: any[]): T[] {
     return [...FALLBACK_AUDIT_LOGS] as unknown as T[];
   }
 
+  if (normalized.includes("from saved_plots")) {
+    let rows = [...FALLBACK_SAVED_PLOTS];
+    if (normalized.includes("where user_id =") && params && params.length > 0) {
+      const uid = String(params[0]);
+      rows = rows.filter((p) => p.user_id === uid);
+    }
+    if (normalized.includes("where id =") && params && params.length > 0) {
+      const pid = String(params[0]);
+      rows = rows.filter((p) => p.id === pid);
+    }
+    return rows as unknown as T[];
+  }
+
   return [] as T[];
 }
 
@@ -467,6 +481,49 @@ function mutateFallbackStore(
       created_at: new Date().toISOString(),
     });
     return { success: true, changes: 1 };
+  }
+
+  if (normalized.startsWith("insert into saved_plots") || normalized.startsWith("insert or replace into saved_plots")) {
+    if (params && params.length >= 7) {
+      const plotObj = {
+        id: params[0] || `plot-${Date.now()}`,
+        user_id: params[1],
+        name: params[2],
+        geojson: params[3],
+        area_cents: params[4],
+        area_sqft: params[5],
+        area_sqm: params[6],
+        perimeter_m: params[7],
+        perimeter_ft: params[8],
+        frontage_ft: params[9] || null,
+        depth_ft: params[10] || null,
+        road_side_index: params[11] || 0,
+        location_name: params[12] || "Kerala, India",
+        center_lat: params[13] || null,
+        center_lng: params[14] || null,
+        metadata: params[15] || "{}",
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      const existingIdx = FALLBACK_SAVED_PLOTS.findIndex((p) => p.id === plotObj.id);
+      if (existingIdx >= 0) {
+        FALLBACK_SAVED_PLOTS[existingIdx] = plotObj;
+      } else {
+        FALLBACK_SAVED_PLOTS.unshift(plotObj);
+      }
+      return { success: true, changes: 1 };
+    }
+  }
+
+  if (normalized.startsWith("delete from saved_plots")) {
+    if (normalized.includes("where id =") && params && params.length > 0) {
+      const id = String(params[0]);
+      const idx = FALLBACK_SAVED_PLOTS.findIndex((p) => p.id === id);
+      if (idx >= 0) {
+        FALLBACK_SAVED_PLOTS.splice(idx, 1);
+        return { success: true, changes: 1 };
+      }
+    }
   }
 
   return { success: true, changes: 0 };
