@@ -19,19 +19,14 @@ import {
   RotateCw,
   Trash2,
   Check,
-  Compass,
   AlertTriangle,
   Locate,
   ZoomIn,
   ZoomOut,
   Pencil,
   Move,
-  Eye,
   Info,
-  Play,
-  Square,
   Crosshair,
-  Sparkles,
 } from "lucide-react";
 import {
   buildMapStyle,
@@ -65,19 +60,15 @@ export default function PlotMapWorkspace({
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
 
-  // Map Modes & 3D Google Earth Perspective
+  // Map Modes (Satellite vs Standard Top-Down Survey)
   const [mapMode, setMapMode] = useState<MapMode>("satellite");
-  const [is3D, setIs3D] = useState(false);
-  const [isOrbiting, setIsOrbiting] = useState(false);
-  const [currentBearing, setCurrentBearing] = useState(0);
-  const [currentPitch, setCurrentPitch] = useState(0);
   const [mapTelemetry, setMapTelemetry] = useState({
     lat: KERALA_DEFAULT_CENTER[1],
     lng: KERALA_DEFAULT_CENTER[0],
     zoom: KERALA_DEFAULT_ZOOM,
   });
 
-  // Drawing & Precision Reticle
+  // Drawing & Precision Measuring Reticle
   const [isDrawing, setIsDrawing] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [cursorPos, setCursorPos] = useState<[number, number] | null>(null);
@@ -99,7 +90,6 @@ export default function PlotMapWorkspace({
   const segmentMarkersRef = useRef<Marker[]>([]);
   const midpointMarkersRef = useRef<Marker[]>([]);
   const userLocationMarkerRef = useRef<Marker[]>([]);
-  const orbitAnimRef = useRef<number | null>(null);
 
   // Push to undo/redo history
   const pushHistory = useCallback(
@@ -131,7 +121,7 @@ export default function PlotMapWorkspace({
     }
   };
 
-  // Initialize MapLibre with 3D capabilities
+  // Initialize MapLibre locked strictly to 2D Top-Down View (no rotation, no pitch)
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return;
 
@@ -143,10 +133,16 @@ export default function PlotMapWorkspace({
       center: KERALA_DEFAULT_CENTER,
       zoom: KERALA_DEFAULT_ZOOM,
       pitch: 0,
-      maxPitch: 75,
+      maxPitch: 0, // Strictly locked to top-down 0°
       bearing: 0,
+      dragRotate: false, // Disable right-click & ctrl-drag rotation
+      pitchWithRotate: false,
+      touchPitch: false, // Disable mobile touch pitch
       attributionControl: false,
     });
+
+    // Disable touch rotation gestures
+    map.touchZoomRotate.disableRotation();
 
     map.addControl(
       new AttributionControl({ compact: true }),
@@ -218,7 +214,6 @@ export default function PlotMapWorkspace({
           data: { type: "FeatureCollection", features: [] },
         });
 
-        // Live Measuring Guide Line
         map.addLayer({
           id: "rubberband-line-glow",
           type: "line",
@@ -272,75 +267,13 @@ export default function PlotMapWorkspace({
       });
     });
 
-    map.on("rotate", () => {
-      setCurrentBearing(map.getBearing());
-    });
-
-    map.on("pitch", () => {
-      setCurrentPitch(map.getPitch());
-    });
-
     mapRef.current = map;
 
     return () => {
-      if (orbitAnimRef.current) cancelAnimationFrame(orbitAnimRef.current);
       map.remove();
       mapRef.current = null;
     };
   }, []);
-
-  // 3D / 2D Perspective Toggle
-  const toggle3DMode = () => {
-    const map = mapRef.current;
-    if (!map) return;
-    const nextState = !is3D;
-    setIs3D(nextState);
-
-    map.easeTo({
-      pitch: nextState ? 55 : 0,
-      duration: 1000,
-      essential: true,
-    });
-  };
-
-  // Google Earth 3D Fly-Around (Orbit Animation)
-  const toggleOrbit = () => {
-    if (isOrbiting) {
-      if (orbitAnimRef.current) cancelAnimationFrame(orbitAnimRef.current);
-      setIsOrbiting(false);
-      return;
-    }
-
-    if (!mapRef.current || coordinates.length < 3 || !analysis) return;
-
-    setIsOrbiting(true);
-    setIs3D(true);
-    const map = mapRef.current;
-
-    map.easeTo({
-      center: analysis.center,
-      pitch: 58,
-      zoom: Math.max(17.8, map.getZoom()),
-      duration: 1400,
-    });
-
-    const rotateCamera = () => {
-      if (!mapRef.current) return;
-      const currentRot = mapRef.current.getBearing();
-      mapRef.current.setBearing((currentRot + 0.35) % 360);
-      orbitAnimRef.current = requestAnimationFrame(rotateCamera);
-    };
-
-    setTimeout(() => {
-      orbitAnimRef.current = requestAnimationFrame(rotateCamera);
-    }, 1400);
-  };
-
-  // Reset Bearing to North
-  const handleResetNorth = () => {
-    if (!mapRef.current) return;
-    mapRef.current.easeTo({ bearing: 0, pitch: is3D ? 55 : 0, duration: 800 });
-  };
 
   // Switch Map Mode (Satellite / Standard)
   const switchMapMode = (newMode: MapMode) => {
@@ -350,6 +283,12 @@ export default function PlotMapWorkspace({
       mapRef.current.once("style.load", () => {
         const map = mapRef.current;
         if (!map) return;
+        // Keep rotation & pitch locked
+        map.setPitch(0);
+        map.setBearing(0);
+        map.dragRotate.disable();
+        map.touchZoomRotate.disableRotation();
+
         // Re-inject sources after style reload
         if (!map.getSource("plot-polygon-source")) {
           map.addSource("plot-polygon-source", {
@@ -701,7 +640,7 @@ export default function PlotMapWorkspace({
     }
   }, [isDrawing]);
 
-  // Zoom to Fit Plot
+  // Zoom to Fit Plot (strictly 2D top-down)
   const fitPlotBounds = () => {
     if (!mapRef.current || coordinates.length < 2) return;
     const bounds = new LngLatBounds(coordinates[0], coordinates[0]);
@@ -709,12 +648,13 @@ export default function PlotMapWorkspace({
     mapRef.current.fitBounds(bounds, {
       padding: 80,
       maxZoom: 19,
-      pitch: is3D ? 52 : 0,
-      duration: 1200,
+      pitch: 0,
+      bearing: 0,
+      duration: 1000,
     });
   };
 
-  // Robust Multi-Tier Live Geolocation
+  // Robust Multi-Tier Live Geolocation (strictly 2D top-down)
   const handleCurrentLocation = () => {
     setGeoLocating(true);
     setGeoNotice(null);
@@ -746,13 +686,13 @@ export default function PlotMapWorkspace({
 
       userLocationMarkerRef.current.push(beaconMarker);
 
-      // Google Earth Cinematic Fly-To
+      // Smooth top-down pan to location
       map.flyTo({
         center: [lng, lat],
         zoom: 18,
-        pitch: is3D ? 55 : 30,
-        bearing: 15,
-        duration: 2500,
+        pitch: 0,
+        bearing: 0,
+        duration: 2000,
         essential: true,
       });
     };
@@ -764,7 +704,7 @@ export default function PlotMapWorkspace({
           applyLocation(pos.coords.latitude, pos.coords.longitude, "Device GPS Position");
         },
         async () => {
-          // Tier 2: IP-based edge geolocation fallback (works on desktop WiFi/Ethernet)
+          // Tier 2: IP-based edge geolocation fallback
           try {
             const res = await fetch("/api/geolocation");
             if (res.ok) {
@@ -820,7 +760,7 @@ export default function PlotMapWorkspace({
 
       {/* 1. Google Earth Dark Glass HUD Top Telemetry Bar */}
       <div className="absolute top-4 left-4 right-4 z-20 pointer-events-none flex items-center justify-between gap-3">
-        {/* Left: Layer Mode Switcher & Coordinate Readout */}
+        {/* Left: Layer Mode Switcher & Top-Down Survey Badge */}
         <div className="pointer-events-auto flex items-center gap-2">
           {/* Satellite / Street Switcher */}
           <div className="bg-black/75 backdrop-blur-md rounded-2xl p-1 border border-white/15 shadow-2xl flex items-center gap-1">
@@ -846,73 +786,25 @@ export default function PlotMapWorkspace({
             </button>
           </div>
 
-          {/* 3D / 2D Perspective Toggle */}
-          <button
-            onClick={toggle3DMode}
-            className={`pointer-events-auto px-3 py-2 rounded-2xl text-xs font-mono font-bold border backdrop-blur-md shadow-2xl transition-all flex items-center gap-1.5 ${
-              is3D
-                ? "bg-cyan-500/20 text-cyan-300 border-cyan-400 shadow-cyan-500/30"
-                : "bg-black/75 text-white/80 border-white/15 hover:text-white hover:border-white/30"
-            }`}
-            title="Toggle 3D Perspective Tilt"
-          >
-            <span>{is3D ? "3D Perspective (55°)" : "2D Survey (Top-Down)"}</span>
-          </button>
+          <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-black/75 backdrop-blur-md border border-white/15 text-[11px] font-mono font-bold text-cyan-300 shadow-2xl">
+            <span className="w-2 h-2 rounded-full bg-cyan-400" />
+            <span>2D TOP SURVEY VIEW</span>
+          </div>
         </div>
 
-        {/* Right: Live Google Earth Telemetry Ticker (Hidden on Mobile) */}
+        {/* Right: Live Telemetry Ticker (Hidden on Mobile) */}
         <div className="hidden md:flex items-center gap-2 bg-black/75 backdrop-blur-md px-3.5 py-2 rounded-2xl border border-white/15 text-[11px] font-mono text-white/70 shadow-2xl">
           <span className="text-cyan-400 font-bold">GIS HUD</span>
           <span>•</span>
           <span>{mapTelemetry.lat.toFixed(5)}°N</span>
           <span>{mapTelemetry.lng.toFixed(5)}°E</span>
           <span>•</span>
-          <span>Pitch: {currentPitch.toFixed(0)}°</span>
-          <span>•</span>
-          <span>Z: {mapTelemetry.zoom.toFixed(1)}</span>
+          <span>Zoom: {mapTelemetry.zoom.toFixed(1)}</span>
         </div>
       </div>
 
-      {/* 2. Top Right Floating Controls: 3D Compass, 3D Orbit, Zoom & Geolocation */}
+      {/* 2. Top Right Floating Controls: Zoom & Geolocation */}
       <div className="absolute top-16 right-4 z-20 flex flex-col items-center gap-2.5">
-        {/* Google Earth 3D Compass Rose Button */}
-        <div className="bg-black/75 backdrop-blur-md rounded-2xl p-1 border border-white/15 shadow-2xl flex flex-col items-center">
-          <button
-            onClick={handleResetNorth}
-            className="w-10 h-10 rounded-xl relative flex items-center justify-center text-white/80 hover:text-white hover:bg-white/10 transition-colors group"
-            title="Reset to True North (Click to face North)"
-          >
-            <div
-              className="w-6 h-6 transition-transform duration-200 flex items-center justify-center"
-              style={{ transform: `rotate(${-currentBearing}deg)` }}
-            >
-              <Compass className="w-5 h-5 text-cyan-400 group-hover:scale-110 transition-transform" />
-            </div>
-            <span className="absolute top-0.5 text-[8px] font-mono font-bold text-red-500">
-              N
-            </span>
-          </button>
-        </div>
-
-        {/* 3D Cinematic Orbit Plot Button */}
-        {coordinates.length >= 3 && (
-          <button
-            onClick={toggleOrbit}
-            className={`p-2.5 rounded-2xl border backdrop-blur-md text-xs font-sans font-medium flex items-center justify-center shadow-2xl transition-all ${
-              isOrbiting
-                ? "bg-amber-500 text-black border-amber-300 font-bold animate-pulse shadow-amber-500/40"
-                : "bg-black/75 text-white/80 border-white/15 hover:text-white hover:border-cyan-400"
-            }`}
-            title={isOrbiting ? "Stop 3D Orbit" : "Cinematic 3D Fly-Around Plot"}
-          >
-            {isOrbiting ? (
-              <Square className="w-4 h-4 fill-current" />
-            ) : (
-              <Play className="w-4 h-4 text-cyan-400" />
-            )}
-          </button>
-        )}
-
         {/* Zoom Controls */}
         <div className="bg-black/75 backdrop-blur-md rounded-2xl p-1 border border-white/15 shadow-2xl flex flex-col items-center">
           <button
@@ -1038,7 +930,7 @@ export default function PlotMapWorkspace({
         </div>
       </div>
 
-      {/* 4. Google Earth Dynamic Reticle Floating Measurement Badge (Follows Mouse Cursor while Drawing) */}
+      {/* 4. Dynamic Reticle Floating Measurement Badge (Follows Mouse Cursor while Drawing) */}
       {isDrawing && mouseScreenPos && (
         <div
           className="pointer-events-none absolute z-30 transform -translate-x-1/2 -translate-y-12 transition-transform duration-75"
@@ -1065,21 +957,7 @@ export default function PlotMapWorkspace({
         </div>
       )}
 
-      {/* 5. Bottom Center Orbiting Indicator / Instructions */}
-      {isOrbiting && (
-        <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 z-20 bg-amber-500/90 text-black px-4 py-2 rounded-full font-sans text-xs font-bold shadow-2xl flex items-center gap-2 backdrop-blur-md animate-bounce">
-          <Play className="w-3.5 h-3.5 fill-current" />
-          <span>3D Cinematic Plot Inspection in Progress</span>
-          <button
-            onClick={toggleOrbit}
-            className="ml-2 px-2.5 py-0.5 rounded-full bg-black text-white text-[10px] font-mono font-bold"
-          >
-            Stop
-          </button>
-        </div>
-      )}
-
-      {/* 6. Geolocation Notification Toast */}
+      {/* 5. Geolocation Notification Toast */}
       {geoNotice && (
         <div className="absolute top-20 left-1/2 transform -translate-x-1/2 z-30 bg-cyan-950/90 border border-cyan-400/60 text-cyan-200 px-4 py-2 rounded-2xl shadow-2xl text-xs font-sans flex items-center gap-2 backdrop-blur-md">
           <Locate className="w-4 h-4 text-cyan-400 shrink-0" />
@@ -1093,7 +971,7 @@ export default function PlotMapWorkspace({
         </div>
       )}
 
-      {/* 7. Invalid Boundary Warning */}
+      {/* 6. Invalid Boundary Warning */}
       {!validation.valid && coordinates.length >= 3 && (
         <div className="absolute bottom-20 left-4 right-4 sm:left-auto sm:right-4 sm:max-w-md z-20 bg-rose-950/90 border border-rose-500/60 text-rose-200 backdrop-blur-md p-3.5 rounded-2xl shadow-2xl flex items-start gap-2.5">
           <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
@@ -1104,7 +982,7 @@ export default function PlotMapWorkspace({
         </div>
       )}
 
-      {/* 8. Clear Confirmation Dialog */}
+      {/* 7. Clear Confirmation Dialog */}
       {showClearConfirm && (
         <div className="absolute inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl p-6 max-w-sm w-full border border-warm-border shadow-2xl space-y-4">
