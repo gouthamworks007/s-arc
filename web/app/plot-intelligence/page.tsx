@@ -60,10 +60,11 @@ export default function PlotIntelligencePage() {
   const { isLoggedIn, currentUser } = useAuth();
 
   // Primary Plot State
-  const [coordinates, setCoordinates] = useState<[number, number][]>(SAMPLE_KOCHI_PLOT);
+  const [coordinates, setCoordinates] = useState<[number, number][]>([]);
   const [roadFacingIndex, setRoadFacingIndex] = useState(0);
   const [selectedUnit, setSelectedUnit] = useState<KeralaLandUnit>("cent");
-  const [locationName, setLocationName] = useState("Edappally, Kochi, Kerala");
+  const [locationName, setLocationName] = useState("Kochi, Kerala");
+  const [focusLocation, setFocusLocation] = useState<{ lat: number; lng: number; label: string } | null>(null);
   const [userInputs, setUserInputs] = useState<PlotAnalysisData["userInputs"]>({
     roadAccessWidthFt: 14,
     preferredBedrooms: 4,
@@ -92,19 +93,18 @@ export default function PlotIntelligencePage() {
     return matchArchitecturalPlans(analysis, activeProjects);
   }, [analysis, projects]);
 
-  // Handle location search selection
+  // Handle location search selection (fly directly to property without placing fake shapes)
   const handleSelectLocation = (lat: number, lng: number, displayName: string) => {
     setLocationName(displayName);
-    // Center a fresh 10-cent marker boundary near the selected location
-    const delta = 0.0003;
-    const newSample: [number, number][] = [
-      [lng - delta, lat + delta * 0.8],
-      [lng + delta, lat + delta * 0.85],
-      [lng + delta * 0.95, lat - delta * 0.8],
-      [lng - delta * 1.05, lat - delta * 0.75],
-    ];
-    setCoordinates(newSample);
+    setFocusLocation({ lat, lng, label: displayName });
+  };
+
+  // Load realistic sample plot (11.8 Cent Kerala plot) for instant demo
+  const handleLoadSamplePlot = () => {
+    setCoordinates(SAMPLE_KOCHI_PLOT);
     setRoadFacingIndex(0);
+    setLocationName("Edappally, Kochi, Kerala");
+    setFocusLocation({ lat: 9.9816, lng: 76.3264, label: "Edappally, Kochi (Sample)" });
   };
 
   // Load saved plot from drawer
@@ -208,6 +208,8 @@ export default function PlotIntelligencePage() {
                   roadFacingIndex={roadFacingIndex}
                   onRoadFacingIndexChange={setRoadFacingIndex}
                   analysis={analysis}
+                  focusLocation={focusLocation}
+                  onLoadSamplePlot={handleLoadSamplePlot}
                   className="h-full w-full"
                 />
               </div>
@@ -226,6 +228,7 @@ export default function PlotIntelligencePage() {
                   onSavePlot={() => setIsSaveModalOpen(true)}
                   onExportReport={() => setIsReportModalOpen(true)}
                   onOpenSavedPlots={() => setIsSavedDrawerOpen(true)}
+                  onLoadSamplePlot={handleLoadSamplePlot}
                   matchedCount={compatiblePlansCount}
                   isLoggedIn={isLoggedIn}
                 />

@@ -34,6 +34,7 @@ interface PlotAnalysisSidebarProps {
   onSavePlot: () => void;
   onExportReport: () => void;
   onOpenSavedPlots: () => void;
+  onLoadSamplePlot?: () => void;
   matchedCount: number;
   isLoggedIn: boolean;
 }
@@ -50,6 +51,7 @@ export default function PlotAnalysisSidebar({
   onSavePlot,
   onExportReport,
   onOpenSavedPlots,
+  onLoadSamplePlot,
   matchedCount,
   isLoggedIn,
 }: PlotAnalysisSidebarProps) {
@@ -62,7 +64,7 @@ export default function PlotAnalysisSidebar({
         <div className="space-y-4">
           <div className="flex items-center justify-between pb-3 border-b border-warm-border">
             <span className="text-[10px] tracking-widestExtra uppercase text-copper font-semibold">
-              Live Telemetry
+              Plot Analysis
             </span>
             <button
               onClick={onOpenSavedPlots}
@@ -81,9 +83,18 @@ export default function PlotAnalysisSidebar({
               No Boundary Marked
             </h4>
             <p className="text-xs text-charcoal/60 font-sans leading-relaxed">
-              Use the satellite map to search for your property in Kerala, then
-              click <strong className="text-charcoal font-medium">Draw Plot</strong> to mark the property corners.
+              Click anywhere on the satellite map to mark your property corners (Corner 1, Corner 2, Corner 3...), or search your location.
             </p>
+
+            {onLoadSamplePlot && (
+              <button
+                onClick={onLoadSamplePlot}
+                className="mt-3 w-full py-2.5 px-4 rounded-xl border border-copper/40 bg-copper-subtle text-copper text-xs font-sans font-medium hover:bg-copper hover:text-white transition-all flex items-center justify-center gap-1.5 shadow-xs"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Try Sample 11.8-Cent Plot</span>
+              </button>
+            )}
           </div>
         </div>
 
