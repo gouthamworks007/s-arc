@@ -45,10 +45,24 @@ export default function LocationSearchBar({
     setLocating(true);
 
     navigator.geolocation.getCurrentPosition(
-      (pos) => {
+      async (pos) => {
         setLocating(false);
+        const { latitude, longitude } = pos.coords;
+
+        // Reverse geocode to find real locality name
+        try {
+          const res = await fetch(`/api/geocode?lat=${latitude}&lng=${longitude}`);
+          if (res.ok) {
+            const data = await res.json();
+            const placeName = data.name || "Your Location";
+            setQuery(placeName);
+            onSelectLocation(latitude, longitude, data.displayName || placeName);
+            return;
+          }
+        } catch (err) {}
+
         setQuery("Your Location");
-        onSelectLocation(pos.coords.latitude, pos.coords.longitude, "Your Location");
+        onSelectLocation(latitude, longitude, "Your Location");
       },
       () => {
         setLocating(false);

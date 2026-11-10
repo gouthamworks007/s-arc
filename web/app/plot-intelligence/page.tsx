@@ -233,6 +233,7 @@ export default function PlotIntelligencePage() {
                   onRoadFacingIndexChange={setRoadFacingIndex}
                   analysis={analysis}
                   focusLocation={focusLocation}
+                  onLocationDetected={(name, displayName) => setLocationName(displayName || name)}
                   onLoadSamplePlot={handleLoadSamplePlot}
                   className="h-full w-full"
                 />

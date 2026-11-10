@@ -5,7 +5,6 @@ import * as turf from "@turf/turf";
 import {
   Map as MapLibreMap,
   Marker,
-  LngLatBounds,
   AttributionControl,
   GeoJSONSource,
   MapMouseEvent,
@@ -22,6 +21,7 @@ import {
   Check,
   Pencil,
   Sparkles,
+  MapPin,
 } from "lucide-react";
 import {
   buildMapStyle,
@@ -30,7 +30,6 @@ import {
   MapMode,
 } from "@/lib/map-config";
 import {
-  analyzePlotBoundary,
   validatePolygonCoordinates,
 } from "@/lib/plot-measurements";
 import { PlotAnalysisData } from "@/lib/types";
@@ -51,6 +50,7 @@ interface PlotMapWorkspaceProps {
   onRoadFacingIndexChange: (idx: number) => void;
   analysis: PlotAnalysisData | null;
   focusLocation?: { lat: number; lng: number; label?: string } | null;
+  onLocationDetected?: (name: string, displayName: string, lat: number, lng: number) => void;
   onLoadSamplePlot?: () => void;
   className?: string;
 }
@@ -62,6 +62,7 @@ export default function PlotMapWorkspace({
   onRoadFacingIndexChange,
   analysis,
   focusLocation,
+  onLocationDetected,
   onLoadSamplePlot,
   className = "",
 }: PlotMapWorkspaceProps) {
@@ -75,7 +76,6 @@ export default function PlotMapWorkspace({
   const [isDrawing, setIsDrawing] = useState(true);
   const [isClosed, setIsClosed] = useState(false);
   const [isNearStartPoint, setIsNearStartPoint] = useState(false);
-  const [mousePos, setMousePos] = useState<[number, number] | null>(null);
   const [liveDistanceFt, setLiveDistanceFt] = useState<number | null>(null);
 
   // Undo History
@@ -89,6 +89,7 @@ export default function PlotMapWorkspace({
   // Markers
   const cornerMarkersRef = useRef<Marker[]>([]);
   const segmentMarkersRef = useRef<Marker[]>([]);
+  const centerMarkerRef = useRef<Marker | null>(null);
   const locationPinMarkerRef = useRef<Marker | null>(null);
 
   // Auto-detect closed status when coordinates change externally
@@ -193,8 +194,8 @@ export default function PlotMapWorkspace({
           source: "plot-polygon-source",
           filter: ["==", "type", "plot-fill"],
           paint: {
-            "fill-color": "#38bdf8",
-            "fill-opacity": 0.25,
+            "fill-color": "#0284c7",
+            "fill-opacity": 0.28,
           },
         });
 
@@ -205,9 +206,9 @@ export default function PlotMapWorkspace({
           source: "plot-polygon-source",
           paint: {
             "line-color": "#38bdf8",
-            "line-width": 4,
-            "line-opacity": 0.4,
-            "line-blur": 2,
+            "line-width": 5,
+            "line-opacity": 0.5,
+            "line-blur": 3,
           },
         });
 
@@ -230,8 +231,8 @@ export default function PlotMapWorkspace({
           source: "plot-polygon-source",
           filter: ["==", "isRoad", true],
           paint: {
-            "line-color": "#f59e0b",
-            "line-width": 5,
+            "line-color": "#fbbf24",
+            "line-width": 6,
             "line-dasharray": [2, 1],
           },
         });
@@ -250,13 +251,13 @@ export default function PlotMapWorkspace({
           source: "rubberband-source",
           paint: {
             "line-color": "#38bdf8",
-            "line-width": 2,
+            "line-width": 2.5,
             "line-dasharray": [3, 2],
           },
         });
       }
 
-      // Live Area Preview
+      // Rubberband Polygon Fill Preview
       if (!map.getSource("rubberband-poly-source")) {
         map.addSource("rubberband-poly-source", {
           type: "geojson",
@@ -269,7 +270,7 @@ export default function PlotMapWorkspace({
           source: "rubberband-poly-source",
           paint: {
             "fill-color": "#38bdf8",
-            "fill-opacity": 0.12,
+            "fill-opacity": 0.15,
           },
         });
       }
@@ -309,13 +310,13 @@ export default function PlotMapWorkspace({
           type: "fill",
           source: "plot-polygon-source",
           filter: ["==", "type", "plot-fill"],
-          paint: { "fill-color": "#38bdf8", "fill-opacity": 0.25 },
+          paint: { "fill-color": "#0284c7", "fill-opacity": 0.28 },
         });
         map.addLayer({
           id: "plot-boundary-stroke-glow",
           type: "line",
           source: "plot-polygon-source",
-          paint: { "line-color": "#38bdf8", "line-width": 4, "line-opacity": 0.4, "line-blur": 2 },
+          paint: { "line-color": "#38bdf8", "line-width": 5, "line-opacity": 0.5, "line-blur": 3 },
         });
         map.addLayer({
           id: "plot-boundary-stroke",
@@ -328,7 +329,7 @@ export default function PlotMapWorkspace({
           type: "line",
           source: "plot-polygon-source",
           filter: ["==", "isRoad", true],
-          paint: { "line-color": "#f59e0b", "line-width": 5, "line-dasharray": [2, 1] },
+          paint: { "line-color": "#fbbf24", "line-width": 6, "line-dasharray": [2, 1] },
         });
       }
 
@@ -341,7 +342,7 @@ export default function PlotMapWorkspace({
           id: "rubberband-line",
           type: "line",
           source: "rubberband-source",
-          paint: { "line-color": "#38bdf8", "line-width": 2, "line-dasharray": [3, 2] },
+          paint: { "line-color": "#38bdf8", "line-width": 2.5, "line-dasharray": [3, 2] },
         });
       }
 
@@ -354,7 +355,7 @@ export default function PlotMapWorkspace({
           id: "rubberband-poly-fill",
           type: "fill",
           source: "rubberband-poly-source",
-          paint: { "fill-color": "#38bdf8", "fill-opacity": 0.12 },
+          paint: { "fill-color": "#38bdf8", "fill-opacity": 0.15 },
         });
       }
 
@@ -413,6 +414,11 @@ export default function PlotMapWorkspace({
       segmentMarkersRef.current.forEach((m) => m.remove());
       segmentMarkersRef.current = [];
 
+      if (centerMarkerRef.current) {
+        centerMarkerRef.current.remove();
+        centerMarkerRef.current = null;
+      }
+
       // Add Corner Pins (ALWAYS draggable for effortless adjustments)
       coords.forEach((coord, i) => {
         const isStart = i === 0;
@@ -429,7 +435,7 @@ export default function PlotMapWorkspace({
             <div class="w-6 h-6 rounded-full bg-charcoal text-cyan-300 font-mono text-[10px] font-bold flex items-center justify-center border-2 border-white shadow-xl hover:scale-125 hover:bg-cyan-500 hover:text-black transition-all">
               ${i + 1}
             </div>
-            <div class="absolute -bottom-5 opacity-0 group-hover:opacity-100 transition-opacity bg-black/85 text-white font-mono text-[9px] px-1.5 py-0.5 rounded shadow pointer-events-none whitespace-nowrap">
+            <div class="absolute -bottom-5 opacity-0 group-hover:opacity-100 transition-opacity bg-black/85 text-white font-mono text-[9px] px-1.5 py-0.5 rounded shadow pointer-events-none whitespace-nowrap z-20">
               Corner ${i + 1} (Drag to adjust)
             </div>
           </div>
@@ -437,7 +443,7 @@ export default function PlotMapWorkspace({
 
         const marker = new Marker({
           element: el,
-          draggable: true, // Always draggable!
+          draggable: true,
         })
           .setLngLat(coord)
           .addTo(map);
@@ -460,7 +466,7 @@ export default function PlotMapWorkspace({
         cornerMarkersRef.current.push(marker);
       });
 
-      // Add Clean Side Length Badges
+      // Add Interactive Side Length Badges (Clicking sets Road Frontage!)
       if (coords.length >= 2) {
         const segCount = isClosed ? coords.length : coords.length - 1;
         for (let i = 0; i < segCount; i++) {
@@ -473,10 +479,21 @@ export default function PlotMapWorkspace({
           const distKm = turf.distance(turf.point(p1), turf.point(p2), { units: "kilometers" });
           const distFt = distKm * 3280.84;
 
+          const isRoad = i === roadFacingIndex;
           const badgeEl = document.createElement("div");
-          badgeEl.className =
-            "pointer-events-none px-2 py-0.5 rounded-full bg-black/80 backdrop-blur-sm border border-white/20 text-white font-mono text-[10px] font-medium shadow-md whitespace-nowrap";
-          badgeEl.innerText = `${distFt.toFixed(1)} ft`;
+          badgeEl.className = `cursor-pointer px-2.5 py-1 rounded-full font-mono text-[10px] shadow-lg transition-all flex items-center gap-1.5 select-none ${
+            isRoad
+              ? "bg-amber-500 text-black border border-amber-300 ring-2 ring-amber-400/50 font-bold scale-105 z-10"
+              : "bg-black/85 hover:bg-black text-white/90 border border-white/20 hover:border-cyan-400 font-medium"
+          }`;
+          badgeEl.innerHTML = `
+            <span>${isRoad ? "★ Road " : ""}${distFt.toFixed(1)} ft</span>
+          `;
+          badgeEl.title = isRoad ? "Designated Road Frontage" : "Click to mark this side as Road Frontage";
+          badgeEl.addEventListener("click", (e) => {
+            e.stopPropagation();
+            onRoadFacingIndexChange(i);
+          });
 
           const segMarker = new Marker({ element: badgeEl, anchor: "center" })
             .setLngLat([midLng, midLat])
@@ -485,8 +502,28 @@ export default function PlotMapWorkspace({
           segmentMarkersRef.current.push(segMarker);
         }
       }
+
+      // Add High-Tech Centroid Area Badge
+      if (coords.length >= 3 && analysis) {
+        const centerEl = document.createElement("div");
+        centerEl.className = "pointer-events-none transform -translate-x-1/2 -translate-y-1/2";
+        centerEl.innerHTML = `
+          <div class="px-3.5 py-1.5 rounded-2xl bg-black/85 backdrop-blur-md border border-cyan-400/50 shadow-2xl text-center animate-in zoom-in-95 duration-200">
+            <div class="font-mono text-sm font-bold text-cyan-300 leading-tight">
+              ${analysis.areaCents.toFixed(2)} Cents
+            </div>
+            <div class="text-[10px] font-sans text-white/70">
+              ${analysis.areaSqFt.toLocaleString(undefined, { maximumFractionDigits: 0 })} Sq.Ft
+            </div>
+          </div>
+        `;
+        const centerMarker = new Marker({ element: centerEl, anchor: "center" })
+          .setLngLat(analysis.center)
+          .addTo(map);
+        centerMarkerRef.current = centerMarker;
+      }
     },
-    [isClosed, roadFacingIndex, pushHistory]
+    [isClosed, roadFacingIndex, analysis, pushHistory, onRoadFacingIndexChange]
   );
 
   useEffect(() => {
@@ -501,7 +538,6 @@ export default function PlotMapWorkspace({
     const handleMouseMove = (e: MapMouseEvent) => {
       if (isClosed) return;
       const curPt: [number, number] = [e.lngLat.lng, e.lngLat.lat];
-      setMousePos(curPt);
 
       if (coordinates.length > 0) {
         const lastPt = coordinates[coordinates.length - 1];
@@ -562,7 +598,6 @@ export default function PlotMapWorkspace({
     };
 
     const handleMapClick = (e: MapMouseEvent) => {
-      // If already closed, don't add more points unless user clicks to add
       if (isClosed) return;
 
       // If clicked near starting point, complete boundary!
@@ -586,48 +621,50 @@ export default function PlotMapWorkspace({
   }, [coordinates, isClosed, isNearStartPoint, pushHistory]);
 
   // 5. Fit Plot Bounds
-  const fitPlotBounds = () => {
-    if (!mapRef.current || coordinates.length < 2) return;
-    const bounds = new LngLatBounds(coordinates[0], coordinates[0]);
-    coordinates.forEach((coord) => bounds.extend(coord));
-    mapRef.current.fitBounds(bounds, {
-      padding: 90,
-      maxZoom: 19,
-      pitch: 0,
-      bearing: 0,
-      duration: 1000,
-    });
-  };
+  const fitPlotBounds = useCallback(() => {
+    const map = mapRef.current;
+    if (!map || coordinates.length < 2) return;
 
-  // 6. Handle focusLocation prop from search
-  const placeLocationPin = useCallback((lat: number, lng: number, label: string) => {
+    const line = turf.lineString(coordinates);
+    const [minX, minY, maxX, maxY] = turf.bbox(line);
+
+    map.fitBounds(
+      [
+        [minX, minY],
+        [maxX, maxY],
+      ],
+      {
+        padding: { top: 80, bottom: 90, left: 80, right: 80 },
+        maxZoom: 19.5,
+        duration: 900,
+        pitch: 0,
+        bearing: 0,
+      }
+    );
+  }, [coordinates]);
+
+  // 6. External Focus Location Handling
+  const placeLocationPin = useCallback((lat: number, lng: number, label = "Selected Location") => {
     const map = mapRef.current;
     if (!map) return;
 
     if (locationPinMarkerRef.current) {
       locationPinMarkerRef.current.remove();
+      locationPinMarkerRef.current = null;
     }
 
-    const el = document.createElement("div");
-    el.className = "group relative cursor-move select-none";
-    el.innerHTML = `
-      <div class="relative flex flex-col items-center">
-        <div class="mb-1 px-2.5 py-1 rounded-full bg-charcoal text-cyan-300 border border-cyan-400 text-[10px] font-medium shadow-xl whitespace-nowrap">
-          📍 ${label} (Drag to your land)
-        </div>
-        <div class="w-4 h-4 bg-cyan-400 border-2 border-white rounded-full shadow-lg"></div>
+    const pinEl = document.createElement("div");
+    pinEl.className = "flex flex-col items-center pointer-events-none select-none animate-bounce";
+    pinEl.innerHTML = `
+      <div class="px-2.5 py-1 rounded-full bg-cyan-500 text-black font-mono text-[10px] font-bold shadow-2xl border border-white whitespace-nowrap mb-1">
+        ${label}
       </div>
+      <div class="w-4 h-4 rounded-full bg-cyan-400 border-2 border-white shadow-xl"></div>
     `;
 
-    const pin = new Marker({ element: el, draggable: true })
+    const pin = new Marker({ element: pinEl, anchor: "bottom" })
       .setLngLat([lng, lat])
       .addTo(map);
-
-    pin.on("dragend", () => {
-      const pos = pin.getLngLat();
-      setGeoNotice(`Pin placed at: ${pos.lat.toFixed(5)}, ${pos.lng.toFixed(5)}`);
-      setTimeout(() => setGeoNotice(null), 3500);
-    });
 
     locationPinMarkerRef.current = pin;
   }, []);
@@ -641,14 +678,14 @@ export default function PlotMapWorkspace({
       zoom: 18,
       pitch: 0,
       bearing: 0,
-      duration: 1500,
+      duration: 1400,
       essential: true,
     });
 
     placeLocationPin(lat, lng, label || "Selected Property");
   }, [focusLocation, placeLocationPin]);
 
-  // 7. Native Device Geolocation Tracking (Original First-Version Implementation)
+  // 7. High-Precision Device Geolocation with Reverse Geocoding
   const handleCurrentLocation = () => {
     if (!navigator.geolocation) {
       setGeoNotice("Geolocation is not supported by your browser.");
@@ -657,10 +694,10 @@ export default function PlotMapWorkspace({
     }
 
     setGeoLocating(true);
-    setGeoNotice(null);
+    setGeoNotice("Acquiring GPS fix...");
 
     navigator.geolocation.getCurrentPosition(
-      (pos) => {
+      async (pos) => {
         setGeoLocating(false);
         const { longitude, latitude } = pos.coords;
         const map = mapRef.current;
@@ -674,7 +711,26 @@ export default function PlotMapWorkspace({
             essential: true,
           });
         }
+
+        // Reverse geocode to retrieve exact locality (e.g. East Desam, Aluva)
+        try {
+          const res = await fetch(`/api/geocode?lat=${latitude}&lng=${longitude}`);
+          if (res.ok) {
+            const geoData = await res.json();
+            const placeName = geoData.name || "Your Location";
+            placeLocationPin(latitude, longitude, placeName);
+            setGeoNotice(`Located at ${placeName}`);
+            setTimeout(() => setGeoNotice(null), 4000);
+            if (onLocationDetected) {
+              onLocationDetected(placeName, geoData.displayName || placeName, latitude, longitude);
+            }
+            return;
+          }
+        } catch (err) {}
+
         placeLocationPin(latitude, longitude, "Your Location");
+        setGeoNotice("Property location detected");
+        setTimeout(() => setGeoNotice(null), 3000);
       },
       (err) => {
         setGeoLocating(false);
@@ -755,7 +811,7 @@ export default function PlotMapWorkspace({
               ? "bg-cyan-500/20 text-cyan-300 border-cyan-400 animate-pulse"
               : "bg-black/80 text-white/80 border-white/15 hover:text-white hover:border-cyan-400"
           }`}
-          title="Detect Live Location"
+          title="Detect Live Location (GPS)"
         >
           <Locate className="w-4 h-4" />
         </button>
@@ -774,10 +830,27 @@ export default function PlotMapWorkspace({
 
       {/* Notification Toast */}
       {geoNotice && (
-        <div className="absolute top-16 left-1/2 transform -translate-x-1/2 z-30 bg-black/90 border border-cyan-400/60 text-cyan-200 px-4 py-2 rounded-2xl shadow-2xl text-xs font-sans flex items-center gap-2 backdrop-blur-md max-w-md text-center">
+        <div className="absolute top-16 left-1/2 transform -translate-x-1/2 z-30 bg-black/90 border border-cyan-400/60 text-cyan-200 px-4 py-2 rounded-2xl shadow-2xl text-xs font-sans flex items-center gap-2 backdrop-blur-md max-w-md text-center animate-in fade-in">
           <Locate className="w-4 h-4 text-cyan-400 shrink-0" />
           <span>{geoNotice}</span>
           <button onClick={() => setGeoNotice(null)} className="ml-1 text-white/60 hover:text-white font-bold">×</button>
+        </div>
+      )}
+
+      {/* Floating Live Distance & Snap Indicator while drawing */}
+      {coordinates.length > 0 && !isClosed && liveDistanceFt !== null && (
+        <div className="absolute bottom-20 left-1/2 transform -translate-x-1/2 z-20 pointer-events-none">
+          {isNearStartPoint && coordinates.length >= 3 ? (
+            <div className="bg-emerald-500 text-black px-4 py-1.5 rounded-full font-sans text-xs font-bold shadow-2xl flex items-center gap-2 animate-bounce">
+              <Check className="w-4 h-4 stroke-[3]" />
+              <span>Click Corner #1 to Close Boundary!</span>
+            </div>
+          ) : (
+            <div className="bg-black/85 backdrop-blur-md border border-cyan-400/40 text-cyan-200 px-3.5 py-1 rounded-full font-mono text-xs shadow-xl flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
+              <span>Current Side: <strong className="text-white">{liveDistanceFt.toFixed(1)} ft</strong></span>
+            </div>
+          )}
         </div>
       )}
 

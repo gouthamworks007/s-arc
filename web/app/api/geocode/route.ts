@@ -139,6 +139,77 @@ const PRESEEDED_LOCATIONS: GeocodeResult[] = [
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
+
+  // 0. Reverse Geocoding support: ?lat=10.1287&lng=76.3493
+  const latParam = searchParams.get("lat");
+  const lngParam = searchParams.get("lng");
+  if (latParam && lngParam) {
+    const lat = parseFloat(latParam);
+    const lng = parseFloat(lngParam);
+    if (!isNaN(lat) && !isNaN(lng)) {
+      // Check pre-seeded known hubs within ~1.5 km
+      for (const loc of PRESEEDED_LOCATIONS) {
+        const dLat = Math.abs(loc.lat - lat);
+        const dLng = Math.abs(loc.lng - lng);
+        if (dLat < 0.015 && dLng < 0.015) {
+          return NextResponse.json({
+            success: true,
+            name: loc.name,
+            displayName: loc.displayName,
+            lat,
+            lng,
+          });
+        }
+      }
+
+      // Query OpenStreetMap Nominatim reverse endpoint
+      try {
+        const revUrl = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&addressdetails=1`;
+        const res = await fetch(revUrl, {
+          headers: {
+            "User-Agent": "S-ARC-SouthernArchitecture-Platform/1.0 (gis@s-arc.pages.dev)",
+            Accept: "application/json",
+          },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          const addr = data.address || {};
+          const locality =
+            addr.suburb ||
+            addr.neighbourhood ||
+            addr.village ||
+            addr.town ||
+            addr.city ||
+            addr.county ||
+            "Kerala Property";
+          const district = addr.county || addr.state_district || "";
+          const state = addr.state || "Kerala";
+          const postcode = addr.postcode ? ` - ${addr.postcode}` : "";
+          const name = district && locality !== district ? `${locality}, ${district}` : `${locality}, ${state}`;
+          const displayName = data.display_name || `${name}${postcode}`;
+
+          return NextResponse.json({
+            success: true,
+            name,
+            displayName,
+            lat,
+            lng,
+          });
+        }
+      } catch (err) {
+        // Fallback
+      }
+
+      return NextResponse.json({
+        success: true,
+        name: `Plot Location (${lat.toFixed(4)}, ${lng.toFixed(4)})`,
+        displayName: `Coordinates: ${lat.toFixed(5)}, ${lng.toFixed(5)} (Kerala, India)`,
+        lat,
+        lng,
+      });
+    }
+  }
+
   const q = searchParams.get("q")?.trim() || "";
 
   if (!q) {

@@ -18,6 +18,7 @@ import {
   Layers,
   Sparkles,
   HelpCircle,
+  ShieldCheck,
 } from "lucide-react";
 import { formatArea, getUnitBreakdown } from "@/lib/plot-measurements";
 import { KeralaLandUnit, PlotAnalysisData } from "@/lib/types";
@@ -292,6 +293,44 @@ export default function PlotAnalysisSidebar({
               );
             })}
           </div>
+        </div>
+
+        {/* KMBR 2019 Kerala Statutory Setbacks & Buildable Envelope */}
+        <div className="p-4 rounded-2xl bg-stone-50 border border-stone-200/80 space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1.5">
+              <ShieldCheck className="w-4 h-4 text-emerald-600" />
+              <span className="font-serif text-xs font-semibold text-charcoal">
+                KMBR Setbacks & Coverage
+              </span>
+            </div>
+            <span className="text-[9px] font-mono bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-bold uppercase">
+              Kerala 2019
+            </span>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2 text-xs font-mono">
+            <div className="p-2 rounded-xl bg-white border border-stone-200">
+              <span className="text-[10px] text-stone-500 uppercase block font-sans">Front Setback</span>
+              <strong className="text-charcoal text-xs">9.84 ft (3.0 m)</strong>
+            </div>
+            <div className="p-2 rounded-xl bg-white border border-stone-200">
+              <span className="text-[10px] text-stone-500 uppercase block font-sans">Rear Setback</span>
+              <strong className="text-charcoal text-xs">4.92 ft (1.5 m)</strong>
+            </div>
+            <div className="p-2 rounded-xl bg-white border border-stone-200">
+              <span className="text-[10px] text-stone-500 uppercase block font-sans">Side Setbacks</span>
+              <strong className="text-charcoal text-xs">3.93 ft / 3.28 ft</strong>
+            </div>
+            <div className="p-2 rounded-xl bg-white border border-stone-200">
+              <span className="text-[10px] text-stone-500 uppercase block font-sans">Max Footprint</span>
+              <strong className="text-emerald-700 text-xs">~{Math.round(analysis.areaSqFt * 0.60).toLocaleString()} Sq.Ft</strong>
+            </div>
+          </div>
+
+          <p className="text-[10px] text-stone-500 font-sans leading-tight">
+            * Based on Kerala Municipality Building Rules (KMBR) standard 60% ground coverage allowance for residential parcels.
+          </p>
         </div>
 
         {/* Additional Property Constraints Accordion */}
