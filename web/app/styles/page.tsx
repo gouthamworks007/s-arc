@@ -106,37 +106,56 @@ export default function StylesPage() {
       {/* Hero Header */}
       <section className="pt-32 pb-14 bg-warm-grey border-b border-warm-border">
         <div className="max-w-7xl mx-auto px-6 sm:px-8">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-copper/10 border border-copper/20 text-copper text-[11px] font-mono tracking-wider uppercase mb-4">
+            <Compass className="w-3.5 h-3.5 text-copper" />
+            <span>Architectural Taxonomy &amp; Vernacular Philosophy</span>
+          </div>
+
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-normal font-serif tracking-tight text-charcoal mb-4">
             Find Your Architectural Language.
           </h1>
-          <p className="text-[15px] sm:text-base leading-relaxed text-secondaryText max-w-2xl font-light font-sans">
+          <p className="text-[15px] sm:text-base leading-relaxed text-secondaryText max-w-2xl font-light font-sans mb-8">
             Every architectural style on S-ARC represents a distinct philosophy of living, structural system, and climate response engineered for Southern Indian geography.
           </p>
+
+          {/* Quick Anchor Navigation Pills */}
+          <div className="flex flex-wrap gap-2">
+            {styleDetails.map((style) => (
+              <a
+                key={style.id}
+                href={`#${style.id}`}
+                className="px-4 py-2 text-xs font-sans font-medium bg-white text-charcoal border border-warm-border hover:border-charcoal hover:bg-warm-grey transition-all rounded-full"
+              >
+                {style.name}
+              </a>
+            ))}
+          </div>
         </div>
       </section>
 
       {/* Detailed Styles Showcase */}
       <section className="py-16 sm:py-24 bg-white">
-        <div className="max-w-7xl mx-auto px-6 sm:px-8 space-y-20">
+        <div className="max-w-7xl mx-auto px-6 sm:px-8 space-y-24">
           {styleDetails.map((style, idx) => (
             <div
               key={style.id}
-              className={`grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-center pb-16 border-b border-warm-border ${
+              id={style.id}
+              className={`grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-center pb-20 border-b border-warm-border scroll-mt-28 ${
                 idx % 2 === 1 ? "lg:flex-row-reverse" : ""
               }`}
             >
               {/* Image Column */}
-              <div className={`lg:col-span-6 relative aspect-[16/11] bg-charcoal overflow-hidden rounded-2xl ${
+              <div className={`lg:col-span-6 relative aspect-[16/11] bg-charcoal overflow-hidden rounded-2xl shadow-card group ${
                 idx % 2 === 1 ? "lg:order-2" : "lg:order-1"
               }`}>
                 <Image
                   src={style.image}
                   alt={style.name}
                   fill
-                  className="object-cover"
+                  className="object-cover group-hover:scale-105 transition-transform duration-700"
                   sizes="(max-width: 1024px) 100vw, 50vw"
                 />
-                <div className="absolute top-4 left-4 bg-charcoal/80 text-white text-[10px] tracking-widestExtra uppercase px-3 py-1 font-sans rounded-full">
+                <div className="absolute top-4 left-4 bg-charcoal/85 backdrop-blur-sm text-white text-[10px] tracking-widestExtra uppercase px-3.5 py-1.5 font-sans rounded-full border border-white/10">
                   Style 0{idx + 1}
                 </div>
               </div>
@@ -159,13 +178,14 @@ export default function StylesPage() {
                 </p>
 
                 {/* Climate Response Features */}
-                <div className="bg-warm-grey p-4 border border-warm-border space-y-2 rounded-xl">
-                  <div className="text-[11px] font-semibold text-charcoal uppercase tracking-wider font-sans">
-                    Climate & Vernacular Adaptations
+                <div className="bg-warm-grey p-5 border border-warm-border space-y-3 rounded-2xl">
+                  <div className="text-[11px] font-semibold text-charcoal uppercase tracking-wider font-sans flex items-center justify-between">
+                    <span>Climate &amp; Vernacular Adaptations</span>
+                    <span className="text-[10px] font-normal text-mutedText lowercase">kerala &amp; south india</span>
                   </div>
-                  <ul className="space-y-1.5 text-xs text-secondaryText font-sans">
+                  <ul className="space-y-2 text-xs text-secondaryText font-sans">
                     {style.climateFeatures.map((feat, fIdx) => (
-                      <li key={fIdx} className="flex items-start gap-2">
+                      <li key={fIdx} className="flex items-start gap-2.5">
                         <CheckCircle2 className="w-3.5 h-3.5 text-copper mt-0.5 shrink-0" />
                         <span>{feat}</span>
                       </li>
@@ -174,25 +194,38 @@ export default function StylesPage() {
                 </div>
 
                 {/* Specs */}
-                <div className="grid grid-cols-2 gap-3 text-xs font-sans">
-                  <div className="border border-warm-border p-3 rounded-xl">
-                    <span className="text-mutedText block text-[10px] uppercase">Recommended Plot</span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-sans">
+                  <div className="border border-warm-border p-3.5 rounded-xl bg-white">
+                    <span className="text-mutedText block text-[10px] uppercase font-mono mb-1">Recommended Plot Size</span>
                     <span className="font-medium text-charcoal">{style.idealPlots}</span>
                   </div>
-                  <div className="border border-warm-border p-3 rounded-xl">
-                    <span className="text-mutedText block text-[10px] uppercase">Primary Materials</span>
-                    <span className="font-medium text-charcoal truncate block">{style.materials}</span>
+                  <div className="border border-warm-border p-3.5 rounded-xl bg-white">
+                    <span className="text-mutedText block text-[10px] uppercase font-mono mb-1">Primary Materiality</span>
+                    <span className="font-medium text-charcoal block line-clamp-2">{style.materials}</span>
                   </div>
                 </div>
 
-                {/* Explore link */}
-                <div className="pt-2">
+                {/* Explore actions */}
+                <div className="pt-2 flex flex-wrap items-center gap-3">
                   <Link
                     href={`/designs?style=${encodeURIComponent(style.name)}`}
-                    className="inline-flex items-center gap-2 px-5 py-2.5 bg-charcoal text-white hover:bg-copper text-xs font-medium tracking-wide transition-colors font-sans rounded-full"
+                    className="inline-flex items-center gap-2 px-5 py-3 bg-charcoal text-white hover:bg-copper text-xs font-medium tracking-wide transition-all font-sans rounded-full shadow-subtle group"
                   >
                     <span>Browse {style.name} Plans</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
+                    <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
+                  </Link>
+
+                  <Link
+                    href="/plot-intelligence"
+                    className="inline-flex items-center gap-1.5 px-4 py-3 bg-warm-grey hover:bg-warm-border/60 text-charcoal text-xs font-medium font-sans rounded-full border border-warm-border transition-colors"
+                  >
+                    <Compass className="w-3.5 h-3.5 text-copper" />
+                    <span>Test on Satellite Plot</span>
+                  </Link>
+                </div>
+              </div>
+            </div>
+          ))}
                   </Link>
                 </div>
               </div>

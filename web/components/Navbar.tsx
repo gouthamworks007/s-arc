@@ -71,8 +71,9 @@ export default function Navbar({ onOpenSellerModal, onOpenSearch }: NavbarProps)
             >
               <span>{link.name}</span>
               {link.isNew && (
-                <span className="ml-1.5 px-1.5 py-0.2 rounded-full text-[9px] bg-copper-subtle text-copper font-mono uppercase font-bold border border-copper/30">
-                  GIS
+                <span className="ml-1.5 px-1.5 py-0.5 rounded-full text-[9px] bg-copper/10 text-copper font-mono uppercase font-bold border border-copper/30 flex items-center gap-1 shadow-sm">
+                  <span className="w-1.5 h-1.5 rounded-full bg-copper animate-pulse" />
+                  <span>GIS</span>
                 </span>
               )}
               <span
@@ -198,8 +199,9 @@ export default function Navbar({ onOpenSellerModal, onOpenSearch }: NavbarProps)
               >
                 <span>{link.name}</span>
                 {link.isNew && (
-                  <span className="px-2 py-0.5 rounded-full text-[9px] bg-copper-subtle text-copper font-mono uppercase font-bold border border-copper/30">
-                    GIS Tool
+                  <span className="px-2 py-0.5 rounded-full text-[9px] bg-copper/10 text-copper font-mono uppercase font-bold border border-copper/30 flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-copper animate-pulse" />
+                    <span>GIS Tool</span>
                   </span>
                 )}
               </Link>

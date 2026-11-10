@@ -387,6 +387,28 @@ export const FEATURED_ARCHITECTS: ArchitectProfile[] = [
     bio: "Master of Architecture from SPA Delhi. Focuses on disciplined geometric minimalism with tactile wood and steel detailing.",
     specialty: "Minimalist & Structural Steel",
   },
+  {
+    id: "rahul-menon",
+    name: "Ar. Rahul Menon",
+    location: "Thrissur, Kerala",
+    title: "Principal Partner, Nalukettu Atelier",
+    projectsCount: 22,
+    verified: true,
+    image: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=600&q=80",
+    bio: "Pioneering contemporary timber-and-laterite courtyard homes respecting Vastu Vidya and KMBR regulations.",
+    specialty: "Courtyards & Kerala Vernacular",
+  },
+  {
+    id: "priya-pillai",
+    name: "Ar. Priya Pillai",
+    location: "Kannur, Kerala",
+    title: "Chief Designer, Coastal Habitat Labs",
+    projectsCount: 19,
+    verified: true,
+    image: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=600&q=80",
+    bio: "Specializing in resilient coastal architecture, passive monsoon cross-ventilation, and sustainable hydraulic lime plaster.",
+    specialty: "Coastal & Tropical Resilience",
+  },
 ];
 
 export const JOURNAL_ARTICLES: JournalArticle[] = [

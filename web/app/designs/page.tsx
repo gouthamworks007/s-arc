@@ -9,7 +9,8 @@ import SellerModal from "@/components/SellerModal";
 import { FEATURED_PROJECTS } from "@/lib/data";
 import { ArchitecturalProject } from "@/lib/types";
 import Image from "next/image";
-import { Search, Maximize, Bed, Layers, ArrowRight, ArrowUpDown, X, Bookmark, BookmarkCheck } from "lucide-react";
+import Link from "next/link";
+import { Search, Maximize, Bed, Layers, ArrowRight, ArrowUpDown, X, Bookmark, BookmarkCheck, Compass, Sparkles, CheckCircle2 } from "lucide-react";
 import { useSavedProjects } from "@/lib/savedProjectsContext";
 import { useProjects } from "@/lib/projectsContext";
 
@@ -66,7 +67,8 @@ function DesignsCatalogContent() {
       // Style Filter
       const matchesStyle =
         selectedStyle === "All" ||
-        project.style.toLowerCase().includes(selectedStyle.toLowerCase());
+        project.style.toLowerCase().includes(selectedStyle.toLowerCase()) ||
+        selectedStyle.toLowerCase().includes(project.style.toLowerCase());
 
       // Architect Filter
       const matchesArchitect =
@@ -223,13 +225,116 @@ function DesignsCatalogContent() {
               </select>
             </div>
           </div>
+
+          {/* Quick Filter Tag Chips */}
+          <div className="flex flex-wrap items-center gap-2 mt-4 pt-2">
+            <span className="text-[11px] text-mutedText font-medium font-sans uppercase tracking-wider mr-1">
+              Quick Filter:
+            </span>
+            <button
+              onClick={() => setSelectedStyle(selectedStyle === "COURTYARD" ? "All" : "COURTYARD")}
+              className={`px-3 py-1 rounded-full text-xs font-sans transition-all ${
+                selectedStyle === "COURTYARD"
+                  ? "bg-copper text-white shadow-sm font-medium"
+                  : "bg-white text-charcoal border border-warm-border hover:border-charcoal/40"
+              }`}
+            >
+              Courtyard Homes
+            </button>
+            <button
+              onClick={() => setSelectedPlot(selectedPlot === "< 10 Cents" ? "All" : "< 10 Cents")}
+              className={`px-3 py-1 rounded-full text-xs font-sans transition-all ${
+                selectedPlot === "< 10 Cents"
+                  ? "bg-copper text-white shadow-sm font-medium"
+                  : "bg-white text-charcoal border border-warm-border hover:border-charcoal/40"
+              }`}
+            >
+              &lt; 10 Cents
+            </button>
+            <button
+              onClick={() => setSelectedPlot(selectedPlot === "10 - 15 Cents" ? "All" : "10 - 15 Cents")}
+              className={`px-3 py-1 rounded-full text-xs font-sans transition-all ${
+                selectedPlot === "10 - 15 Cents"
+                  ? "bg-copper text-white shadow-sm font-medium"
+                  : "bg-white text-charcoal border border-warm-border hover:border-charcoal/40"
+              }`}
+            >
+              10–15 Cents
+            </button>
+            <button
+              onClick={() => setSelectedBhk(selectedBhk === "4" ? "All" : "4")}
+              className={`px-3 py-1 rounded-full text-xs font-sans transition-all ${
+                selectedBhk === "4"
+                  ? "bg-copper text-white shadow-sm font-medium"
+                  : "bg-white text-charcoal border border-warm-border hover:border-charcoal/40"
+              }`}
+            >
+              4 BHK
+            </button>
+            <button
+              onClick={() => setSelectedStyle(selectedStyle === "TRADITIONAL" ? "All" : "TRADITIONAL")}
+              className={`px-3 py-1 rounded-full text-xs font-sans transition-all ${
+                selectedStyle === "TRADITIONAL"
+                  ? "bg-copper text-white shadow-sm font-medium"
+                  : "bg-white text-charcoal border border-warm-border hover:border-charcoal/40"
+              }`}
+            >
+              Traditional Nalukettu
+            </button>
+            <button
+              onClick={() => setSelectedStyle(selectedStyle === "MODERN TROPICAL" ? "All" : "MODERN TROPICAL")}
+              className={`px-3 py-1 rounded-full text-xs font-sans transition-all ${
+                selectedStyle === "MODERN TROPICAL"
+                  ? "bg-copper text-white shadow-sm font-medium"
+                  : "bg-white text-charcoal border border-warm-border hover:border-charcoal/40"
+              }`}
+            >
+              Modern Tropical
+            </button>
+            {hasActiveFilters && (
+              <button
+                onClick={resetAllFilters}
+                className="px-2.5 py-1 text-xs text-copper hover:underline font-sans font-medium flex items-center gap-1 ml-1"
+              >
+                <X className="w-3 h-3" />
+                Clear All
+              </button>
+            )}
+          </div>
         </div>
       </section>
 
       {/* Projects Grid Section */}
-      <section className="py-14 sm:py-20 bg-white">
+      <section className="py-12 sm:py-16 bg-white">
         <div className="max-w-7xl mx-auto px-6 sm:px-8">
-            {/* Status bar */}
+          
+          {/* Plot Intelligence Banner */}
+          <div className="mb-8 p-4 sm:p-5 rounded-2xl bg-[#1b1918] text-white border border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-subtle">
+            <div className="flex items-center gap-3.5">
+              <div className="w-10 h-10 rounded-xl bg-copper/20 border border-copper/40 flex items-center justify-center shrink-0">
+                <Compass className="w-5 h-5 text-copper-light" />
+              </div>
+              <div>
+                <div className="text-[13px] font-medium font-sans text-white flex items-center gap-2">
+                  <span>Have a specific plot boundary or land in Kerala?</span>
+                  <span className="px-1.5 py-0.2 rounded-full text-[9px] bg-copper/30 text-copper-light font-mono font-bold">GIS</span>
+                </div>
+                <div className="text-xs text-white/60 font-light font-sans mt-0.5">
+                  Draw your exact perimeter on top-down satellite imagery to filter plans fitting inside your KMBR setbacks.
+                </div>
+              </div>
+            </div>
+
+            <Link
+              href="/plot-intelligence"
+              className="inline-flex items-center gap-2 px-4 py-2.5 bg-copper hover:bg-copper-hover text-white text-xs font-medium font-sans rounded-full shrink-0 transition-colors shadow-sm self-start sm:self-auto"
+            >
+              <span>Open Satellite Workspace</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+
+          {/* Status bar */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 mb-8 border-b border-warm-border gap-4">
             <div className="text-[13px] text-mutedText font-sans flex items-center gap-2">
               <span>Showing <strong className="text-charcoal font-medium">{filteredAndSortedProjects.length}</strong> available drawing packages</span>
@@ -310,17 +415,17 @@ function DesignsCatalogContent() {
 
                   {/* Specifications Footer */}
                   <div className="pt-4 border-t border-warm-border/80 flex items-center justify-between text-[12px] font-sans text-charcoal/80 font-medium">
-                    <span className="flex items-center gap-1">
+                    <span className="flex items-center gap-1" title="Minimum Plot Size">
                       <Maximize className="w-3.5 h-3.5 text-copper" />
-                      {project.plotSize}
+                      <span>{project.plotSize}</span>
                     </span>
-                    <span className="flex items-center gap-1">
-                      <Bed className="w-3.5 h-3.5 text-copper" />
-                      {project.bedrooms} Bed
-                    </span>
-                    <span className="flex items-center gap-1">
+                    <span className="flex items-center gap-1" title="Built-up Area">
                       <Layers className="w-3.5 h-3.5 text-copper" />
-                      {project.floors} Floors
+                      <span>{project.builtUpArea}</span>
+                    </span>
+                    <span className="flex items-center gap-1" title="Bedrooms">
+                      <Bed className="w-3.5 h-3.5 text-copper" />
+                      <span>{project.bedrooms} BHK</span>
                     </span>
                   </div>
                 </div>

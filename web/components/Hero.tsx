@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import Image from "next/image";
-import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
+import Link from "next/link";
+import { ArrowRight, ChevronLeft, ChevronRight, Compass, Sparkles } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface HeroProps {
@@ -71,14 +72,14 @@ export default function Hero({ onExploreClick, onProjectClick }: HeroProps) {
     setCurrentSlide((prev) => (prev - 1 + HERO_SLIDES.length) % HERO_SLIDES.length);
   }, []);
 
-  // Continuous scrolling animation in loop every 1.5 seconds (1500ms)
+  // Continuous scrolling animation in loop every 5.5 seconds (5500ms) with calm ease
   useEffect(() => {
     if (isPaused) return;
 
     const timer = setInterval(() => {
       setDirection(1);
       setCurrentSlide((prev) => (prev + 1) % HERO_SLIDES.length);
-    }, 1500);
+    }, 5500);
 
     return () => clearInterval(timer);
   }, [isPaused]);
@@ -124,9 +125,31 @@ export default function Hero({ onExploreClick, onProjectClick }: HeroProps) {
               </h1>
 
               {/* Supporting Text */}
-              <p className="text-[15px] sm:text-base leading-relaxed text-secondaryText max-w-md mb-12 font-light font-sans">
+              <p className="text-[15px] sm:text-base leading-relaxed text-secondaryText max-w-md mb-8 font-light font-sans">
                 Discover, customise and purchase architectural designs from verified architects across South India.
               </p>
+
+              {/* Primary & Secondary Action CTAs */}
+              <div className="flex flex-wrap items-center gap-3.5 mb-10">
+                <button
+                  onClick={onExploreClick}
+                  className="inline-flex items-center gap-2.5 px-6 py-3.5 bg-copper hover:bg-copper-hover text-white text-xs font-medium font-sans tracking-wide rounded-full shadow-subtle hover:shadow transition-all group"
+                >
+                  <span>Explore 500+ Designs</span>
+                  <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
+                </button>
+
+                <Link
+                  href="/plot-intelligence"
+                  className="inline-flex items-center gap-2 px-5 py-3.5 bg-warm-grey hover:bg-warm-border/50 text-charcoal border border-warm-border text-xs font-medium font-sans tracking-wide rounded-full transition-all group"
+                >
+                  <Compass className="w-3.5 h-3.5 text-copper" />
+                  <span>Plot Intelligence GIS</span>
+                  <span className="ml-0.5 px-1.5 py-0.5 rounded-full text-[9px] bg-copper-subtle text-copper font-mono uppercase font-bold border border-copper/30">
+                    Live
+                  </span>
+                </Link>
+              </div>
             </div>
 
             {/* Platform Metrics / Statistics */}
@@ -204,6 +227,17 @@ export default function Hero({ onExploreClick, onProjectClick }: HeroProps) {
 
               {/* Architectural Vignette Overlay */}
               <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-transparent to-black/20 pointer-events-none" />
+
+              {/* Slide Progress Indicator Bar */}
+              <div className="absolute top-0 left-0 right-0 h-[3px] bg-white/10 z-20 overflow-hidden pointer-events-none">
+                <motion.div
+                  key={currentSlide}
+                  initial={{ width: "0%" }}
+                  animate={{ width: isPaused ? "0%" : "100%" }}
+                  transition={{ duration: 5.5, ease: "linear" }}
+                  className="h-full bg-copper shadow-[0_0_10px_rgba(173,128,101,0.9)]"
+                />
+              </div>
 
               {/* Animated Moving Dot Indicators */}
               <div className="absolute top-6 right-6 sm:top-8 sm:right-8 z-20 pointer-events-auto">

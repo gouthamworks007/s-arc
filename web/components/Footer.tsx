@@ -90,6 +90,12 @@ export default function Footer({ onOpenSellerModal }: FooterProps) {
                 </Link>
               </li>
               <li>
+                <Link href="/plot-intelligence" className="hover:text-copper transition-colors flex items-center gap-1.5">
+                  <span>Plot Intelligence GIS</span>
+                  <span className="px-1.5 py-0.2 rounded text-[9px] bg-copper/20 text-copper-light font-mono font-bold">NEW</span>
+                </Link>
+              </li>
+              <li>
                 <Link href="/styles" className="hover:text-copper transition-colors">
                   Architectural Styles
                 </Link>
