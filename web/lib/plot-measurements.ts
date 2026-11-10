@@ -299,18 +299,34 @@ export function getUnitBreakdown(cents: number) {
 export function generateSampleKeralaPlot(
   centerLng = 76.2999,
   centerLat = 9.9816,
-  targetCents = 10.5
+  targetCents = 10.5,
+  shape = "Rectangular"
 ): [number, number][] {
-  const targetAreaSqm = targetCents * SQM_PER_CENT; // ~425 sqm
-  // Standard Kerala residential parcel aspect ratio (~1 : 1.6)
-  const widthMeters = Math.sqrt(targetAreaSqm / 1.6); // ~16.3m (~53.5 ft)
-  const depthMeters = widthMeters * 1.6; // ~26.1m (~85.6 ft)
+  const targetAreaSqm = targetCents * SQM_PER_CENT;
+  let aspect = 1.6;
+  if (shape === "Square") aspect = 1.0;
+  if (shape === "Narrow Frontage") aspect = 2.4;
+
+  const widthMeters = Math.sqrt(targetAreaSqm / aspect);
+  const depthMeters = widthMeters * aspect;
 
   const halfWidth = widthMeters / 2;
   const halfDepth = depthMeters / 2;
 
   const deltaLat = halfDepth / 111320;
   const deltaLng = halfWidth / (111320 * Math.cos((centerLat * Math.PI) / 180));
+
+  if (shape === "Corner Plot") {
+    const cutLng = deltaLng * 0.35;
+    const cutLat = deltaLat * 0.35;
+    return [
+      [Number((centerLng - deltaLng).toFixed(6)), Number((centerLat + deltaLat).toFixed(6))],
+      [Number((centerLng + deltaLng - cutLng).toFixed(6)), Number((centerLat + deltaLat).toFixed(6))],
+      [Number((centerLng + deltaLng).toFixed(6)), Number((centerLat + deltaLat - cutLat).toFixed(6))],
+      [Number((centerLng + deltaLng).toFixed(6)), Number((centerLat - deltaLat).toFixed(6))],
+      [Number((centerLng - deltaLng).toFixed(6)), Number((centerLat - deltaLat).toFixed(6))],
+    ];
+  }
 
   return [
     [Number((centerLng - deltaLng).toFixed(6)), Number((centerLat + deltaLat).toFixed(6))], // P1: NW

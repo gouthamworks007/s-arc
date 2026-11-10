@@ -25,6 +25,7 @@ import SavedPlotsDrawer from "@/components/plot-intelligence/SavedPlotsDrawer";
 import SavePlotModal from "@/components/plot-intelligence/SavePlotModal";
 import ConsultArchitectModal from "@/components/plot-intelligence/ConsultArchitectModal";
 import ProjectModal from "@/components/ProjectModal";
+import PlotGuideOverlay from "@/components/plot-intelligence/PlotGuideOverlay";
 
 import { analyzePlotBoundary, generateSampleKeralaPlot } from "@/lib/plot-measurements";
 import { matchArchitecturalPlans } from "@/lib/plan-matching";
@@ -72,6 +73,11 @@ export default function PlotIntelligencePage() {
   const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
   const [selectedProjectModal, setSelectedProjectModal] = useState<ArchitecturalProject | null>(null);
   const [selectedConsultProject, setSelectedConsultProject] = useState<ArchitecturalProject | null>(null);
+
+  // Plot Guide State (Project same plot in live location with interactive guide)
+  const [guideCents, setGuideCents] = useState(10);
+  const [guideShape, setGuideShape] = useState("Rectangular");
+  const [isGuideOpen, setIsGuideOpen] = useState(false);
 
   // Compute live geospatial telemetry
   const analysis = useMemo(() => {
@@ -160,7 +166,26 @@ export default function PlotIntelligencePage() {
     }
   };
 
-  // Check if plotId is provided in URL query string (e.g. from Dashboard)
+  const handleLocateMeDirect = () => {
+    if (typeof navigator !== "undefined" && navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const { latitude, longitude } = pos.coords;
+          const sampleCoords = generateSampleKeralaPlot(longitude, latitude, guideCents, guideShape);
+          setCoordinates(sampleCoords);
+          setIsClosed(true);
+          setLocationName(`Your Live Location (${guideCents} Cents)`);
+          setFocusLocation({ lat: latitude, lng: longitude, label: "Live GPS Location" });
+        },
+        (err) => {
+          console.warn("Geolocation failed:", err);
+        },
+        { enableHighAccuracy: true, timeout: 6000, maximumAge: 0 }
+      );
+    }
+  };
+
+  // Check URL query parameters (plotId, custom cents, live location, and plot guide)
   React.useEffect(() => {
     if (typeof window === "undefined") return;
     const urlParams = new URLSearchParams(window.location.search);
@@ -174,6 +199,107 @@ export default function PlotIntelligencePage() {
           }
         })
         .catch((err) => console.error("Error loading plot from url:", err));
+      return;
+    }
+
+    const centsParam = urlParams.get("cents");
+    const plotParam = urlParams.get("plot");
+    const shapeParam = urlParams.get("shape");
+    const directionParam = urlParams.get("direction");
+    const locationParam = urlParams.get("location");
+    const liveParam = urlParams.get("live");
+    const guideParam = urlParams.get("guide");
+
+    let parsedCents: number | null = null;
+    if (centsParam) {
+      const num = parseFloat(centsParam);
+      if (!isNaN(num) && num > 0) parsedCents = num;
+    } else if (plotParam) {
+      const match = plotParam.match(/([\d.]+)\s*Cents/i);
+      if (match) {
+        const num = parseFloat(match[1]);
+        if (!isNaN(num) && num > 0) parsedCents = num;
+      }
+    }
+
+    if (parsedCents) {
+      setGuideCents(parsedCents);
+      const targetShape = shapeParam || "Rectangular";
+      setGuideShape(targetShape);
+      if (guideParam === "true") setIsGuideOpen(true);
+
+      let targetRoadIdx = 0;
+      if (directionParam) {
+        if (directionParam.includes("East")) targetRoadIdx = 1;
+        else if (directionParam.includes("South")) targetRoadIdx = 2;
+        else if (directionParam.includes("West")) targetRoadIdx = 3;
+      }
+      setRoadFacingIndex(targetRoadIdx);
+
+      const districtLookup: Record<string, [number, number]> = {
+        ernakulam: [76.2999, 9.9816],
+        kochi: [76.2999, 9.9816],
+        thiruvananthapuram: [76.9366, 8.5241],
+        trivandrum: [76.9366, 8.5241],
+        kozhikode: [75.7804, 11.2588],
+        calicut: [75.7804, 11.2588],
+        thrissur: [76.2144, 10.5276],
+        kottayam: [76.5222, 9.5916],
+        kannur: [75.3704, 11.8745],
+        alappuzha: [76.3388, 9.4981],
+        kollam: [76.6141, 8.8932],
+        palakkad: [76.6548, 10.7867],
+        malappuram: [76.0711, 11.0510],
+        wayanad: [76.0827, 11.6103],
+        idukki: [76.9667, 9.8500],
+        pathanamthitta: [76.7870, 9.2648],
+        kasaragod: [74.9869, 12.4996],
+      };
+
+      const locKey = locationParam ? locationParam.toLowerCase() : "";
+      let foundCenter: [number, number] | null = null;
+      for (const [key, coords] of Object.entries(districtLookup)) {
+        if (locKey.includes(key)) {
+          foundCenter = coords;
+          break;
+        }
+      }
+
+      const applyPlotAtCoords = (lng: number, lat: number, locLabel: string) => {
+        const sampleCoords = generateSampleKeralaPlot(lng, lat, parsedCents!, targetShape);
+        setCoordinates(sampleCoords);
+        setIsClosed(true);
+        setLocationName(locLabel);
+        setFocusLocation({ lat, lng, label: locLabel });
+      };
+
+      if (liveParam === "true" && typeof navigator !== "undefined" && navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            applyPlotAtCoords(
+              pos.coords.longitude,
+              pos.coords.latitude,
+              `Your Live Location (${parsedCents} Cents)`
+            );
+          },
+          () => {
+            const fallback = foundCenter || [76.2999, 9.9816];
+            applyPlotAtCoords(
+              fallback[0],
+              fallback[1],
+              locationParam || "Kerala Residential Plot"
+            );
+          },
+          { enableHighAccuracy: true, timeout: 6000, maximumAge: 0 }
+        );
+      } else {
+        const center = foundCenter || [76.2999, 9.9816];
+        applyPlotAtCoords(
+          center[0],
+          center[1],
+          locationParam || "Kerala Residential Plot"
+        );
+      }
     }
   }, []);
 
@@ -347,6 +473,17 @@ export default function PlotIntelligencePage() {
         project={selectedProjectModal}
         onClose={() => setSelectedProjectModal(null)}
       />
+
+      {isGuideOpen && (
+        <PlotGuideOverlay
+          cents={guideCents}
+          locationName={locationName}
+          shape={guideShape}
+          onLocateMe={handleLocateMeDirect}
+          onViewRecommendations={() => setActiveView("recommendations")}
+          onClose={() => setIsGuideOpen(false)}
+        />
+      )}
     </main>
   );
 }

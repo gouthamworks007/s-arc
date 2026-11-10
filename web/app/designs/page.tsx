@@ -54,6 +54,36 @@ function DesignsCatalogContent() {
     if (queryParam) setSearchQuery(queryParam.split(",")[0]);
   }, [searchParams]);
 
+  const plotParam = searchParams.get("plot");
+  const shapeParam = searchParams.get("shape");
+  const directionParam = searchParams.get("direction");
+  const locationParam = searchParams.get("location");
+
+  const activePlotInfo = useMemo(() => {
+    let cents = 10;
+    let label = "10 Cents";
+    let isActive = false;
+
+    if (plotParam) {
+      isActive = true;
+      label = plotParam;
+      const match = plotParam.match(/([\d.]+)\s*Cents/i);
+      if (match) {
+        cents = parseFloat(match[1]);
+      } else if (plotParam.includes("20+")) {
+        cents = 20;
+      }
+    } else if (selectedPlot !== "All") {
+      isActive = true;
+      label = selectedPlot;
+      if (selectedPlot === "< 10 Cents") cents = 8;
+      else if (selectedPlot === "10 - 15 Cents") cents = 10;
+      else if (selectedPlot === "> 15 Cents") cents = 20;
+    }
+
+    return { isActive, cents, label };
+  }, [plotParam, selectedPlot]);
+
   const filteredAndSortedProjects = useMemo(() => {
     const activeProjects = projects.filter((p) => p.status !== "draft");
     let result = activeProjects.filter((project) => {
@@ -310,31 +340,61 @@ function DesignsCatalogContent() {
       <section className="py-12 sm:py-16 bg-white">
         <div className="max-w-7xl mx-auto px-6 sm:px-8">
           
-          {/* Plot Intelligence Banner */}
-          <div className="mb-8 p-4 sm:p-5 rounded-2xl bg-[#1b1918] text-white border border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-subtle">
-            <div className="flex items-center gap-3.5">
-              <div className="w-10 h-10 rounded-xl bg-copper/20 border border-copper/40 flex items-center justify-center shrink-0">
-                <Compass className="w-5 h-5 text-copper-light" />
-              </div>
-              <div>
-                <div className="text-[13px] font-medium font-sans text-white flex items-center gap-2">
-                  <span>Have a specific plot boundary or land in Kerala?</span>
-                  <span className="px-1.5 py-0.2 rounded-full text-[9px] bg-copper/30 text-copper-light font-mono font-bold">GIS</span>
+          {/* Plot Intelligence Banner / Active Plot Action */}
+          {activePlotInfo.isActive ? (
+            <div className="mb-8 p-4 sm:p-5 rounded-2xl bg-charcoal text-white border border-copper/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xl relative overflow-hidden animate-in fade-in">
+              <div className="flex items-center gap-3.5 relative z-10">
+                <div className="w-11 h-11 rounded-2xl bg-copper/20 border border-copper/40 flex items-center justify-center shrink-0 text-copper-light">
+                  <Compass className="w-5 h-5" />
                 </div>
-                <div className="text-xs text-white/60 font-light font-sans mt-0.5">
-                  Draw your exact perimeter on top-down satellite imagery to filter plans fitting inside your KMBR setbacks.
+                <div>
+                  <div className="text-[13px] font-medium font-sans text-white flex items-center gap-2">
+                    <span>Active Plot: <strong>{activePlotInfo.label}</strong></span>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] bg-copper text-white font-mono font-bold">
+                      Live GIS Guide
+                    </span>
+                  </div>
+                  <div className="text-xs text-white/70 font-light font-sans mt-0.5">
+                    Project this exact {activePlotInfo.cents} Cent parcel onto your physical property with interactive satellite guidance.
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <Link
-              href="/plot-intelligence"
-              className="inline-flex items-center gap-2 px-4 py-2.5 bg-copper hover:bg-copper-hover text-white text-xs font-medium font-sans rounded-full shrink-0 transition-colors shadow-sm self-start sm:self-auto"
-            >
-              <span>Open Satellite Workspace</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </Link>
-          </div>
+              <Link
+                href={`/plot-intelligence?cents=${activePlotInfo.cents}&shape=${encodeURIComponent(shapeParam || "Rectangular")}&direction=${encodeURIComponent(directionParam || "North Facing")}&location=${encodeURIComponent(locationParam || searchQuery || "")}&live=true&guide=true`}
+                className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-copper hover:bg-copper-hover text-white text-xs font-medium font-sans rounded-xl shrink-0 transition-all shadow-md group relative z-10 hover:scale-[1.02]"
+              >
+                <Compass className="w-4 h-4 text-white" />
+                <span>Use same plot in live location with Plot Guide</span>
+                <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
+              </Link>
+            </div>
+          ) : (
+            <div className="mb-8 p-4 sm:p-5 rounded-2xl bg-[#1b1918] text-white border border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-subtle">
+              <div className="flex items-center gap-3.5">
+                <div className="w-10 h-10 rounded-xl bg-copper/20 border border-copper/40 flex items-center justify-center shrink-0">
+                  <Compass className="w-5 h-5 text-copper-light" />
+                </div>
+                <div>
+                  <div className="text-[13px] font-medium font-sans text-white flex items-center gap-2">
+                    <span>Have a specific plot boundary or land in Kerala?</span>
+                    <span className="px-1.5 py-0.2 rounded-full text-[9px] bg-copper/30 text-copper-light font-mono font-bold">GIS</span>
+                  </div>
+                  <div className="text-xs text-white/60 font-light font-sans mt-0.5">
+                    Draw your exact perimeter on top-down satellite imagery to filter plans fitting inside your KMBR setbacks.
+                  </div>
+                </div>
+              </div>
+
+              <Link
+                href="/plot-intelligence"
+                className="inline-flex items-center gap-2 px-4 py-2.5 bg-copper hover:bg-copper-hover text-white text-xs font-medium font-sans rounded-full shrink-0 transition-colors shadow-sm self-start sm:self-auto"
+              >
+                <span>Open Satellite Workspace</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+          )}
 
           {/* Status bar */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 mb-8 border-b border-warm-border gap-4">

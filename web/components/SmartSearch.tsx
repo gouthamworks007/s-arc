@@ -2,7 +2,7 @@
 
 import React, { useEffect, useId, useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, MapPin } from "lucide-react";
+import { ArrowRight, MapPin, Compass } from "lucide-react";
 import {
   motion,
   MotionConfig,
@@ -776,6 +776,19 @@ export default function SmartSearch({ onSearch }: SmartSearchProps) {
                     <span>Find matching designs</span>
                     <ArrowRight className="w-4 h-4 text-white group-hover:translate-x-1 transition-transform" />
                   </button>
+
+                  {/* Direct Link to Live Satellite Workspace with Plot Guide */}
+                  <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-2.5 text-[12px] font-sans border-t border-warm-border/60">
+                    <span className="text-mutedText">Want to project this on your property?</span>
+                    <Link
+                      href={`/plot-intelligence?cents=${isCustom ? customCents : (activeSize.sqft / 435.6).toFixed(1)}&shape=${encodeURIComponent(shapeId)}&direction=${encodeURIComponent(directionId)}&location=${encodeURIComponent(location)}&live=true&guide=true`}
+                      className="inline-flex items-center gap-1.5 text-copper hover:text-copper-dark font-medium underline underline-offset-4 decoration-copper/60 transition-colors group"
+                    >
+                      <Compass className="w-3.5 h-3.5 text-copper shrink-0 group-hover:rotate-45 transition-transform" />
+                      <span>Use same plot in live location with Plot Guide</span>
+                      <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
+                    </Link>
+                  </div>
                 </div>
               </form>
             </div>
