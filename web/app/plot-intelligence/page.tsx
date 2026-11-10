@@ -26,7 +26,7 @@ import SavePlotModal from "@/components/plot-intelligence/SavePlotModal";
 import ConsultArchitectModal from "@/components/plot-intelligence/ConsultArchitectModal";
 import ProjectModal from "@/components/ProjectModal";
 
-import { analyzePlotBoundary } from "@/lib/plot-measurements";
+import { analyzePlotBoundary, generateSampleKeralaPlot } from "@/lib/plot-measurements";
 import { matchArchitecturalPlans } from "@/lib/plan-matching";
 import { useProjects } from "@/lib/projectsContext";
 import { useAuth } from "@/lib/authContext";
@@ -47,23 +47,16 @@ import {
   FolderHeart,
 } from "lucide-react";
 
-// Default realistic sample residential plot in Kochi, Kerala (~11.8 Cents)
-const SAMPLE_KOCHI_PLOT: [number, number][] = [
-  [76.3262, 9.9818],
-  [76.3267, 9.9819],
-  [76.3268, 9.9813],
-  [76.3263, 9.9812],
-];
-
 export default function PlotIntelligencePage() {
   const { projects } = useProjects();
   const { isLoggedIn, currentUser } = useAuth();
 
   // Primary Plot State
   const [coordinates, setCoordinates] = useState<[number, number][]>([]);
+  const [isClosed, setIsClosed] = useState(false);
   const [roadFacingIndex, setRoadFacingIndex] = useState(0);
   const [selectedUnit, setSelectedUnit] = useState<KeralaLandUnit>("cent");
-  const [locationName, setLocationName] = useState("Kochi, Kerala");
+  const [locationName, setLocationName] = useState("East Desam, Aluva, Kerala");
   const [focusLocation, setFocusLocation] = useState<{ lat: number; lng: number; label: string } | null>(null);
   const [userInputs, setUserInputs] = useState<PlotAnalysisData["userInputs"]>({
     roadAccessWidthFt: 14,
@@ -99,12 +92,20 @@ export default function PlotIntelligencePage() {
     setFocusLocation({ lat, lng, label: displayName });
   };
 
-  // Load realistic sample plot (11.8 Cent Kerala plot) for instant demo
+  // Load realistic sample plot (10.5 Cent Kerala plot) centered at active location or East Desam
   const handleLoadSamplePlot = () => {
-    setCoordinates(SAMPLE_KOCHI_PLOT);
+    const centerLng = focusLocation ? focusLocation.lng : 76.3493;
+    const centerLat = focusLocation ? focusLocation.lat : 10.1287;
+    const sampleCoords = generateSampleKeralaPlot(centerLng, centerLat, 10.5);
+
+    setCoordinates(sampleCoords);
+    setIsClosed(true);
     setRoadFacingIndex(0);
-    setLocationName("Edappally, Kochi, Kerala");
-    setFocusLocation({ lat: 9.9816, lng: 76.3264, label: "Edappally, Kochi (Sample)" });
+    const label = locationName && !locationName.includes("Sample")
+      ? `${locationName} (Sample 10.5 Cents)`
+      : "East Desam, Aluva (Sample 10.5 Cents)";
+    setLocationName(label);
+    setFocusLocation(null);
   };
 
   // Load saved plot from drawer or dashboard
@@ -115,6 +116,7 @@ export default function PlotIntelligencePage() {
       // Strip closed ring duplicate end point
       const cleanCoords = ring.slice(0, ring.length - 1) as [number, number][];
       setCoordinates(cleanCoords);
+      setIsClosed(true);
       setRoadFacingIndex(saved.road_side_index || 0);
       if (saved.location_name) setLocationName(saved.location_name);
       if (saved.center_lat && saved.center_lng) {
@@ -229,6 +231,8 @@ export default function PlotIntelligencePage() {
                 <PlotMapWorkspace
                   coordinates={coordinates}
                   onCoordinatesChange={setCoordinates}
+                  isClosed={isClosed}
+                  onIsClosedChange={setIsClosed}
                   roadFacingIndex={roadFacingIndex}
                   onRoadFacingIndexChange={setRoadFacingIndex}
                   analysis={analysis}

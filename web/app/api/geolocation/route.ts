@@ -58,12 +58,12 @@ export async function GET(req: NextRequest) {
     // Ignore timeout
   }
 
-  // 4. Default to Kochi / Central Kerala fallback if completely offline
+  // 4. Default to East Desam, Aluva fallback if completely offline or local development
   return NextResponse.json({
-    latitude: 9.9816,
-    longitude: 76.3264,
-    city: "Kochi",
-    region: "Kerala",
+    latitude: 10.1287,
+    longitude: 76.3493,
+    city: "East Desam",
+    region: "Desom, Aluva, Kerala",
     source: "default-regional",
   });
 }

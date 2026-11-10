@@ -22,8 +22,8 @@ export const DEFAULT_MAP_CONFIG: MapLayerConfig = {
     '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
 };
 
-// Initial Kerala default focus (Kochi / Central Kerala)
-export const KERALA_DEFAULT_CENTER: [number, number] = [76.3264, 9.9816];
+// Initial Kerala default focus (East Desam, Aluva / Central Kerala)
+export const KERALA_DEFAULT_CENTER: [number, number] = [76.3493, 10.1287];
 export const KERALA_DEFAULT_ZOOM = 17;
 
 /**

@@ -31,6 +31,7 @@ import {
 } from "@/lib/map-config";
 import {
   validatePolygonCoordinates,
+  generateSampleKeralaPlot,
 } from "@/lib/plot-measurements";
 import { PlotAnalysisData } from "@/lib/types";
 
@@ -46,6 +47,8 @@ if (typeof window !== "undefined") {
 interface PlotMapWorkspaceProps {
   coordinates: [number, number][];
   onCoordinatesChange: (coords: [number, number][]) => void;
+  isClosed?: boolean;
+  onIsClosedChange?: (closed: boolean) => void;
   roadFacingIndex: number;
   onRoadFacingIndexChange: (idx: number) => void;
   analysis: PlotAnalysisData | null;
@@ -58,6 +61,8 @@ interface PlotMapWorkspaceProps {
 export default function PlotMapWorkspace({
   coordinates,
   onCoordinatesChange,
+  isClosed: isClosedProp,
+  onIsClosedChange,
   roadFacingIndex,
   onRoadFacingIndexChange,
   analysis,
@@ -74,9 +79,16 @@ export default function PlotMapWorkspace({
 
   // Drawing state
   const [isDrawing, setIsDrawing] = useState(true);
-  const [isClosed, setIsClosed] = useState(false);
+  const [isClosed, setIsClosed] = useState(isClosedProp ?? false);
   const [isNearStartPoint, setIsNearStartPoint] = useState(false);
   const [liveDistanceFt, setLiveDistanceFt] = useState<number | null>(null);
+
+  // Sync external isClosed state
+  useEffect(() => {
+    if (isClosedProp !== undefined) {
+      setIsClosed(isClosedProp);
+    }
+  }, [isClosedProp]);
 
   // Undo History
   const [history, setHistory] = useState<[number, number][][]>([coordinates]);
@@ -92,14 +104,15 @@ export default function PlotMapWorkspace({
   const centerMarkerRef = useRef<Marker | null>(null);
   const locationPinMarkerRef = useRef<Marker | null>(null);
 
-  // Auto-detect closed status when coordinates change externally
+  // Reset history and drawing state if coordinates are cleared from outside
   useEffect(() => {
-    if (coordinates.length >= 3) {
-      setIsClosed(true);
-    } else {
+    if (coordinates.length === 0) {
+      setHistory([[]]);
+      setHistoryIdx(0);
       setIsClosed(false);
+      onIsClosedChange?.(false);
     }
-  }, [coordinates.length]);
+  }, [coordinates.length, onIsClosedChange]);
 
   // Push to history
   const pushHistory = useCallback(
@@ -120,26 +133,98 @@ export default function PlotMapWorkspace({
       setHistoryIdx(nextIdx);
       const prevCoords = history[nextIdx] || [];
       onCoordinatesChange(prevCoords);
-      if (prevCoords.length < 3) setIsClosed(false);
+      if (prevCoords.length < 3) {
+        setIsClosed(false);
+        onIsClosedChange?.(false);
+      }
     }
   };
 
   const handleClear = () => {
     pushHistory([]);
     setIsClosed(false);
+    onIsClosedChange?.(false);
     setIsDrawing(true);
     clearRubberband();
+    if (locationPinMarkerRef.current) {
+      locationPinMarkerRef.current.remove();
+      locationPinMarkerRef.current = null;
+    }
   };
 
   // Complete / Close boundary polygon
   const handleCompleteBoundary = () => {
     if (coordinates.length >= 3) {
       setIsClosed(true);
+      onIsClosedChange?.(true);
       setIsDrawing(false);
       clearRubberband();
       fitPlotBounds();
     }
   };
+
+  // Generate authentic Kerala residential sample plot at current viewport or East Desam
+  const handleSamplePlotClick = useCallback(() => {
+    let centerLng = 76.3493; // East Desam, Aluva default
+    let centerLat = 10.1287;
+
+    const map = mapRef.current;
+    if (map) {
+      const c = map.getCenter();
+      if (c.lng >= 74 && c.lng <= 79 && c.lat >= 8 && c.lat <= 14) {
+        centerLng = c.lng;
+        centerLat = c.lat;
+      }
+    } else if (focusLocation) {
+      centerLng = focusLocation.lng;
+      centerLat = focusLocation.lat;
+    }
+
+    const sampleCoords = generateSampleKeralaPlot(centerLng, centerLat, 10.5);
+
+    pushHistory(sampleCoords);
+    setIsClosed(true);
+    onIsClosedChange?.(true);
+    setIsDrawing(false);
+    clearRubberband();
+    onRoadFacingIndexChange(0);
+
+    if (locationPinMarkerRef.current) {
+      locationPinMarkerRef.current.remove();
+      locationPinMarkerRef.current = null;
+    }
+
+    if (map) {
+      const line = turf.lineString(sampleCoords);
+      const [minX, minY, maxX, maxY] = turf.bbox(line);
+      map.fitBounds(
+        [
+          [minX, minY],
+          [maxX, maxY],
+        ],
+        {
+          padding: { top: 90, bottom: 100, left: 90, right: 90 },
+          maxZoom: 19.5,
+          duration: 900,
+          pitch: 0,
+          bearing: 0,
+        }
+      );
+    }
+
+    if (onLocationDetected) {
+      onLocationDetected(
+        "East Desam, Aluva",
+        "East Desam, Aluva (Sample 10.5 Cents)",
+        centerLat,
+        centerLng
+      );
+    }
+
+    if (onLoadSamplePlot) {
+      onLoadSamplePlot();
+    }
+  }, [focusLocation, pushHistory, onIsClosedChange, onRoadFacingIndexChange, onLocationDetected, onLoadSamplePlot]);
 
   // Clear rubberband lines
   const clearRubberband = () => {
@@ -503,8 +588,8 @@ export default function PlotMapWorkspace({
         }
       }
 
-      // Add High-Tech Centroid Area Badge
-      if (coords.length >= 3 && analysis) {
+      // Add High-Tech Centroid Area Badge (Only when boundary is complete and closed)
+      if (coords.length >= 3 && analysis && isClosed) {
         const centerEl = document.createElement("div");
         centerEl.className = "pointer-events-none transform -translate-x-1/2 -translate-y-1/2";
         centerEl.innerHTML = `
@@ -551,7 +636,7 @@ export default function PlotMapWorkspace({
         if (coordinates.length >= 3) {
           const startPt = turf.point(coordinates[0]);
           const distToStartKm = turf.distance(startPt, toPt, { units: "kilometers" });
-          setIsNearStartPoint(distToStartKm * 1000 < 15);
+          setIsNearStartPoint(distToStartKm * 1000 < 10);
         } else {
           setIsNearStartPoint(false);
         }
@@ -642,6 +727,16 @@ export default function PlotMapWorkspace({
       }
     );
   }, [coordinates]);
+
+  // Auto-fit bounds whenever a completed/closed plot is loaded
+  useEffect(() => {
+    if (isClosed && coordinates.length >= 3) {
+      const timer = setTimeout(() => {
+        fitPlotBounds();
+      }, 250);
+      return () => clearTimeout(timer);
+    }
+  }, [isClosed, coordinates.length, fitPlotBounds]);
 
   // 6. External Focus Location Handling
   const placeLocationPin = useCallback((lat: number, lng: number, label = "Selected Location") => {
@@ -905,15 +1000,13 @@ export default function PlotMapWorkspace({
             <div className="flex items-center gap-2 text-xs font-sans text-white/90">
               <Pencil className="w-4 h-4 text-cyan-400 animate-pulse shrink-0" />
               <span>Click anywhere on the map to place <strong>Corner #1</strong></span>
-              {onLoadSamplePlot && (
-                <button
-                  onClick={onLoadSamplePlot}
-                  className="ml-2 px-2.5 py-1 rounded-xl bg-cyan-500/20 text-cyan-300 border border-cyan-400/40 hover:bg-cyan-500 hover:text-black font-medium transition-all flex items-center gap-1 text-[11px]"
-                >
-                  <Sparkles className="w-3 h-3" />
-                  <span>Try Sample Plot</span>
-                </button>
-              )}
+              <button
+                onClick={handleSamplePlotClick}
+                className="ml-2 px-2.5 py-1 rounded-xl bg-cyan-500/20 text-cyan-300 border border-cyan-400/40 hover:bg-cyan-500 hover:text-black font-medium transition-all flex items-center gap-1 text-[11px]"
+              >
+                <Sparkles className="w-3 h-3" />
+                <span>Try Sample Plot</span>
+              </button>
             </div>
           ) : !isClosed ? (
             /* State 2: Plot in progress (placing corners) */

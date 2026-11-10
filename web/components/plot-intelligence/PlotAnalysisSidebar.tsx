@@ -93,7 +93,7 @@ export default function PlotAnalysisSidebar({
                 className="mt-3 w-full py-2.5 px-4 rounded-xl border border-copper/40 bg-copper-subtle text-copper text-xs font-sans font-medium hover:bg-copper hover:text-white transition-all flex items-center justify-center gap-1.5 shadow-xs"
               >
                 <Sparkles className="w-3.5 h-3.5" />
-                <span>Try Sample 11.8-Cent Plot</span>
+                <span>Try Sample 10.5-Cent Plot</span>
               </button>
             )}
           </div>

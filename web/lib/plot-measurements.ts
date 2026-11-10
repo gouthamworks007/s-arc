@@ -291,3 +291,33 @@ export function getUnitBreakdown(cents: number) {
   };
 }
 
+/**
+ * Generates an authentic rectangular Kerala residential sample plot (~10.5 Cents / 425 m²)
+ * centered around a specific [lng, lat] (defaulting to East Desam, Aluva).
+ * Road frontage is aligned along side 0 (North edge, ~53.5 ft frontage x ~85.6 ft depth).
+ */
+export function generateSampleKeralaPlot(
+  centerLng = 76.3493,
+  centerLat = 10.1287,
+  targetCents = 10.5
+): [number, number][] {
+  const targetAreaSqm = targetCents * SQM_PER_CENT; // ~425 sqm
+  // Standard Kerala residential parcel aspect ratio (~1 : 1.6)
+  const widthMeters = Math.sqrt(targetAreaSqm / 1.6); // ~16.3m (~53.5 ft)
+  const depthMeters = widthMeters * 1.6; // ~26.1m (~85.6 ft)
+
+  const halfWidth = widthMeters / 2;
+  const halfDepth = depthMeters / 2;
+
+  const deltaLat = halfDepth / 111320;
+  const deltaLng = halfWidth / (111320 * Math.cos((centerLat * Math.PI) / 180));
+
+  return [
+    [Number((centerLng - deltaLng).toFixed(6)), Number((centerLat + deltaLat).toFixed(6))], // P1: NW
+    [Number((centerLng + deltaLng).toFixed(6)), Number((centerLat + deltaLat).toFixed(6))], // P2: NE
+    [Number((centerLng + deltaLng).toFixed(6)), Number((centerLat - deltaLat).toFixed(6))], // P3: SE
+    [Number((centerLng - deltaLng).toFixed(6)), Number((centerLat - deltaLat).toFixed(6))], // P4: SW
+  ];
+}
+
+
