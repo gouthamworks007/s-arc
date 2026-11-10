@@ -226,11 +226,6 @@ export default function StylesPage() {
               </div>
             </div>
           ))}
-                  </Link>
-                </div>
-              </div>
-            </div>
-          ))}
         </div>
       </section>
 
