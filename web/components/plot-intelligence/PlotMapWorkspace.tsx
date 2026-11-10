@@ -685,64 +685,107 @@ export default function PlotMapWorkspace({
     placeLocationPin(lat, lng, label || "Selected Property");
   }, [focusLocation, placeLocationPin]);
 
-  // 7. High-Precision Device Geolocation with Reverse Geocoding
-  const handleCurrentLocation = () => {
-    if (!navigator.geolocation) {
-      setGeoNotice("Geolocation is not supported by your browser.");
-      setTimeout(() => setGeoNotice(null), 4000);
-      return;
-    }
-
-    setGeoLocating(true);
-    setGeoNotice("Acquiring GPS fix...");
-
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        setGeoLocating(false);
-        const { longitude, latitude } = pos.coords;
-        const map = mapRef.current;
-        if (map) {
-          map.flyTo({
-            center: [longitude, latitude],
-            zoom: 18,
-            pitch: 0,
-            bearing: 0,
-            duration: 1500,
-            essential: true,
-          });
-        }
-
-        // Reverse geocode to retrieve exact locality (e.g. East Desam, Aluva)
-        try {
-          const res = await fetch(`/api/geocode?lat=${latitude}&lng=${longitude}`);
-          if (res.ok) {
-            const geoData = await res.json();
-            const placeName = geoData.name || "Your Location";
-            placeLocationPin(latitude, longitude, placeName);
-            setGeoNotice(`Located at ${placeName}`);
-            setTimeout(() => setGeoNotice(null), 4000);
-            if (onLocationDetected) {
-              onLocationDetected(placeName, geoData.displayName || placeName, latitude, longitude);
-            }
-            return;
+  // Fallback to server-side IP geolocation if browser GPS is blocked
+  const fallbackIpGeolocation = async () => {
+    try {
+      const geoRes = await fetch("/api/geolocation");
+      if (geoRes.ok) {
+        const geoInfo = await geoRes.json();
+        if (geoInfo.latitude && geoInfo.longitude) {
+          const lat = geoInfo.latitude;
+          const lng = geoInfo.longitude;
+          const map = mapRef.current;
+          if (map) {
+            map.flyTo({
+              center: [lng, lat],
+              zoom: 17,
+              pitch: 0,
+              bearing: 0,
+              duration: 1200,
+              essential: true,
+            });
           }
-        } catch (err) {}
 
-        placeLocationPin(latitude, longitude, "Your Location");
-        setGeoNotice("Property location detected");
-        setTimeout(() => setGeoNotice(null), 3000);
-      },
-      (err) => {
+          const placeName = geoInfo.city || "Regional Location";
+          placeLocationPin(lat, lng, placeName);
+          if (onLocationDetected) {
+            onLocationDetected(placeName, `${placeName}, ${geoInfo.region || "Kerala"}`, lat, lng);
+          }
+          setGeoNotice(`Located approximately via Network (${placeName})`);
+          setTimeout(() => setGeoNotice(null), 4000);
+          return;
+        }
+      }
+    } catch (e) {}
+
+    setGeoNotice("Please search your locality or PIN code in the search bar above.");
+    setTimeout(() => setGeoNotice(null), 5000);
+  };
+
+  // 7. High-Precision Device Geolocation with Reverse Geocoding & Safe Fallback
+  const handleCurrentLocation = () => {
+    setGeoLocating(true);
+    setGeoNotice("Detecting property location...");
+
+    const onGeoSuccess = async (pos: GeolocationPosition) => {
+      setGeoLocating(false);
+      const { longitude, latitude } = pos.coords;
+      const map = mapRef.current;
+      if (map) {
+        map.flyTo({
+          center: [longitude, latitude],
+          zoom: 18,
+          pitch: 0,
+          bearing: 0,
+          duration: 1500,
+          essential: true,
+        });
+      }
+
+      // Reverse geocode to retrieve exact locality (e.g. East Desam, Aluva)
+      try {
+        const res = await fetch(`/api/geocode?lat=${latitude}&lng=${longitude}`);
+        if (res.ok) {
+          const geoData = await res.json();
+          const placeName = geoData.name || "Your Location";
+          placeLocationPin(latitude, longitude, placeName);
+          setGeoNotice(`Located: ${placeName}`);
+          setTimeout(() => setGeoNotice(null), 4000);
+          if (onLocationDetected) {
+            onLocationDetected(placeName, geoData.displayName || placeName, latitude, longitude);
+          }
+          return;
+        }
+      } catch (err) {}
+
+      placeLocationPin(latitude, longitude, "Your Location");
+      setGeoNotice("Property location detected");
+      setTimeout(() => setGeoNotice(null), 3000);
+    };
+
+    const onGeoError = async (err?: GeolocationPositionError) => {
+      console.warn("Browser geolocation blocked or unavailable, using IP fallback:", err?.message);
+      await fallbackIpGeolocation();
+      setGeoLocating(false);
+    };
+
+    try {
+      if (!navigator.geolocation) {
+        fallbackIpGeolocation();
         setGeoLocating(false);
-        setGeoNotice(
-          err.code === 1
-            ? "Location permission denied. Please allow location access in your browser or search your place above."
-            : "Unable to retrieve device location. Please search your place or PIN above."
-        );
-        setTimeout(() => setGeoNotice(null), 6000);
-      },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-    );
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(
+        onGeoSuccess,
+        onGeoError,
+        { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
+      );
+    } catch (ex) {
+      console.warn("Geolocation access threw policy exception, falling back:", ex);
+      fallbackIpGeolocation();
+      setGeoLocating(false);
+    }
   };
 
   const validation = validatePolygonCoordinates(coordinates);

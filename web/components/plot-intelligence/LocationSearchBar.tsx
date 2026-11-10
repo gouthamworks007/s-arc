@@ -40,35 +40,65 @@ export default function LocationSearchBar({
   const containerRef = useRef<HTMLDivElement>(null);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  const fallbackIpLocate = async () => {
+    try {
+      const res = await fetch("/api/geolocation");
+      if (res.ok) {
+        const data = await res.json();
+        if (data.latitude && data.longitude) {
+          const name = data.city ? `${data.city}, ${data.region || "Kerala"}` : "Regional Location";
+          setQuery(name);
+          onSelectLocation(data.latitude, data.longitude, name);
+          return;
+        }
+      }
+    } catch (e) {}
+  };
+
   const handleLocateMe = () => {
-    if (!navigator.geolocation) return;
     setLocating(true);
 
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        setLocating(false);
-        const { latitude, longitude } = pos.coords;
+    const onGeoSuccess = async (pos: GeolocationPosition) => {
+      setLocating(false);
+      const { latitude, longitude } = pos.coords;
 
-        // Reverse geocode to find real locality name
-        try {
-          const res = await fetch(`/api/geocode?lat=${latitude}&lng=${longitude}`);
-          if (res.ok) {
-            const data = await res.json();
-            const placeName = data.name || "Your Location";
-            setQuery(placeName);
-            onSelectLocation(latitude, longitude, data.displayName || placeName);
-            return;
-          }
-        } catch (err) {}
+      // Reverse geocode to find real locality name
+      try {
+        const res = await fetch(`/api/geocode?lat=${latitude}&lng=${longitude}`);
+        if (res.ok) {
+          const data = await res.json();
+          const placeName = data.name || "Your Location";
+          setQuery(placeName);
+          onSelectLocation(latitude, longitude, data.displayName || placeName);
+          return;
+        }
+      } catch (err) {}
 
-        setQuery("Your Location");
-        onSelectLocation(latitude, longitude, "Your Location");
-      },
-      () => {
+      setQuery("Your Location");
+      onSelectLocation(latitude, longitude, "Your Location");
+    };
+
+    const onGeoError = async () => {
+      await fallbackIpLocate();
+      setLocating(false);
+    };
+
+    try {
+      if (!navigator.geolocation) {
+        fallbackIpLocate();
         setLocating(false);
-      },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-    );
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(
+        onGeoSuccess,
+        onGeoError,
+        { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
+      );
+    } catch (e) {
+      fallbackIpLocate();
+      setLocating(false);
+    }
   };
 
   // Close dropdown on click outside
