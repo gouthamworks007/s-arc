@@ -228,17 +228,6 @@ export default function Hero({ onExploreClick, onProjectClick }: HeroProps) {
               {/* Architectural Vignette Overlay */}
               <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-transparent to-black/20 pointer-events-none" />
 
-              {/* Slide Progress Indicator Bar */}
-              <div className="absolute top-0 left-0 right-0 h-[3px] bg-white/10 z-20 overflow-hidden pointer-events-none">
-                <motion.div
-                  key={currentSlide}
-                  initial={{ width: "0%" }}
-                  animate={{ width: isPaused ? "0%" : "100%" }}
-                  transition={{ duration: 5.5, ease: "linear" }}
-                  className="h-full bg-copper shadow-[0_0_10px_rgba(173,128,101,0.9)]"
-                />
-              </div>
-
               {/* Animated Moving Dot Indicators */}
               <div className="absolute top-6 right-6 sm:top-8 sm:right-8 z-20 pointer-events-auto">
                 <div className="flex items-center gap-1.5">
