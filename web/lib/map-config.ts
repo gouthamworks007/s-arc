@@ -10,11 +10,12 @@ export interface MapLayerConfig {
 }
 
 export const DEFAULT_MAP_CONFIG: MapLayerConfig = {
+  // Ultra high-resolution Google Satellite Hybrid tiles covering all Kerala districts down to sub-meter parcel accuracy
   satelliteTileUrl:
     process.env.NEXT_PUBLIC_SATELLITE_TILE_URL ||
-    "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+    "https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",
   satelliteAttribution:
-    "Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community",
+    "Imagery &copy; Google",
   standardTileUrl:
     process.env.NEXT_PUBLIC_STANDARD_TILE_URL ||
     "https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png",
@@ -31,9 +32,19 @@ export const KERALA_DEFAULT_ZOOM = 17;
  */
 export function buildMapStyle(mode: MapMode): StyleSpecification {
   const isSat = mode === "satellite";
-  const tileUrl = isSat
-    ? DEFAULT_MAP_CONFIG.satelliteTileUrl
-    : DEFAULT_MAP_CONFIG.standardTileUrl;
+  const customSatUrl = process.env.NEXT_PUBLIC_SATELLITE_TILE_URL;
+
+  const tileUrls = isSat
+    ? customSatUrl
+      ? [customSatUrl]
+      : [
+          "https://mt0.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",
+          "https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",
+          "https://mt2.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",
+          "https://mt3.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",
+        ]
+    : [DEFAULT_MAP_CONFIG.standardTileUrl];
+
   const attribution = isSat
     ? DEFAULT_MAP_CONFIG.satelliteAttribution
     : DEFAULT_MAP_CONFIG.standardAttribution;
@@ -44,10 +55,10 @@ export function buildMapStyle(mode: MapMode): StyleSpecification {
     sources: {
       "base-raster-tiles": {
         type: "raster",
-        tiles: [tileUrl],
+        tiles: tileUrls,
         tileSize: 256,
         attribution,
-        maxzoom: 19,
+        maxzoom: 20,
       },
     },
     layers: [
@@ -64,4 +75,3 @@ export function buildMapStyle(mode: MapMode): StyleSpecification {
     ],
   };
 }
-
