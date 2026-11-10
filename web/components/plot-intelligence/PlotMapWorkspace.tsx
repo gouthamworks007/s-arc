@@ -516,7 +516,7 @@ export default function PlotMapWorkspace({
 
       const features: any[] = [];
 
-      if (coords.length >= 3) {
+      if (coords.length >= 3 && isClosed) {
         const closedRing = [...coords, coords[0]];
         features.push({
           type: "Feature",
@@ -524,7 +524,7 @@ export default function PlotMapWorkspace({
           geometry: { type: "Polygon", coordinates: [closedRing] },
         });
 
-        // Boundary lines with road frontage identification
+        // Fully closed boundary lines with road frontage identification
         for (let i = 0; i < coords.length; i++) {
           const nextIdx = (i + 1) % coords.length;
           features.push({
@@ -540,12 +540,18 @@ export default function PlotMapWorkspace({
             },
           });
         }
-      } else if (coords.length === 2) {
-        features.push({
-          type: "Feature",
-          properties: { type: "segment", index: 0, isRoad: false },
-          geometry: { type: "LineString", coordinates: coords },
-        });
+      } else if (coords.length >= 2) {
+        // Open polyline path while actively placing corners (unlimited corners: 3, 4, 5, 10, 20+)
+        for (let i = 0; i < coords.length - 1; i++) {
+          features.push({
+            type: "Feature",
+            properties: { type: "segment", index: i, isRoad: false },
+            geometry: {
+              type: "LineString",
+              coordinates: [coords[i], coords[i + 1]],
+            },
+          });
+        }
       }
 
       source.setData({ type: "FeatureCollection", features });
@@ -693,7 +699,7 @@ export default function PlotMapWorkspace({
         if (coordinates.length >= 3) {
           const startPt = turf.point(coordinates[0]);
           const distToStartKm = turf.distance(startPt, toPt, { units: "kilometers" });
-          setIsNearStartPoint(distToStartKm * 1000 < 10);
+          setIsNearStartPoint(distToStartKm * 1000 < 5);
         } else {
           setIsNearStartPoint(false);
         }
@@ -1133,11 +1139,16 @@ export default function PlotMapWorkspace({
               </button>
             </div>
           ) : !isClosed ? (
-            /* State 2: Plot in progress (placing corners) */
+            /* State 2: Plot in progress (placing corners: 3, 4, 5, 10, 20+ supported) */
             <div className="flex items-center gap-2.5">
-              <span className="text-xs font-mono font-medium text-cyan-300">
-                Corner #{coordinates.length + 1}
-              </span>
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs font-mono font-bold text-cyan-300">
+                  Corner #{coordinates.length + 1}
+                </span>
+                <span className="text-[11px] font-sans text-white/60 hidden sm:inline">
+                  • Click map to add corner #{coordinates.length + 1}
+                </span>
+              </div>
 
               {/* Complete Boundary button appears when >= 3 points exist */}
               {coordinates.length >= 3 && (
@@ -1146,7 +1157,7 @@ export default function PlotMapWorkspace({
                   className="px-3 py-1.5 rounded-xl bg-cyan-500 text-black text-xs font-sans font-bold hover:bg-cyan-400 transition-all flex items-center gap-1.5 shadow-lg shadow-cyan-500/20"
                 >
                   <Check className="w-3.5 h-3.5 stroke-[3]" />
-                  <span>Close Boundary</span>
+                  <span>Close Boundary ({coordinates.length} Corners)</span>
                 </button>
               )}
 
