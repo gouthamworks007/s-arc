@@ -163,10 +163,10 @@ export default function PlotMapWorkspace({
     }
   };
 
-  // Generate authentic Kerala residential sample plot at current viewport or East Desam
+  // Generate authentic Kerala residential sample plot at current viewport or Central Kerala
   const handleSamplePlotClick = useCallback(() => {
-    let centerLng = 76.3493; // East Desam, Aluva default
-    let centerLat = 10.1287;
+    let centerLng = 76.2999; // Central Kerala / Ernakulam default
+    let centerLat = 9.9816;
 
     const map = mapRef.current;
     if (map) {
@@ -214,8 +214,8 @@ export default function PlotMapWorkspace({
 
     if (onLocationDetected) {
       onLocationDetected(
-        "East Desam, Aluva",
-        "East Desam, Aluva (Sample 10.5 Cents)",
+        "Kerala",
+        "Kerala Residential Plot (Sample 10.5 Cents)",
         centerLat,
         centerLng
       );
@@ -837,7 +837,7 @@ export default function PlotMapWorkspace({
         });
       }
 
-      // Reverse geocode to retrieve exact locality (e.g. East Desam, Aluva)
+      // Reverse geocode to retrieve exact locality
       try {
         const res = await fetch(`/api/geocode?lat=${latitude}&lng=${longitude}`);
         if (res.ok) {

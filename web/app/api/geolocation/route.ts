@@ -58,12 +58,12 @@ export async function GET(req: NextRequest) {
     // Ignore timeout
   }
 
-  // 4. Default to East Desam, Aluva fallback if completely offline or local development
+  // 4. Default to Ernakulam / Central Kerala fallback if completely offline or local development
   return NextResponse.json({
-    latitude: 10.1287,
-    longitude: 76.3493,
-    city: "East Desam",
-    region: "Desom, Aluva, Kerala",
+    latitude: 9.9816,
+    longitude: 76.2999,
+    city: "Ernakulam",
+    region: "Kerala",
     source: "default-regional",
   });
 }

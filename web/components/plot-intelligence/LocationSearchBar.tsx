@@ -17,15 +17,22 @@ interface LocationSearchBarProps {
   className?: string;
 }
 
-const QUICK_HUBS = [
-  { name: "East Desam", lat: 10.1287, lng: 76.3493 },
-  { name: "Aluva", lat: 10.1076, lng: 76.3516 },
-  { name: "Kochi", lat: 9.9312, lng: 76.2673 },
-  { name: "Trivandrum", lat: 8.5241, lng: 76.9366 },
+// All 14 Districts of Kerala with administrative headquarters coordinates
+const KERALA_DISTRICTS = [
+  { name: "Ernakulam", lat: 9.9816, lng: 76.2999 },
+  { name: "Thiruvananthapuram", lat: 8.5241, lng: 76.9366 },
   { name: "Kozhikode", lat: 11.2588, lng: 75.7804 },
   { name: "Thrissur", lat: 10.5276, lng: 76.2144 },
-  { name: "Wayanad", lat: 11.6103, lng: 76.0827 },
   { name: "Kottayam", lat: 9.5916, lng: 76.5222 },
+  { name: "Kannur", lat: 11.8745, lng: 75.3704 },
+  { name: "Alappuzha", lat: 9.4981, lng: 76.3388 },
+  { name: "Kollam", lat: 8.8932, lng: 76.6141 },
+  { name: "Palakkad", lat: 10.7867, lng: 76.6548 },
+  { name: "Malappuram", lat: 11.0510, lng: 76.0711 },
+  { name: "Wayanad", lat: 11.6103, lng: 76.0827 },
+  { name: "Idukki", lat: 9.8500, lng: 76.9667 },
+  { name: "Pathanamthitta", lat: 9.2648, lng: 76.7870 },
+  { name: "Kasaragod", lat: 12.4996, lng: 74.9869 },
 ];
 
 export default function LocationSearchBar({
@@ -202,18 +209,18 @@ export default function LocationSearchBar({
         </button>
 
         <span className="text-[10px] tracking-wider uppercase text-charcoal/40 font-semibold shrink-0 pl-1">
-          Hubs:
+          Districts:
         </span>
-        {QUICK_HUBS.map((hub) => (
+        {KERALA_DISTRICTS.map((dist) => (
           <button
-            key={hub.name}
+            key={dist.name}
             onClick={() => {
-              setQuery(hub.name);
-              onSelectLocation(hub.lat, hub.lng, `${hub.name}, Kerala, India`);
+              setQuery(dist.name);
+              onSelectLocation(dist.lat, dist.lng, `${dist.name} District, Kerala, India`);
             }}
             className="px-2.5 py-1 rounded-lg bg-white/90 backdrop-blur-sm border border-warm-border text-charcoal/70 hover:border-copper hover:text-copper transition-all shrink-0 font-medium"
           >
-            {hub.name}
+            {dist.name}
           </button>
         ))}
       </div>

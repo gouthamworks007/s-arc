@@ -293,12 +293,12 @@ export function getUnitBreakdown(cents: number) {
 
 /**
  * Generates an authentic rectangular Kerala residential sample plot (~10.5 Cents / 425 m²)
- * centered around a specific [lng, lat] (defaulting to East Desam, Aluva).
+ * centered around a specific [lng, lat] (defaulting to Ernakulam / Central Kerala).
  * Road frontage is aligned along side 0 (North edge, ~53.5 ft frontage x ~85.6 ft depth).
  */
 export function generateSampleKeralaPlot(
-  centerLng = 76.3493,
-  centerLat = 10.1287,
+  centerLng = 76.2999,
+  centerLat = 9.9816,
   targetCents = 10.5
 ): [number, number][] {
   const targetAreaSqm = targetCents * SQM_PER_CENT; // ~425 sqm

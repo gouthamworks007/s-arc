@@ -13,15 +13,119 @@ interface GeocodeResult {
 const GEOCODE_CACHE = new Map<string, { timestamp: number; data: GeocodeResult[] }>();
 const CACHE_TTL_MS = 1000 * 60 * 60; // 1 hour
 
-// Instant pre-seeded major locations in South India / Kerala
+// Instant pre-seeded major locations in South India / Kerala (Including all 14 Kerala districts)
 const PRESEEDED_LOCATIONS: GeocodeResult[] = [
   {
-    placeId: "loc-east-desam",
-    name: "East Desam (Desom, Aluva)",
-    displayName: "East Desam, Desom, Aluva, Ernakulam District, Kerala 683102",
-    lat: 10.1287,
-    lng: 76.3493,
-    type: "locality",
+    placeId: "loc-ernakulam",
+    name: "Ernakulam (Kochi)",
+    displayName: "Ernakulam District, Kochi, Kerala, India",
+    lat: 9.9816,
+    lng: 76.2999,
+    type: "city",
+  },
+  {
+    placeId: "loc-trivandrum",
+    name: "Thiruvananthapuram (Trivandrum)",
+    displayName: "Thiruvananthapuram District, Kerala, India",
+    lat: 8.5241,
+    lng: 76.9366,
+    type: "city",
+  },
+  {
+    placeId: "loc-calicut",
+    name: "Kozhikode (Calicut)",
+    displayName: "Kozhikode District, Kerala, India",
+    lat: 11.2588,
+    lng: 75.7804,
+    type: "city",
+  },
+  {
+    placeId: "loc-thrissur",
+    name: "Thrissur",
+    displayName: "Thrissur District, Cultural Capital, Kerala, India",
+    lat: 10.5276,
+    lng: 76.2144,
+    type: "city",
+  },
+  {
+    placeId: "loc-kottayam",
+    name: "Kottayam",
+    displayName: "Kottayam District, Kerala, India",
+    lat: 9.5916,
+    lng: 76.5222,
+    type: "city",
+  },
+  {
+    placeId: "loc-alappuzha",
+    name: "Alappuzha (Alleppey)",
+    displayName: "Alappuzha District, Kerala, India",
+    lat: 9.4981,
+    lng: 76.3388,
+    type: "city",
+  },
+  {
+    placeId: "loc-kollam",
+    name: "Kollam (Quilon)",
+    displayName: "Kollam District, Kerala, India",
+    lat: 8.8932,
+    lng: 76.6141,
+    type: "city",
+  },
+  {
+    placeId: "loc-palakkad",
+    name: "Palakkad",
+    displayName: "Palakkad District, Kerala, India",
+    lat: 10.7867,
+    lng: 76.6548,
+    type: "city",
+  },
+  {
+    placeId: "loc-malappuram",
+    name: "Malappuram",
+    displayName: "Malappuram District, Kerala, India",
+    lat: 11.0510,
+    lng: 76.0711,
+    type: "city",
+  },
+  {
+    placeId: "loc-kannur",
+    name: "Kannur",
+    displayName: "Kannur District, Kerala, India",
+    lat: 11.8745,
+    lng: 75.3704,
+    type: "city",
+  },
+  {
+    placeId: "loc-kasaragod",
+    name: "Kasaragod",
+    displayName: "Kasaragod District, Kerala, India",
+    lat: 12.4996,
+    lng: 74.9869,
+    type: "city",
+  },
+  {
+    placeId: "loc-wayanad",
+    name: "Wayanad (Kalpetta)",
+    displayName: "Wayanad District, Kalpetta, Kerala, India",
+    lat: 11.6103,
+    lng: 76.0827,
+    type: "city",
+  },
+  {
+    placeId: "loc-idukki",
+    name: "Idukki (Painavu)",
+    displayName: "Idukki District, Kerala, India",
+    lat: 9.8500,
+    lng: 76.9667,
+    type: "city",
+  },
+  {
+    placeId: "loc-pathanamthitta",
+    name: "Pathanamthitta",
+    displayName: "Pathanamthitta District, Kerala, India",
+    lat: 9.2648,
+    lng: 76.7870,
+    type: "city",
   },
   {
     placeId: "loc-aluva",
@@ -32,91 +136,11 @@ const PRESEEDED_LOCATIONS: GeocodeResult[] = [
     type: "city",
   },
   {
-    placeId: "loc-kochi",
-    name: "Kochi (Cochin)",
-    displayName: "Kochi, Ernakulam District, Kerala, India",
-    lat: 9.9312,
-    lng: 76.2673,
-    type: "city",
-  },
-  {
-    placeId: "loc-trivandrum",
-    name: "Thiruvananthapuram (Trivandrum)",
-    displayName: "Thiruvananthapuram, Kerala, India",
-    lat: 8.5241,
-    lng: 76.9366,
-    type: "city",
-  },
-  {
-    placeId: "loc-calicut",
-    name: "Kozhikode (Calicut)",
-    displayName: "Kozhikode, Kerala, India",
-    lat: 11.2588,
-    lng: 75.7804,
-    type: "city",
-  },
-  {
-    placeId: "loc-thrissur",
-    name: "Thrissur",
-    displayName: "Thrissur Cultural Capital, Kerala, India",
-    lat: 10.5276,
-    lng: 76.2144,
-    type: "city",
-  },
-  {
     placeId: "loc-angamaly",
     name: "Angamaly",
     displayName: "Angamaly, Ernakulam District, Kerala",
     lat: 10.1960,
     lng: 76.3860,
-    type: "city",
-  },
-  {
-    placeId: "loc-kalamassery",
-    name: "Kalamassery",
-    displayName: "Kalamassery, Kochi, Kerala",
-    lat: 10.0538,
-    lng: 76.3213,
-    type: "city",
-  },
-  {
-    placeId: "loc-kottayam",
-    name: "Kottayam",
-    displayName: "Kottayam, Kerala, India",
-    lat: 9.5916,
-    lng: 76.5222,
-    type: "city",
-  },
-  {
-    placeId: "loc-wayanad",
-    name: "Wayanad (Kalpetta)",
-    displayName: "Kalpetta, Wayanad District, Kerala, India",
-    lat: 11.6103,
-    lng: 76.0827,
-    type: "city",
-  },
-  {
-    placeId: "loc-alappuzha",
-    name: "Alappuzha (Alleppey)",
-    displayName: "Alappuzha, Kerala, India",
-    lat: 9.4981,
-    lng: 76.3388,
-    type: "city",
-  },
-  {
-    placeId: "loc-kollam",
-    name: "Kollam",
-    displayName: "Kollam, Kerala, India",
-    lat: 8.8932,
-    lng: 76.6141,
-    type: "city",
-  },
-  {
-    placeId: "loc-palakkad",
-    name: "Palakkad",
-    displayName: "Palakkad, Kerala, India",
-    lat: 10.7867,
-    lng: 76.6548,
     type: "city",
   },
   {
@@ -262,11 +286,7 @@ export async function GET(req: NextRequest) {
     // OpenStreetMap Nominatim request with compliance
     const nominatimUrl = new URL("https://nominatim.openstreetmap.org/search");
     
-    // Normalize known Kerala variant transliterations (e.g. East Desam -> Desom Aluva)
-    let queryToSearch = q;
-    if (cacheKey.includes("desam") || cacheKey.includes("desom")) {
-      queryToSearch = "Desom, Aluva, Kerala";
-    }
+    const queryToSearch = q;
 
     nominatimUrl.searchParams.set("q", queryToSearch);
     nominatimUrl.searchParams.set("format", "json");

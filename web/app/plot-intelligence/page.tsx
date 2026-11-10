@@ -56,7 +56,7 @@ export default function PlotIntelligencePage() {
   const [isClosed, setIsClosed] = useState(false);
   const [roadFacingIndex, setRoadFacingIndex] = useState(0);
   const [selectedUnit, setSelectedUnit] = useState<KeralaLandUnit>("cent");
-  const [locationName, setLocationName] = useState("East Desam, Aluva, Kerala");
+  const [locationName, setLocationName] = useState("Ernakulam, Kerala");
   const [focusLocation, setFocusLocation] = useState<{ lat: number; lng: number; label: string } | null>(null);
   const [userInputs, setUserInputs] = useState<PlotAnalysisData["userInputs"]>({
     roadAccessWidthFt: 14,
@@ -92,10 +92,10 @@ export default function PlotIntelligencePage() {
     setFocusLocation({ lat, lng, label: displayName });
   };
 
-  // Load realistic sample plot (10.5 Cent Kerala plot) centered at active location or East Desam
+  // Load realistic sample plot (10.5 Cent Kerala plot) centered at active location or Central Kerala
   const handleLoadSamplePlot = () => {
-    const centerLng = focusLocation ? focusLocation.lng : 76.3493;
-    const centerLat = focusLocation ? focusLocation.lat : 10.1287;
+    const centerLng = focusLocation ? focusLocation.lng : 76.2999;
+    const centerLat = focusLocation ? focusLocation.lat : 9.9816;
     const sampleCoords = generateSampleKeralaPlot(centerLng, centerLat, 10.5);
 
     setCoordinates(sampleCoords);
@@ -103,7 +103,7 @@ export default function PlotIntelligencePage() {
     setRoadFacingIndex(0);
     const label = locationName && !locationName.includes("Sample")
       ? `${locationName} (Sample 10.5 Cents)`
-      : "East Desam, Aluva (Sample 10.5 Cents)";
+      : "Kerala Residential Plot (Sample 10.5 Cents)";
     setLocationName(label);
     setFocusLocation(null);
   };
