@@ -1,9 +1,15 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useEffect, useId, useMemo, useState } from "react";
 import Link from "next/link";
-import { Compass, MapPin, Maximize2, Shapes, Navigation, ArrowRight, Check, Sparkles, Layers, Sliders, DollarSign, Bed, Home, Ruler, ShieldCheck } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { ArrowRight, MapPin } from "lucide-react";
+import {
+  motion,
+  MotionConfig,
+  useReducedMotion,
+  useSpring,
+  useTransform,
+} from "framer-motion";
 
 interface SmartSearchProps {
   onSearch: (params: {
@@ -14,28 +20,36 @@ interface SmartSearchProps {
   }) => void;
 }
 
+type Side = "N" | "E" | "S" | "W";
+type Pt = [number, number];
+
+/* -------------------------------------------------------------------------- */
+/*  Data                                                                      */
+/* -------------------------------------------------------------------------- */
+
+// `value`, shape `id` and direction `id` are what onSearch sends, unchanged.
 const PLOT_SIZES = [
-  { label: "5 Cents", sqft: "2,178 Sq.Ft", builtUp: "1,200 – 1,400 Sq.Ft", value: "5 Cents / 1,200 Sq.Ft", dimensions: { w: "35 ft", l: "62 ft" } },
-  { label: "8 Cents", sqft: "3,485 Sq.Ft", builtUp: "1,800 – 2,200 Sq.Ft", value: "8 Cents / 1,900 Sq.Ft", dimensions: { w: "42 ft", l: "83 ft" } },
-  { label: "10 Cents", sqft: "4,356 Sq.Ft", builtUp: "2,400 – 2,800 Sq.Ft", value: "10 Cents / 2,400 Sq.Ft", dimensions: { w: "48 ft", l: "90 ft" } },
-  { label: "12 Cents", sqft: "5,227 Sq.Ft", builtUp: "2,900 – 3,400 Sq.Ft", value: "12 Cents / 2,900 Sq.Ft", dimensions: { w: "55 ft", l: "95 ft" } },
-  { label: "15 Cents", sqft: "6,534 Sq.Ft", builtUp: "3,600 – 4,200 Sq.Ft", value: "15 Cents / 3,600 Sq.Ft", dimensions: { w: "65 ft", l: "100 ft" } },
-  { label: "20+ Cents", sqft: "8,712+ Sq.Ft", builtUp: "4,800 – 6,500 Sq.Ft", value: "20+ Cents / 5,000+ Sq.Ft", dimensions: { w: "80 ft", l: "110 ft" } },
+  { label: "5 cents", tick: "5", sqft: 2178, plus: false, w: 35, l: 62, builtUp: "1,200 – 1,400", value: "5 Cents / 1,200 Sq.Ft" },
+  { label: "8 cents", tick: "8", sqft: 3485, plus: false, w: 42, l: 83, builtUp: "1,800 – 2,200", value: "8 Cents / 1,900 Sq.Ft" },
+  { label: "10 cents", tick: "10", sqft: 4356, plus: false, w: 48, l: 90, builtUp: "2,400 – 2,800", value: "10 Cents / 2,400 Sq.Ft" },
+  { label: "12 cents", tick: "12", sqft: 5227, plus: false, w: 55, l: 95, builtUp: "2,900 – 3,400", value: "12 Cents / 2,900 Sq.Ft" },
+  { label: "15 cents", tick: "15", sqft: 6534, plus: false, w: 65, l: 100, builtUp: "3,600 – 4,200", value: "15 Cents / 3,600 Sq.Ft" },
+  { label: "20+ cents", tick: "20+", sqft: 8712, plus: true, w: 80, l: 110, builtUp: "4,800 – 6,500", value: "20+ Cents / 5,000+ Sq.Ft" },
 ];
 
 const PLOT_SHAPES = [
-  { id: "Rectangular", label: "Rectangular", desc: "Standard 1:1.5 Ratio", icon: "⬚" },
-  { id: "Square", label: "Square Plot", desc: "Balanced 1:1 Footprint", icon: "⬜" },
-  { id: "Corner Plot", label: "Corner Plot", desc: "Dual Road Frontage", icon: "⬡" },
-  { id: "Narrow Frontage", label: "Narrow Deep", desc: "Linear Courtyard Site", icon: "▮" },
-  { id: "Sloped / Contour", label: "Sloped Contour", desc: "Multi-level Hillside", icon: "〰" },
+  { id: "Rectangular", label: "Rectangle", desc: "Standard 1:1.5 ratio" },
+  { id: "Square", label: "Square", desc: "Balanced 1:1 footprint" },
+  { id: "Corner Plot", label: "Corner", desc: "Roads on two sides" },
+  { id: "Narrow Frontage", label: "Narrow", desc: "Narrow and deep, built around a courtyard" },
+  { id: "Sloped / Contour", label: "Sloped", desc: "Multi-level hillside" },
 ];
 
-const ROAD_DIRECTIONS = [
-  { id: "North Facing", label: "North", deg: 0, desc: "Vaastu Compliant" },
-  { id: "East Facing", label: "East", deg: 90, desc: "Morning Sun" },
-  { id: "South Facing", label: "South", deg: 180, desc: "Cooling Breeze" },
-  { id: "West Facing", label: "West", deg: 270, desc: "Sunset Horizon" },
+const ROAD_DIRECTIONS: { id: string; label: string; side: Side; hint: string }[] = [
+  { id: "North Facing", label: "North", side: "N", hint: "Vaastu compliant" },
+  { id: "East Facing", label: "East", side: "E", hint: "Morning sun" },
+  { id: "South Facing", label: "South", side: "S", hint: "Cooling breeze" },
+  { id: "West Facing", label: "West", side: "W", hint: "Sunset horizon" },
 ];
 
 const LOCATIONS = [
@@ -50,645 +64,576 @@ const LOCATIONS = [
   "Coimbatore, Tamil Nadu",
 ];
 
+/* -------------------------------------------------------------------------- */
+/*  Plot geometry                                                             */
+/* -------------------------------------------------------------------------- */
+
+const CX = 130;
+const CY = 130;
+const MAX_SCALE = 1.36; // px per ft, so bigger plots visibly grow
+
+// Illustrative setbacks (ft) used only for the diagram and footprint estimate.
+// Swap in your real rules (e.g. KMBR) before presenting these as compliant.
+const FRONT_SETBACK_FT = 10;
+const SIDE_SETBACK_FT = 4;
+const CORNER_CUT_FT = 14;
+
+const NEXT_SIDE: Record<Side, Side> = { N: "E", E: "S", S: "W", W: "N" };
+// Corner order is [top-left, top-right, bottom-right, bottom-left].
+// A corner plot is cut where the main road meets the next road clockwise.
+const CORNER_INDEX: Record<Side, number> = { N: 1, E: 2, S: 3, W: 0 };
+
+const SIDE_NAME: Record<Side, string> = { N: "north", E: "east", S: "south", W: "west" };
+
+const ROADS: Record<
+  Side,
+  {
+    line: { x1: number; y1: number; x2: number; y2: number };
+    hit: { x: number; y: number; width: number; height: number };
+    text: { x: number; y: number; rotate: number };
+  }
+> = {
+  N: { line: { x1: 20, y1: 20, x2: 240, y2: 20 }, hit: { x: 16, y: 8, width: 228, height: 24 }, text: { x: 130, y: 12, rotate: 0 } },
+  E: { line: { x1: 240, y1: 20, x2: 240, y2: 240 }, hit: { x: 228, y: 16, width: 24, height: 228 }, text: { x: 251, y: 130, rotate: 90 } },
+  S: { line: { x1: 20, y1: 240, x2: 240, y2: 240 }, hit: { x: 16, y: 228, width: 228, height: 24 }, text: { x: 130, y: 254, rotate: 0 } },
+  W: { line: { x1: 20, y1: 20, x2: 20, y2: 240 }, hit: { x: 8, y: 16, width: 24, height: 228 }, text: { x: 9, y: 130, rotate: -90 } },
+};
+
+// Always 8 points (two per corner) so shapes morph smoothly into each other.
+function outline(left: number, top: number, right: number, bottom: number, c: number[]): Pt[] {
+  return [
+    [left, top + c[0]], [left + c[0], top],
+    [right - c[1], top], [right, top + c[1]],
+    [right, bottom - c[2]], [right - c[2], bottom],
+    [left + c[3], bottom], [left, bottom - c[3]],
+  ];
+}
+
+function polygonArea(pts: Pt[]) {
+  let a = 0;
+  pts.forEach(([x1, y1], i) => {
+    const [x2, y2] = pts[(i + 1) % pts.length];
+    a += x1 * y2 - x2 * y1;
+  });
+  return Math.abs(a / 2);
+}
+
+function toPath(pts: Pt[], scale: number) {
+  return (
+    pts
+      .map(([x, y], i) => `${i ? "L" : "M"}${(CX + x * scale).toFixed(1)},${(CY + y * scale).toFixed(1)}`)
+      .join(" ") + " Z"
+  );
+}
+
+function buildModel(sizeIdx: number, shapeId: string, side: Side) {
+  const size = PLOT_SIZES[sizeIdx];
+  let w = size.w;
+  let l = size.l;
+  if (shapeId === "Square") w = l = Math.sqrt(size.w * size.l);
+  if (shapeId === "Narrow Frontage") {
+    w = size.w * 0.7;
+    l = (size.w * size.l) / w;
+  }
+
+  const isCorner = shapeId === "Corner Plot";
+  const secondRoad: Side | null = isCorner ? NEXT_SIDE[side] : null;
+  const inset = (s: Side) => (s === side || s === secondRoad ? FRONT_SETBACK_FT : SIDE_SETBACK_FT);
+
+  const hw = w / 2;
+  const hl = l / 2;
+  const cut = isCorner ? Math.min(CORNER_CUT_FT, w / 3, l / 3) : 0;
+  const plotCuts = [0, 0, 0, 0];
+  plotCuts[CORNER_INDEX[side]] = cut;
+
+  const bl = -hw + inset("W");
+  const br = hw - inset("E");
+  const bt = -hl + inset("N");
+  const bb = hl - inset("S");
+  const bCut = cut ? Math.min(cut + 4, (br - bl) / 3, (bb - bt) / 3) : 0;
+  const buildCuts = [0, 0, 0, 0];
+  buildCuts[CORNER_INDEX[side]] = bCut;
+
+  const scale = Math.min(MAX_SCALE, 168 / Math.max(w, l));
+  const buildPts = outline(bl, bt, br, bb, buildCuts);
+
+  const contours = [0.25, 0.5, 0.75].map((f) => {
+    const y = CY + (-hl + l * f) * scale;
+    const xl = CX - hw * scale;
+    const xr = CX + hw * scale;
+    return `M${xl.toFixed(1)},${y.toFixed(1)} Q${CX},${(y - 9).toFixed(1)} ${xr.toFixed(1)},${(y + 4).toFixed(1)}`;
+  });
+
+  return {
+    w,
+    l,
+    hw,
+    hl,
+    scale,
+    secondRoad,
+    contours,
+    footprint: polygonArea(buildPts),
+    plotD: toPath(outline(-hw, -hl, hw, hl, plotCuts), scale),
+    buildD: toPath(buildPts, scale),
+  };
+}
+
+type Model = ReturnType<typeof buildModel>;
+
+/* -------------------------------------------------------------------------- */
+/*  Small pieces                                                              */
+/* -------------------------------------------------------------------------- */
+
+function ShapeGlyph({ id }: { id: string }) {
+  const line = { fill: "none", stroke: "currentColor", strokeWidth: 1.5, strokeLinejoin: "round" as const };
+  return (
+    <svg viewBox="0 0 24 24" className="w-5 h-5" aria-hidden="true">
+      {id === "Rectangular" && <rect x="4" y="7" width="16" height="10" rx="1" {...line} />}
+      {id === "Square" && <rect x="6" y="6" width="12" height="12" rx="1" {...line} />}
+      {id === "Corner Plot" && <path d="M4 5h11l5 5v9H4z" {...line} />}
+      {id === "Narrow Frontage" && <rect x="8" y="3" width="8" height="18" rx="1" {...line} />}
+      {id === "Sloped / Contour" && (
+        <>
+          <rect x="4" y="5" width="16" height="14" rx="1" {...line} />
+          <path d="M4 10c5-3 10-1 16-1M4 15c5-3 10-1 16-1" {...line} strokeWidth={1} />
+        </>
+      )}
+    </svg>
+  );
+}
+
+function AnimatedNumber({ value }: { value: number }) {
+  const reduce = useReducedMotion();
+  const spring = useSpring(value, { stiffness: 140, damping: 22 });
+  const text = useTransform(spring, (v) => Math.round(v).toLocaleString("en-IN"));
+
+  useEffect(() => {
+    spring.set(value);
+  }, [value, spring]);
+
+  if (reduce) return <span>{Math.round(value).toLocaleString("en-IN")}</span>;
+  return <motion.span>{text}</motion.span>;
+}
+
+function PlotDiagram({
+  model,
+  side,
+  onPickSide,
+  label,
+  sloped,
+}: {
+  model: Model;
+  side: Side;
+  onPickSide: (s: Side) => void;
+  label: string;
+  sloped: boolean;
+}) {
+  const reduce = useReducedMotion();
+  const uid = useId().replace(/:/g, "");
+  const move = reduce ? { duration: 0 } : { type: "spring" as const, stiffness: 170, damping: 22 };
+
+  const topLabel = { x: CX, y: CY - model.hl * model.scale - 7 };
+  const leftLabel = { x: CX - model.hw * model.scale - 7, y: CY };
+
+  return (
+    <svg viewBox="0 0 260 260" className="w-full h-full" fill="none" role="group" aria-label={label}>
+      <defs>
+        <pattern id={`grid-${uid}`} width="16" height="16" patternUnits="userSpaceOnUse">
+          <path d="M 16 0 L 0 0 0 16" fill="none" stroke="#E5E2DC" strokeWidth="0.7" />
+        </pattern>
+        <pattern id={`hatch-${uid}`} width="6" height="6" patternTransform="rotate(45 0 0)" patternUnits="userSpaceOnUse">
+          <line x1="0" y1="0" x2="0" y2="6" stroke="#AD8065" strokeWidth="1" strokeOpacity="0.3" />
+        </pattern>
+      </defs>
+
+      <rect width="260" height="260" fill={`url(#grid-${uid})`} rx="12" />
+
+      {/* Roads: click or press Enter on any edge to put the road there */}
+      {(Object.keys(ROADS) as Side[]).map((s) => {
+        const g = ROADS[s];
+        const main = s === side;
+        const second = s === model.secondRoad;
+        const active = main || second;
+        return (
+          <g
+            key={s}
+            role="button"
+            tabIndex={0}
+            aria-label={`Put the road on the ${SIDE_NAME[s]} side`}
+            aria-pressed={main}
+            onClick={() => onPickSide(s)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                onPickSide(s);
+              }
+            }}
+            className="group cursor-pointer outline-none"
+          >
+            <rect
+              {...g.hit}
+              rx="6"
+              strokeWidth="1.5"
+              className="fill-transparent stroke-transparent group-focus-visible:stroke-[#AD8065]"
+            />
+            <line
+              {...g.line}
+              stroke={active ? "#171717" : "#D1CDC7"}
+              strokeOpacity={main ? 0.8 : second ? 0.4 : 1}
+              strokeWidth={active ? 5 : 3}
+              strokeDasharray={active ? undefined : "5 4"}
+              strokeLinecap="round"
+              className={active ? "" : "transition-colors group-hover:stroke-[#171717]"}
+            />
+            <text
+              x={g.text.x}
+              y={g.text.y}
+              transform={g.text.rotate ? `rotate(${g.text.rotate} ${g.text.x} ${g.text.y})` : undefined}
+              fontSize="7.5"
+              textAnchor="middle"
+              fill="#777777"
+              fontFamily="monospace"
+              className={active ? "" : "opacity-0 transition-opacity group-hover:opacity-100"}
+            >
+              {main ? "Main road" : second ? "Side road" : "Road here"}
+            </text>
+          </g>
+        );
+      })}
+
+      {/* Plot boundary */}
+      <motion.path
+        initial={false}
+        animate={{ d: model.plotD }}
+        transition={move}
+        fill="#FFFFFF"
+        stroke="#171717"
+        strokeWidth="1.8"
+        strokeLinejoin="round"
+      />
+
+      {/* Contour lines (sloped plots only) */}
+      {model.contours.map((d, i) => (
+        <motion.path
+          key={i}
+          initial={false}
+          animate={{ d, opacity: sloped ? 1 : 0 }}
+          transition={move}
+          stroke="#AD8065"
+          strokeWidth="0.8"
+          strokeDasharray="2 2"
+        />
+      ))}
+
+      {/* Buildable zone */}
+      <motion.path
+        initial={false}
+        animate={{ d: model.buildD }}
+        transition={move}
+        fill={`url(#hatch-${uid})`}
+        stroke="#AD8065"
+        strokeWidth="1.4"
+        strokeDasharray="4 3"
+        strokeLinejoin="round"
+      />
+
+      {/* Dimensions */}
+      <motion.g initial={false} animate={topLabel} transition={move}>
+        <text fontSize="8" fill="#777777" textAnchor="middle" fontFamily="monospace">
+          {Math.round(model.w)} ft
+        </text>
+      </motion.g>
+      <motion.g initial={false} animate={leftLabel} transition={move}>
+        <text fontSize="8" fill="#777777" textAnchor="middle" fontFamily="monospace" transform="rotate(-90)">
+          {Math.round(model.l)} ft
+        </text>
+      </motion.g>
+
+      {/* North is always up */}
+      <g transform="translate(38 46)" aria-hidden="true">
+        <path d="M0,-9 L4,2 L0,0 L-4,2 Z" fill="#AD8065" />
+        <text y="13" fontSize="7.5" textAnchor="middle" fill="#171717" fontFamily="monospace">
+          N
+        </text>
+      </g>
+    </svg>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Component                                                                 */
+/* -------------------------------------------------------------------------- */
+
 export default function SmartSearch({ onSearch }: SmartSearchProps) {
-  const [activeTab, setActiveTab] = useState<"plot" | "preferences" | "budget">("plot");
-  
-  // Plot details state
   const [location, setLocation] = useState("Kochi, Kerala");
-  const [plotSize, setPlotSize] = useState("10 Cents / 2,400 Sq.Ft");
-  const [plotShape, setPlotShape] = useState("Rectangular");
-  const [roadDirection, setRoadDirection] = useState("North Facing");
+  const [sizeIdx, setSizeIdx] = useState(2);
+  const [shapeId, setShapeId] = useState("Rectangular");
+  const [directionId, setDirectionId] = useState("North Facing");
 
-  // Preferences state
-  const [bedrooms, setBedrooms] = useState("3-4 Beds");
-  const [stylePreference, setStylePreference] = useState("Contemporary Tropical");
-  const [primaryFeature, setPrimaryFeature] = useState("Central Open Courtyard (Nadumuttam)");
+  const sliderId = useId();
+  const locationId = useId();
 
-  // Budget state
-  const [budgetRange, setBudgetRange] = useState("₹70L - ₹1.2 Cr Construction");
+  const size = PLOT_SIZES[sizeIdx];
+  const shape = PLOT_SHAPES.find((s) => s.id === shapeId) ?? PLOT_SHAPES[0];
+  const direction = ROAD_DIRECTIONS.find((d) => d.id === directionId) ?? ROAD_DIRECTIONS[0];
 
-  // Selected plot size details
-  const currentSizeObj = useMemo(() => {
-    return PLOT_SIZES.find((s) => s.value === plotSize) || PLOT_SIZES[2];
-  }, [plotSize]);
+  const model = useMemo(
+    () => buildModel(sizeIdx, shapeId, direction.side),
+    [sizeIdx, shapeId, direction.side]
+  );
 
-  // Selected direction rotation degree
-  const currentDirectionObj = useMemo(() => {
-    return ROAD_DIRECTIONS.find((d) => d.id === roadDirection) || ROAD_DIRECTIONS[0];
-  }, [roadDirection]);
+  const pickSide = (side: Side) => {
+    const next = ROAD_DIRECTIONS.find((d) => d.side === side);
+    if (next) setDirectionId(next.id);
+  };
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSearch({
       location,
-      plotSize,
-      shape: plotShape,
-      direction: roadDirection,
+      plotSize: size.value,
+      shape: shapeId,
+      direction: directionId,
     });
   };
 
+  const diagramLabel = `${size.label} ${shape.label.toLowerCase()} plot with the road on the ${SIDE_NAME[direction.side]} side`;
+
+  const groupTitle = "text-[12px] font-medium text-charcoal font-sans";
+
   return (
-    <section id="search-section" className="py-14 sm:py-20 bg-warm-grey border-y border-warm-border">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start">
-          
-          {/* Left Column: Heading and Context */}
-          <div className="lg:col-span-4 space-y-4">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-copper/10 border border-copper/20 text-copper text-[10px] sm:text-[11px] font-mono tracking-wider uppercase">
-              <Compass className="w-3.5 h-3.5" />
-              <span>Smart Plot Matcher</span>
-            </div>
-
-            <h2 className="text-3xl sm:text-4xl lg:text-[44px] font-normal font-serif tracking-[-0.01em] text-charcoal leading-[1.08]">
-              What Are We <br className="hidden sm:inline" />
-              Building On?
-            </h2>
-
-            <p className="text-[14px] sm:text-[15px] leading-relaxed text-secondaryText max-w-sm font-light font-sans">
-              Enter your land dimensions, road orientation, and shape. Our interactive CAD simulator computes your buildable zone and matches architect-drawn plans.
-            </p>
-
-            <div className="pt-2 space-y-3">
+    <MotionConfig reducedMotion="user">
+      <section id="search-section" className="py-14 sm:py-20 bg-warm-grey border-y border-warm-border">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start">
+            {/* Left: heading */}
+            <div className="lg:col-span-4 space-y-4">
+              <h2 className="text-3xl sm:text-4xl lg:text-[44px] font-normal font-serif tracking-[-0.01em] text-charcoal leading-[1.08]">
+                What are we building on?
+              </h2>
+              <p className="text-[14px] sm:text-[15px] leading-relaxed text-secondaryText max-w-sm font-light font-sans">
+                Set your plot size, shape and road side. The diagram updates as you go, and we match architect-drawn
+                plans to it.
+              </p>
               <Link
                 href="/plot-intelligence"
-                className="inline-flex items-center gap-2 px-4 py-3 rounded-xl bg-copper text-white text-xs font-sans font-medium hover:bg-copper-hover transition-all shadow-sm group"
+                className="inline-block text-[13px] font-sans font-medium text-charcoal underline underline-offset-4 decoration-copper hover:text-copper transition-colors"
               >
-                <Compass className="w-4 h-4 text-white" />
-                <span>Launch Satellite GIS Workspace</span>
-                <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
+                Or map your plot on satellite view
               </Link>
-              <div className="text-[11px] text-charcoal/60 font-sans flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                <span>Supports GPS polygon mapping &amp; KMBR 2019 setbacks</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Right Column: Search Card + Interactive Plot Diagram */}
-          <div className="lg:col-span-8 bg-white border border-warm-border shadow-subtle p-5 sm:p-7 md:p-8 rounded-2xl">
-            {/* Tabs */}
-            <div className="flex border-b border-warm-border pb-3 mb-6 space-x-6 sm:space-x-8 text-[13px] font-sans">
-              <button
-                type="button"
-                onClick={() => setActiveTab("plot")}
-                className={`font-medium pb-2 transition-colors relative flex items-center gap-1.5 ${
-                  activeTab === "plot" ? "text-charcoal" : "text-mutedText hover:text-charcoal"
-                }`}
-              >
-                <Shapes className="w-3.5 h-3.5 text-copper" />
-                <span>By Plot Details</span>
-                {activeTab === "plot" && (
-                  <motion.div
-                    layoutId="activeSearchTab"
-                    className="absolute bottom-[-13px] left-0 right-0 h-[2px] bg-charcoal"
-                  />
-                )}
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setActiveTab("preferences")}
-                className={`font-medium pb-2 transition-colors relative flex items-center gap-1.5 ${
-                  activeTab === "preferences" ? "text-charcoal" : "text-mutedText hover:text-charcoal"
-                }`}
-              >
-                <Bed className="w-3.5 h-3.5 text-copper" />
-                <span>By Preferences</span>
-                {activeTab === "preferences" && (
-                  <motion.div
-                    layoutId="activeSearchTab"
-                    className="absolute bottom-[-13px] left-0 right-0 h-[2px] bg-charcoal"
-                  />
-                )}
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setActiveTab("budget")}
-                className={`font-medium pb-2 transition-colors relative flex items-center gap-1.5 ${
-                  activeTab === "budget" ? "text-charcoal" : "text-mutedText hover:text-charcoal"
-                }`}
-              >
-                <DollarSign className="w-3.5 h-3.5 text-copper" />
-                <span>By Budget</span>
-                {activeTab === "budget" && (
-                  <motion.div
-                    layoutId="activeSearchTab"
-                    className="absolute bottom-[-13px] left-0 right-0 h-[2px] bg-charcoal"
-                  />
-                )}
-              </button>
             </div>
 
-            {/* Tab Form and Plot Diagram Row */}
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-8 items-center">
-              
-              {/* Form Parameters */}
-              <div className="md:col-span-7">
-                <form onSubmit={handleSearchSubmit} className="space-y-4">
-                  <AnimatePresence mode="wait">
-                    {/* TAB 1: PLOT DETAILS */}
-                    {activeTab === "plot" && (
-                      <motion.div
-                        key="plot-tab"
-                        initial={{ opacity: 0, y: 6 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -6 }}
-                        transition={{ duration: 0.2 }}
-                        className="space-y-4"
+            {/* Right: controls + live diagram */}
+            <div className="lg:col-span-8 bg-white border border-warm-border shadow-subtle p-5 sm:p-7 md:p-8 rounded-2xl">
+              <form onSubmit={handleSearchSubmit} className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-8">
+                {/* Diagram (first on mobile so changes stay visible) */}
+                <div className="md:col-span-5 md:order-2 self-start md:sticky md:top-24">
+                  <div className="p-4 bg-warm-card border border-warm-border/70 rounded-2xl">
+                    <div className="relative w-full aspect-square max-w-[300px] mx-auto">
+                      <PlotDiagram
+                        model={model}
+                        side={direction.side}
+                        onPickSide={pickSide}
+                        label={diagramLabel}
+                        sloped={shapeId === "Sloped / Contour"}
+                      />
+                    </div>
+
+                    <div className="mt-3 flex items-center gap-4 text-[11px] text-mutedText font-sans">
+                      <span className="flex items-center gap-1.5">
+                        <span className="w-3 h-3 rounded-sm border border-charcoal bg-white" />
+                        Plot
+                      </span>
+                      <span className="flex items-center gap-1.5">
+                        <span className="w-3 h-3 rounded-sm border border-dashed border-copper bg-copper/20" />
+                        Buildable area
+                      </span>
+                    </div>
+
+                    <dl className="mt-3 pt-3 border-t border-warm-border/60 space-y-1.5 text-[12px] font-sans">
+                      <div className="flex items-baseline justify-between gap-3">
+                        <dt className="text-mutedText">Buildable footprint</dt>
+                        <dd className="font-medium text-charcoal">
+                          about <AnimatedNumber value={model.footprint} /> sq ft
+                        </dd>
+                      </div>
+                      <div className="flex items-baseline justify-between gap-3">
+                        <dt className="text-mutedText">Estimated built-up area</dt>
+                        <dd className="font-medium text-copper">{size.builtUp} sq ft</dd>
+                      </div>
+                    </dl>
+                  </div>
+                </div>
+
+                {/* Controls */}
+                <div className="md:col-span-7 md:order-1 space-y-6">
+                  {/* Location */}
+                  <div>
+                    <label htmlFor={locationId} className={groupTitle}>
+                      Location
+                    </label>
+                    <div className="mt-1.5 flex items-center gap-2 rounded-xl border border-warm-border bg-warm-card px-3 py-2.5 transition-colors focus-within:border-charcoal">
+                      <MapPin className="w-4 h-4 text-copper shrink-0" aria-hidden="true" />
+                      <select
+                        id={locationId}
+                        value={location}
+                        onChange={(e) => setLocation(e.target.value)}
+                        className="w-full bg-transparent text-[13px] font-medium text-charcoal outline-none cursor-pointer font-sans"
                       >
-                        {/* Location Dropdown */}
-                        <div className="border border-warm-border p-2.5 sm:p-3 transition-colors focus-within:border-charcoal bg-warm-card rounded-xl">
-                          <label className="block text-[10px] sm:text-[11px] uppercase tracking-wider text-mutedText mb-1 flex items-center gap-1.5 font-sans font-medium">
-                            <MapPin className="w-3.5 h-3.5 text-copper" />
-                            Location / District Hub
-                          </label>
-                          <select
-                            value={location}
-                            onChange={(e) => setLocation(e.target.value)}
-                            className="w-full bg-transparent text-[13px] font-medium text-charcoal outline-none cursor-pointer font-sans"
+                        {LOCATIONS.map((loc) => (
+                          <option key={loc} value={loc}>
+                            {loc}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Plot size */}
+                  <div>
+                    <div className="flex items-baseline justify-between gap-3">
+                      <label htmlFor={sliderId} className={groupTitle}>
+                        Plot size
+                      </label>
+                      <span className="flex items-baseline gap-2 text-[12px] font-sans">
+                        <span className="font-semibold text-charcoal">{size.label}</span>
+                        <span className="text-mutedText">
+                          {size.sqft.toLocaleString("en-IN")}
+                          {size.plus ? "+" : ""} sq ft
+                        </span>
+                      </span>
+                    </div>
+                    <input
+                      id={sliderId}
+                      type="range"
+                      min={0}
+                      max={PLOT_SIZES.length - 1}
+                      step={1}
+                      value={sizeIdx}
+                      onChange={(e) => setSizeIdx(Number(e.target.value))}
+                      aria-valuetext={`${size.label}, ${size.sqft.toLocaleString("en-IN")} square feet`}
+                      className="mt-3 w-full h-1.5 cursor-pointer accent-copper"
+                    />
+                    <div className="mt-1 grid grid-cols-6 text-center">
+                      {PLOT_SIZES.map((s, i) => (
+                        <button
+                          key={s.value}
+                          type="button"
+                          onClick={() => setSizeIdx(i)}
+                          aria-label={s.label}
+                          className={`py-1 text-[12px] font-sans transition-colors ${
+                            i === sizeIdx ? "font-semibold text-charcoal" : "text-mutedText hover:text-charcoal"
+                          }`}
+                        >
+                          {s.tick}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Shape */}
+                  <div>
+                    <div className="flex items-baseline justify-between gap-3">
+                      <span id="shape-title" className={groupTitle}>
+                        Plot shape
+                      </span>
+                      <span className="text-[12px] text-mutedText font-sans text-right">{shape.desc}</span>
+                    </div>
+                    <div
+                      role="group"
+                      aria-labelledby="shape-title"
+                      className="mt-1.5 grid grid-cols-5 gap-1 p-1 rounded-xl bg-warm-card border border-warm-border"
+                    >
+                      {PLOT_SHAPES.map((s) => {
+                        const active = s.id === shapeId;
+                        return (
+                          <button
+                            key={s.id}
+                            type="button"
+                            aria-pressed={active}
+                            onClick={() => setShapeId(s.id)}
+                            className="relative flex flex-col items-center gap-1 rounded-lg px-1 py-2 text-[11px] font-sans font-medium"
                           >
-                            {LOCATIONS.map((loc) => (
-                              <option key={loc} value={loc}>
-                                {loc}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-
-                        {/* Interactive Plot Size Chips */}
-                        <div className="border border-warm-border p-2.5 sm:p-3 bg-warm-card rounded-xl">
-                          <label className="block text-[10px] sm:text-[11px] uppercase tracking-wider text-mutedText mb-2 flex items-center justify-between font-sans font-medium">
-                            <span className="flex items-center gap-1.5">
-                              <Maximize2 className="w-3.5 h-3.5 text-copper" />
-                              Plot Area (Cent &amp; Sq.Ft)
+                            {active && (
+                              <motion.span
+                                layoutId="shape-pill"
+                                className="absolute inset-0 rounded-lg bg-charcoal"
+                                transition={{ type: "spring", stiffness: 420, damping: 34 }}
+                              />
+                            )}
+                            <span
+                              className={`relative z-10 flex flex-col items-center gap-1 transition-colors ${
+                                active ? "text-white" : "text-charcoal/70 hover:text-charcoal"
+                              }`}
+                            >
+                              <ShapeGlyph id={s.id} />
+                              {s.label}
                             </span>
-                            <span className="text-charcoal font-semibold font-mono text-[11px]">
-                              {currentSizeObj.sqft}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Road side */}
+                  <div>
+                    <div className="flex items-baseline justify-between gap-3">
+                      <span id="road-title" className={groupTitle}>
+                        Road side
+                      </span>
+                      <span className="text-[12px] text-copper font-sans font-medium">{direction.hint}</span>
+                    </div>
+                    <div
+                      role="group"
+                      aria-labelledby="road-title"
+                      className="mt-1.5 grid grid-cols-4 gap-1 p-1 rounded-xl bg-warm-card border border-warm-border"
+                    >
+                      {ROAD_DIRECTIONS.map((d) => {
+                        const active = d.id === directionId;
+                        return (
+                          <button
+                            key={d.id}
+                            type="button"
+                            aria-pressed={active}
+                            onClick={() => setDirectionId(d.id)}
+                            className="relative rounded-lg py-2 text-xs font-sans font-medium"
+                          >
+                            {active && (
+                              <motion.span
+                                layoutId="road-pill"
+                                className="absolute inset-0 rounded-lg bg-copper"
+                                transition={{ type: "spring", stiffness: 420, damping: 34 }}
+                              />
+                            )}
+                            <span
+                              className={`relative z-10 transition-colors ${
+                                active ? "text-white" : "text-charcoal/70 hover:text-charcoal"
+                              }`}
+                            >
+                              {d.label}
                             </span>
-                          </label>
-                          <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5">
-                            {PLOT_SIZES.map((size) => (
-                              <button
-                                key={size.value}
-                                type="button"
-                                onClick={() => setPlotSize(size.value)}
-                                className={`py-1.5 px-2 rounded-lg text-xs font-sans font-medium transition-all text-center ${
-                                  plotSize === size.value
-                                    ? "bg-charcoal text-white shadow-sm"
-                                    : "bg-white text-charcoal border border-warm-border hover:border-charcoal/40"
-                                }`}
-                              >
-                                {size.label}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <p className="mt-1.5 text-[11px] text-mutedText font-sans">
+                      You can also click a road edge on the diagram.
+                    </p>
+                  </div>
 
-                        {/* Interactive Shape Selector */}
-                        <div className="border border-warm-border p-2.5 sm:p-3 bg-warm-card rounded-xl">
-                          <label className="block text-[10px] sm:text-[11px] uppercase tracking-wider text-mutedText mb-2 flex items-center gap-1.5 font-sans font-medium">
-                            <Shapes className="w-3.5 h-3.5 text-copper" />
-                            Parcel Geometry / Shape
-                          </label>
-                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
-                            {PLOT_SHAPES.map((shape) => (
-                              <button
-                                key={shape.id}
-                                type="button"
-                                onClick={() => setPlotShape(shape.id)}
-                                className={`py-2 px-2.5 rounded-lg text-left transition-all ${
-                                  plotShape === shape.id
-                                    ? "bg-charcoal text-white shadow-sm"
-                                    : "bg-white text-charcoal border border-warm-border hover:border-charcoal/40"
-                                }`}
-                              >
-                                <div className="text-xs font-medium font-sans flex items-center gap-1.5">
-                                  <span>{shape.icon}</span>
-                                  <span>{shape.label}</span>
-                                </div>
-                                <div className={`text-[10px] truncate mt-0.5 ${plotShape === shape.id ? "text-white/70" : "text-mutedText"}`}>
-                                  {shape.desc}
-                                </div>
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-
-                        {/* Interactive Road Facing Direction */}
-                        <div className="border border-warm-border p-2.5 sm:p-3 bg-warm-card rounded-xl">
-                          <label className="block text-[10px] sm:text-[11px] uppercase tracking-wider text-mutedText mb-2 flex items-center justify-between font-sans font-medium">
-                            <span className="flex items-center gap-1.5">
-                              <Compass className="w-3.5 h-3.5 text-copper" />
-                              Road Frontage &amp; Orientation
-                            </span>
-                            <span className="text-copper font-medium text-[11px]">
-                              {currentDirectionObj.desc}
-                            </span>
-                          </label>
-                          <div className="grid grid-cols-4 gap-1.5">
-                            {ROAD_DIRECTIONS.map((dir) => (
-                              <button
-                                key={dir.id}
-                                type="button"
-                                onClick={() => setRoadDirection(dir.id)}
-                                className={`py-1.5 px-2 rounded-lg text-xs font-sans font-medium transition-all text-center flex items-center justify-center gap-1 ${
-                                  roadDirection === dir.id
-                                    ? "bg-copper text-white shadow-sm"
-                                    : "bg-white text-charcoal border border-warm-border hover:border-charcoal/40"
-                                }`}
-                              >
-                                <span>{dir.label}</span>
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      </motion.div>
-                    )}
-
-                    {/* TAB 2: PREFERENCES */}
-                    {activeTab === "preferences" && (
-                      <motion.div
-                        key="preferences-tab"
-                        initial={{ opacity: 0, y: 6 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -6 }}
-                        transition={{ duration: 0.2 }}
-                        className="space-y-4"
-                      >
-                        {/* Bedrooms */}
-                        <div className="border border-warm-border p-3 bg-warm-card rounded-xl">
-                          <label className="block text-[11px] uppercase tracking-wider text-mutedText mb-2 font-sans font-medium">
-                            Bedrooms &amp; Levels
-                          </label>
-                          <div className="grid grid-cols-2 gap-2">
-                            {["2-3 Beds (Single Level)", "3-4 Beds (G+1 Villa)", "4-5 Beds (Luxury G+2)", "Multi-generational"].map((bhk) => (
-                              <button
-                                key={bhk}
-                                type="button"
-                                onClick={() => setBedrooms(bhk)}
-                                className={`p-2.5 rounded-lg text-xs font-sans text-left transition-all ${
-                                  bedrooms === bhk
-                                    ? "bg-charcoal text-white"
-                                    : "bg-white text-charcoal border border-warm-border hover:border-charcoal/40"
-                                }`}
-                              >
-                                {bhk}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-
-                        {/* Architectural Style */}
-                        <div className="border border-warm-border p-3 bg-warm-card rounded-xl">
-                          <label className="block text-[11px] uppercase tracking-wider text-mutedText mb-2 font-sans font-medium">
-                            Architectural Style
-                          </label>
-                          <div className="grid grid-cols-2 gap-2">
-                            {["Contemporary Tropical", "Kerala Courtyard / Traditional", "Minimalist Modern", "Mediterranean Coastal"].map((st) => (
-                              <button
-                                key={st}
-                                type="button"
-                                onClick={() => setStylePreference(st)}
-                                className={`p-2.5 rounded-lg text-xs font-sans text-left transition-all ${
-                                  stylePreference === st
-                                    ? "bg-copper text-white"
-                                    : "bg-white text-charcoal border border-warm-border hover:border-charcoal/40"
-                                }`}
-                              >
-                                {st}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-
-                        {/* Primary Feature */}
-                        <div className="border border-warm-border p-3 bg-warm-card rounded-xl">
-                          <label className="block text-[11px] uppercase tracking-wider text-mutedText mb-2 font-sans font-medium">
-                            Signature Lifestyle Feature
-                          </label>
-                          <div className="grid grid-cols-2 gap-2">
-                            {[
-                              "Central Open Courtyard (Nadumuttam)",
-                              "Plunge Pool & Deck",
-                              "Double-Height Living Space",
-                              "Covered Charupadi Verandah",
-                            ].map((feat) => (
-                              <button
-                                key={feat}
-                                type="button"
-                                onClick={() => setPrimaryFeature(feat)}
-                                className={`p-2.5 rounded-lg text-xs font-sans text-left transition-all ${
-                                  primaryFeature === feat
-                                    ? "bg-charcoal text-white"
-                                    : "bg-white text-charcoal border border-warm-border hover:border-charcoal/40"
-                                }`}
-                              >
-                                {feat}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      </motion.div>
-                    )}
-
-                    {/* TAB 3: BUDGET */}
-                    {activeTab === "budget" && (
-                      <motion.div
-                        key="budget-tab"
-                        initial={{ opacity: 0, y: 6 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -6 }}
-                        transition={{ duration: 0.2 }}
-                        className="space-y-4"
-                      >
-                        <div className="border border-warm-border p-3 bg-warm-card rounded-xl">
-                          <label className="block text-[11px] uppercase tracking-wider text-mutedText mb-2 font-sans font-medium">
-                            Target Construction Budget
-                          </label>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                            {[
-                              { label: "₹40L – ₹70L", desc: "Economical / Compact Planning", val: "₹40L - ₹70L" },
-                              { label: "₹70L – ₹1.2 Cr", desc: "Premium Residential Villa", val: "₹70L - ₹1.2 Cr Construction" },
-                              { label: "₹1.2 Cr – ₹2 Cr", desc: "Luxury Architectural Estate", val: "₹1.2 Cr - ₹2 Cr" },
-                              { label: "Above ₹2 Cr", desc: "Ultra-Luxury Signature Compound", val: "Above ₹2 Cr" },
-                            ].map((b) => (
-                              <button
-                                key={b.val}
-                                type="button"
-                                onClick={() => setBudgetRange(b.val)}
-                                className={`p-3 rounded-xl text-left transition-all ${
-                                  budgetRange === b.val
-                                    ? "bg-charcoal text-white shadow-sm"
-                                    : "bg-white text-charcoal border border-warm-border hover:border-charcoal/40"
-                                }`}
-                              >
-                                <div className="text-xs font-semibold font-sans">{b.label}</div>
-                                <div className={`text-[10px] mt-0.5 ${budgetRange === b.val ? "text-white/70" : "text-mutedText"}`}>
-                                  {b.desc}
-                                </div>
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-
-                        <div className="border border-warm-border p-3 bg-warm-card rounded-xl">
-                          <label className="block text-[11px] uppercase tracking-wider text-mutedText mb-1.5 font-sans font-medium">
-                            Estimated Cost Analytics
-                          </label>
-                          <div className="grid grid-cols-2 gap-3 text-xs font-sans">
-                            <div className="p-2.5 bg-white rounded-lg border border-warm-border">
-                              <span className="text-[10px] text-mutedText block">Typical Rate / Sq.Ft</span>
-                              <span className="font-semibold text-charcoal">₹2,400 – ₹3,200</span>
-                            </div>
-                            <div className="p-2.5 bg-white rounded-lg border border-warm-border">
-                              <span className="text-[10px] text-mutedText block">Drawing Set Cost</span>
-                              <span className="font-semibold text-copper">₹50,000 – ₹85,000</span>
-                            </div>
-                          </div>
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-
-                  {/* Submit Button */}
                   <button
                     type="submit"
-                    className="w-full mt-2 py-3.5 px-6 bg-charcoal hover:bg-copper text-white text-[13px] font-medium tracking-wide flex items-center justify-center gap-2 transition-all duration-300 rounded-xl shadow-sm group"
+                    className="w-full py-3.5 px-6 bg-charcoal hover:bg-copper text-white text-[13px] font-medium tracking-wide flex items-center justify-center gap-2 transition-all duration-300 rounded-xl shadow-sm group"
                   >
-                    <span>Find Matching Designs</span>
+                    <span>Find matching designs</span>
                     <ArrowRight className="w-4 h-4 text-white group-hover:translate-x-1 transition-transform" />
                   </button>
-                </form>
-              </div>
-
-              {/* Right Side: Advanced Interactive CAD Plot Simulator Diagram */}
-              <div className="md:col-span-5 flex flex-col items-center justify-center p-4 sm:p-5 bg-warm-card border border-warm-border/70 rounded-2xl relative overflow-hidden">
-                {/* Simulator Header */}
-                <div className="w-full flex items-center justify-between text-[10px] font-mono text-mutedText pb-2 mb-2 border-b border-warm-border/60">
-                  <span className="flex items-center gap-1.5 text-charcoal font-semibold">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                    <span>CAD SIMULATOR</span>
-                  </span>
-                  <span>{currentDirectionObj.id.toUpperCase()}</span>
                 </div>
-
-                {/* Dynamic SVG Drawing Canvas */}
-                <div className="relative w-full aspect-square max-w-[250px] flex items-center justify-center">
-                  <svg
-                    viewBox="0 0 260 260"
-                    className="w-full h-full"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    {/* Grid Pattern */}
-                    <defs>
-                      <pattern id="cadGrid" width="16" height="16" patternUnits="userSpaceOnUse">
-                        <path d="M 16 0 L 0 0 0 16" fill="none" stroke="#E5E2DC" strokeWidth="0.7" />
-                      </pattern>
-                      <pattern id="buildableHatch" width="6" height="6" patternTransform="rotate(45 0 0)" patternUnits="userSpaceOnUse">
-                        <line x1="0" y1="0" x2="0" y2="6" stroke="#AD8065" strokeWidth="1" strokeOpacity="0.3" />
-                      </pattern>
-                    </defs>
-
-                    <rect width="260" height="260" fill="url(#cadGrid)" rx="12" />
-
-                    {/* Access Road Indicator Line */}
-                    <g className="transition-all duration-500">
-                      {roadDirection === "North Facing" && (
-                        <g>
-                          <line x1="20" y1="20" x2="240" y2="20" stroke="#171717" strokeWidth="5" strokeOpacity="0.7" />
-                          <text x="130" y="14" fill="#777777" fontSize="7.5" textAnchor="middle" fontFamily="monospace">
-                            ACCESS ROAD (12M PWD)
-                          </text>
-                        </g>
-                      )}
-                      {roadDirection === "East Facing" && (
-                        <g>
-                          <line x1="242" y1="20" x2="242" y2="240" stroke="#171717" strokeWidth="5" strokeOpacity="0.7" />
-                          <text x="248" y="130" fill="#777777" fontSize="7" transform="rotate(90 248 130)" textAnchor="middle" fontFamily="monospace">
-                            ACCESS ROAD (12M)
-                          </text>
-                        </g>
-                      )}
-                      {roadDirection === "South Facing" && (
-                        <g>
-                          <line x1="20" y1="245" x2="240" y2="245" stroke="#171717" strokeWidth="5" strokeOpacity="0.7" />
-                          <text x="130" y="254" fill="#777777" fontSize="7.5" textAnchor="middle" fontFamily="monospace">
-                            ACCESS ROAD (12M PWD)
-                          </text>
-                        </g>
-                      )}
-                      {roadDirection === "West Facing" && (
-                        <g>
-                          <line x1="16" y1="20" x2="16" y2="240" stroke="#171717" strokeWidth="5" strokeOpacity="0.7" />
-                          <text x="10" y="130" fill="#777777" fontSize="7" transform="rotate(-90 10 130)" textAnchor="middle" fontFamily="monospace">
-                            ACCESS ROAD (12M)
-                          </text>
-                        </g>
-                      )}
-                    </g>
-
-                    {/* Main Morphing Plot Boundary Polygon */}
-                    <g transform="translate(10, 10)">
-                      {plotShape === "Rectangular" && (
-                        <g>
-                          <polygon
-                            points="45,45 195,45 195,205 45,205"
-                            fill="#FFFFFF"
-                            stroke="#171717"
-                            strokeWidth="1.8"
-                          />
-                          {/* Inner Buildable Zone */}
-                          <polygon
-                            points="65,70 175,70 175,185 65,185"
-                            fill="url(#buildableHatch)"
-                            stroke="#AD8065"
-                            strokeWidth="1.4"
-                            strokeDasharray="4 3"
-                          />
-                        </g>
-                      )}
-
-                      {plotShape === "Square" && (
-                        <g>
-                          <polygon
-                            points="45,45 195,45 195,195 45,195"
-                            fill="#FFFFFF"
-                            stroke="#171717"
-                            strokeWidth="1.8"
-                          />
-                          <polygon
-                            points="65,65 175,65 175,175 65,175"
-                            fill="url(#buildableHatch)"
-                            stroke="#AD8065"
-                            strokeWidth="1.4"
-                            strokeDasharray="4 3"
-                          />
-                        </g>
-                      )}
-
-                      {plotShape === "Corner Plot" && (
-                        <g>
-                          {/* Splayed corner */}
-                          <polygon
-                            points="45,45 170,45 200,75 200,205 45,205"
-                            fill="#FFFFFF"
-                            stroke="#171717"
-                            strokeWidth="1.8"
-                          />
-                          <polygon
-                            points="65,70 155,70 178,92 178,185 65,185"
-                            fill="url(#buildableHatch)"
-                            stroke="#AD8065"
-                            strokeWidth="1.4"
-                            strokeDasharray="4 3"
-                          />
-                          {/* Dual Road Badge */}
-                          <line x1="200" y1="20" x2="200" y2="215" stroke="#171717" strokeWidth="4" strokeOpacity="0.4" />
-                        </g>
-                      )}
-
-                      {plotShape === "Narrow Frontage" && (
-                        <g>
-                          <polygon
-                            points="75,30 165,30 165,220 75,220"
-                            fill="#FFFFFF"
-                            stroke="#171717"
-                            strokeWidth="1.8"
-                          />
-                          <polygon
-                            points="90,55 150,55 150,195 90,195"
-                            fill="url(#buildableHatch)"
-                            stroke="#AD8065"
-                            strokeWidth="1.4"
-                            strokeDasharray="4 3"
-                          />
-                        </g>
-                      )}
-
-                      {plotShape === "Sloped / Contour" && (
-                        <g>
-                          <polygon
-                            points="45,45 195,45 195,205 45,205"
-                            fill="#FFFFFF"
-                            stroke="#171717"
-                            strokeWidth="1.8"
-                          />
-                          {/* Contour Lines */}
-                          <path d="M 45,80 Q 120,60 195,85" stroke="#AD8065" strokeWidth="0.8" strokeDasharray="2 2" fill="none" />
-                          <path d="M 45,125 Q 120,105 195,130" stroke="#AD8065" strokeWidth="0.8" strokeDasharray="2 2" fill="none" />
-                          <path d="M 45,170 Q 120,150 195,175" stroke="#AD8065" strokeWidth="0.8" strokeDasharray="2 2" fill="none" />
-                          
-                          <polygon
-                            points="65,75 175,75 175,180 65,180"
-                            fill="url(#buildableHatch)"
-                            stroke="#AD8065"
-                            strokeWidth="1.4"
-                            strokeDasharray="4 3"
-                          />
-                          <text x="50" y="78" fontSize="6.5" fill="#AD8065" fontFamily="monospace">+1.5m</text>
-                          <text x="50" y="123" fontSize="6.5" fill="#AD8065" fontFamily="monospace">+3.0m</text>
-                        </g>
-                      )}
-
-                      {/* Dimension Labels */}
-                      <text x="120" y="38" fontSize="8" fill="#777777" textAnchor="middle" fontFamily="monospace">
-                        {currentSizeObj.dimensions.w}
-                      </text>
-                      <text x="32" y="130" fontSize="8" fill="#777777" textAnchor="middle" transform="rotate(-90 32 130)" fontFamily="monospace">
-                        {currentSizeObj.dimensions.l}
-                      </text>
-
-                      {/* Center Buildable Label */}
-                      <text x="120" y="120" fontSize="9" fill="#171717" fontWeight="bold" textAnchor="middle" fontFamily="sans-serif">
-                        BUILDABLE ZONE
-                      </text>
-                      <text x="120" y="133" fontSize="7.5" fill="#AD8065" textAnchor="middle" fontFamily="monospace">
-                        KMBR 2019 COMPLIANT
-                      </text>
-
-                      {/* Animated Rotating Compass Dial in Top Right */}
-                      <g
-                        transform="translate(210, 30)"
-                        className="transition-transform duration-700 ease-out"
-                        style={{
-                          transform: `translate(210px, 30px) rotate(${currentDirectionObj.deg}deg)`,
-                          transformOrigin: "center",
-                        }}
-                      >
-                        <circle cx="0" cy="0" r="11" stroke="#D1CDC7" strokeWidth="1" fill="#FFFFFF" />
-                        <line x1="0" y1="7" x2="0" y2="-7" stroke="#171717" strokeWidth="1.2" />
-                        <polygon points="0,-8 3.5,-2 -3.5,-2" fill="#AD8065" />
-                        <polygon points="0,8 3,2 -3,2" fill="#171717" />
-                        <text x="-3" y="-12" fontSize="7.5" fill="#171717" fontWeight="bold" fontFamily="monospace">
-                          N
-                        </text>
-                      </g>
-                    </g>
-                  </svg>
-                </div>
-
-                {/* Live Telemetry Info Footer */}
-                <div className="w-full mt-3 pt-3 border-t border-warm-border/60 text-center space-y-1">
-                  <div className="text-xs font-semibold text-charcoal font-sans flex items-center justify-center gap-1.5">
-                    <span>{currentSizeObj.label}</span>
-                    <span className="text-mutedText font-normal">({currentSizeObj.sqft})</span>
-                  </div>
-                  <div className="text-[10px] text-mutedText font-mono uppercase tracking-wide">
-                    {roadDirection} • {plotShape}
-                  </div>
-                  <div className="text-[10px] text-copper font-medium font-sans">
-                    Estimated Max BUA: {currentSizeObj.builtUp}
-                  </div>
-                </div>
-              </div>
-
+              </form>
             </div>
           </div>
-
         </div>
-      </div>
-    </section>
+      </section>
+    </MotionConfig>
   );
 }
