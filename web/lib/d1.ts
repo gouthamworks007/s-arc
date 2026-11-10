@@ -20,7 +20,7 @@ export interface D1QueryResult<T = any> {
 }
 
 // In-memory fallback store to ensure zero build/offline failures
-const FALLBACK_USERS: any[] = [
+const INITIAL_USERS: any[] = [
   {
     id: "usr-admin-01",
     name: "Admin",
@@ -83,6 +83,13 @@ const FALLBACK_USERS: any[] = [
     permissions: "[]",
   },
 ];
+
+// Attach persistent global references so state survives across Next.js route compilation chunks in dev/edge
+const g = globalThis as any;
+if (!g.__S_ARC_FALLBACK_USERS__) {
+  g.__S_ARC_FALLBACK_USERS__ = [...INITIAL_USERS];
+}
+const FALLBACK_USERS: any[] = g.__S_ARC_FALLBACK_USERS__;
 
 const FALLBACK_PROJECTS: any[] = [
   {
@@ -165,7 +172,7 @@ const FALLBACK_PROJECTS: any[] = [
   },
 ];
 
-const FALLBACK_INQUIRIES: any[] = [
+const INITIAL_INQUIRIES: any[] = [
   {
     id: "inq-001",
     client_name: "Adv. K. Ramesh & Sunitha",
@@ -197,8 +204,14 @@ const FALLBACK_INQUIRIES: any[] = [
   },
 ];
 
-const FALLBACK_AUDIT_LOGS: any[] = [];
-const FALLBACK_SAVED_PLOTS: any[] = [];
+if (!g.__S_ARC_FALLBACK_INQUIRIES__) g.__S_ARC_FALLBACK_INQUIRIES__ = [...INITIAL_INQUIRIES];
+const FALLBACK_INQUIRIES: any[] = g.__S_ARC_FALLBACK_INQUIRIES__;
+
+if (!g.__S_ARC_FALLBACK_AUDIT_LOGS__) g.__S_ARC_FALLBACK_AUDIT_LOGS__ = [];
+const FALLBACK_AUDIT_LOGS: any[] = g.__S_ARC_FALLBACK_AUDIT_LOGS__;
+
+if (!g.__S_ARC_FALLBACK_SAVED_PLOTS__) g.__S_ARC_FALLBACK_SAVED_PLOTS__ = [];
+const FALLBACK_SAVED_PLOTS: any[] = g.__S_ARC_FALLBACK_SAVED_PLOTS__;
 
 /**
  * Access the Cloudflare D1 Native binding if available
