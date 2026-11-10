@@ -5,7 +5,6 @@ import * as turf from "@turf/turf";
 import {
   Map as MapLibreMap,
   Marker,
-  AttributionControl,
   GeoJSONSource,
   MapMouseEvent,
   config as maplibreConfig,
@@ -97,6 +96,8 @@ export default function PlotMapWorkspace({
   // Geolocation & Feedback
   const [geoLocating, setGeoLocating] = useState(false);
   const [geoNotice, setGeoNotice] = useState<string | null>(null);
+  const [liveLocation, setLiveLocation] = useState<{ lat: number; lng: number; name: string } | null>(null);
+  const liveLocationRef = useRef<{ lat: number; lng: number; name: string } | null>(null);
 
   // Markers
   const cornerMarkersRef = useRef<Marker[]>([]);
@@ -163,11 +164,119 @@ export default function PlotMapWorkspace({
     }
   };
 
-  // Generate authentic Kerala residential sample plot at current viewport or Central Kerala
-  const handleSamplePlotClick = useCallback(() => {
-    let centerLng = 76.2999; // Central Kerala / Ernakulam default
-    let centerLat = 9.9816;
+  // Generate authentic Kerala residential sample plot at explicit coordinates
+  const applySamplePlotAt = useCallback(
+    (centerLng: number, centerLat: number, label?: string) => {
+      const map = mapRef.current;
+      const sampleCoords = generateSampleKeralaPlot(centerLng, centerLat, 10.5);
 
+      pushHistory(sampleCoords);
+      setIsClosed(true);
+      onIsClosedChange?.(true);
+      setIsDrawing(false);
+      clearRubberband();
+      onRoadFacingIndexChange(0);
+
+      if (locationPinMarkerRef.current) {
+        locationPinMarkerRef.current.remove();
+        locationPinMarkerRef.current = null;
+      }
+
+      if (map) {
+        const line = turf.lineString(sampleCoords);
+        const [minX, minY, maxX, maxY] = turf.bbox(line);
+        map.fitBounds(
+          [
+            [minX, minY],
+            [maxX, maxY],
+          ],
+          {
+            padding: { top: 90, bottom: 100, left: 90, right: 90 },
+            maxZoom: 19.5,
+            duration: 900,
+            pitch: 0,
+            bearing: 0,
+          }
+        );
+      }
+
+      if (onLocationDetected) {
+        const detectedName = label || "Live Location";
+        onLocationDetected(
+          detectedName,
+          `${detectedName} (Sample 10.5 Cents)`,
+          centerLat,
+          centerLng
+        );
+      }
+
+      if (onLoadSamplePlot) {
+        onLoadSamplePlot();
+      }
+    },
+    [pushHistory, onIsClosedChange, onRoadFacingIndexChange, onLocationDetected, onLoadSamplePlot]
+  );
+
+  // Generate sample plot prioritizing detected live location or active viewport
+  const handleSamplePlotClick = useCallback(() => {
+    // 1. If live location is already detected, use it immediately
+    if (liveLocationRef.current) {
+      applySamplePlotAt(
+        liveLocationRef.current.lng,
+        liveLocationRef.current.lat,
+        liveLocationRef.current.name
+      );
+      return;
+    }
+
+    // 2. If focusLocation is active (from search or district selector), use it
+    if (focusLocation) {
+      applySamplePlotAt(
+        focusLocation.lng,
+        focusLocation.lat,
+        focusLocation.label
+      );
+      return;
+    }
+
+    // 3. Try resolving live location on-the-fly via browser GPS
+    if (typeof navigator !== "undefined" && navigator.geolocation) {
+      setGeoLocating(true);
+      setGeoNotice("Detecting live location for sample plot...");
+
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          setGeoLocating(false);
+          setGeoNotice(null);
+          const { latitude, longitude } = pos.coords;
+          const loc = { lat: latitude, lng: longitude, name: "Live Location" };
+          liveLocationRef.current = loc;
+          setLiveLocation(loc);
+          applySamplePlotAt(longitude, latitude, "Live Location");
+        },
+        (err) => {
+          setGeoLocating(false);
+          console.warn("Live GPS unavailable, using map center:", err.message);
+          let centerLng = 76.2999;
+          let centerLat = 9.9816;
+          const map = mapRef.current;
+          if (map) {
+            const c = map.getCenter();
+            if (c.lng >= 74 && c.lng <= 79 && c.lat >= 8 && c.lat <= 14) {
+              centerLng = c.lng;
+              centerLat = c.lat;
+            }
+          }
+          applySamplePlotAt(centerLng, centerLat, "Kerala Residential Plot");
+        },
+        { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+      );
+      return;
+    }
+
+    // 4. Fallback to active map center
+    let centerLng = 76.2999;
+    let centerLat = 9.9816;
     const map = mapRef.current;
     if (map) {
       const c = map.getCenter();
@@ -175,56 +284,9 @@ export default function PlotMapWorkspace({
         centerLng = c.lng;
         centerLat = c.lat;
       }
-    } else if (focusLocation) {
-      centerLng = focusLocation.lng;
-      centerLat = focusLocation.lat;
     }
-
-    const sampleCoords = generateSampleKeralaPlot(centerLng, centerLat, 10.5);
-
-    pushHistory(sampleCoords);
-    setIsClosed(true);
-    onIsClosedChange?.(true);
-    setIsDrawing(false);
-    clearRubberband();
-    onRoadFacingIndexChange(0);
-
-    if (locationPinMarkerRef.current) {
-      locationPinMarkerRef.current.remove();
-      locationPinMarkerRef.current = null;
-    }
-
-    if (map) {
-      const line = turf.lineString(sampleCoords);
-      const [minX, minY, maxX, maxY] = turf.bbox(line);
-      map.fitBounds(
-        [
-          [minX, minY],
-          [maxX, maxY],
-        ],
-        {
-          padding: { top: 90, bottom: 100, left: 90, right: 90 },
-          maxZoom: 19.5,
-          duration: 900,
-          pitch: 0,
-          bearing: 0,
-        }
-      );
-    }
-
-    if (onLocationDetected) {
-      onLocationDetected(
-        "Kerala",
-        "Kerala Residential Plot (Sample 10.5 Cents)",
-        centerLat,
-        centerLng
-      );
-    }
-
-    if (onLoadSamplePlot) {
-      onLoadSamplePlot();
-    }
-  }, [focusLocation, pushHistory, onIsClosedChange, onRoadFacingIndexChange, onLocationDetected, onLoadSamplePlot]);
+    applySamplePlotAt(centerLng, centerLat, "Kerala Residential Plot");
+  }, [applySamplePlotAt, focusLocation]);
 
   // Clear rubberband lines
   const clearRubberband = () => {
@@ -258,11 +320,6 @@ export default function PlotMapWorkspace({
     });
 
     map.touchZoomRotate.disableRotation();
-
-    map.addControl(
-      new AttributionControl({ compact: true }),
-      "bottom-right"
-    );
 
     map.on("load", () => {
       // Polygon Source & Layers
@@ -738,31 +795,49 @@ export default function PlotMapWorkspace({
     }
   }, [isClosed, coordinates.length, fitPlotBounds]);
 
-  // 6. External Focus Location Handling
-  const placeLocationPin = useCallback((lat: number, lng: number, label = "Selected Location") => {
-    const map = mapRef.current;
-    if (!map) return;
+  // 6. External Focus Location Handling with "Try Sample Plot Here" Action Button
+  const placeLocationPin = useCallback(
+    (lat: number, lng: number, label = "Selected Location") => {
+      const map = mapRef.current;
+      if (!map) return;
 
-    if (locationPinMarkerRef.current) {
-      locationPinMarkerRef.current.remove();
-      locationPinMarkerRef.current = null;
-    }
+      if (locationPinMarkerRef.current) {
+        locationPinMarkerRef.current.remove();
+        locationPinMarkerRef.current = null;
+      }
 
-    const pinEl = document.createElement("div");
-    pinEl.className = "flex flex-col items-center pointer-events-none select-none animate-bounce";
-    pinEl.innerHTML = `
-      <div class="px-2.5 py-1 rounded-full bg-cyan-500 text-black font-mono text-[10px] font-bold shadow-2xl border border-white whitespace-nowrap mb-1">
-        ${label}
-      </div>
-      <div class="w-4 h-4 rounded-full bg-cyan-400 border-2 border-white shadow-xl"></div>
-    `;
+      const pinEl = document.createElement("div");
+      pinEl.className = "flex flex-col items-center select-none z-30 animate-in zoom-in-95 duration-200 pointer-events-auto";
+      pinEl.innerHTML = `
+        <div class="flex flex-col items-center bg-black/95 backdrop-blur-md px-3.5 py-2.5 rounded-2xl border border-cyan-400 shadow-2xl text-center space-y-2 mb-2 pointer-events-auto">
+          <div class="flex items-center justify-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-cyan-400 animate-ping shrink-0"></span>
+            <span class="text-xs font-bold text-white font-sans truncate max-w-[200px]">${label}</span>
+          </div>
+          <button id="btn-sample-at-pin" class="w-full px-3 py-1.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black text-xs font-sans font-bold flex items-center justify-center gap-1.5 shadow-lg shadow-cyan-500/20 transition-all active:scale-95 cursor-pointer">
+            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
+            <span>Try Sample Plot Here</span>
+          </button>
+        </div>
+        <div class="w-4 h-4 rounded-full bg-cyan-400 border-2 border-white shadow-xl"></div>
+      `;
 
-    const pin = new Marker({ element: pinEl, anchor: "bottom" })
-      .setLngLat([lng, lat])
-      .addTo(map);
+      const btn = pinEl.querySelector("#btn-sample-at-pin");
+      if (btn) {
+        btn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          applySamplePlotAt(lng, lat, label);
+        });
+      }
 
-    locationPinMarkerRef.current = pin;
-  }, []);
+      const pin = new Marker({ element: pinEl, anchor: "bottom" })
+        .setLngLat([lng, lat])
+        .addTo(map);
+
+      locationPinMarkerRef.current = pin;
+    },
+    [applySamplePlotAt]
+  );
 
   useEffect(() => {
     if (!focusLocation || !mapRef.current) return;
@@ -789,6 +864,11 @@ export default function PlotMapWorkspace({
         if (geoInfo.latitude && geoInfo.longitude) {
           const lat = geoInfo.latitude;
           const lng = geoInfo.longitude;
+          const placeName = geoInfo.city || "Regional Location";
+          const loc = { lat, lng, name: placeName };
+          liveLocationRef.current = loc;
+          setLiveLocation(loc);
+
           const map = mapRef.current;
           if (map) {
             map.flyTo({
@@ -801,7 +881,6 @@ export default function PlotMapWorkspace({
             });
           }
 
-          const placeName = geoInfo.city || "Regional Location";
           placeLocationPin(lat, lng, placeName);
           if (onLocationDetected) {
             onLocationDetected(placeName, `${placeName}, ${geoInfo.region || "Kerala"}`, lat, lng);
@@ -825,6 +904,20 @@ export default function PlotMapWorkspace({
     const onGeoSuccess = async (pos: GeolocationPosition) => {
       setGeoLocating(false);
       const { longitude, latitude } = pos.coords;
+      let placeName = "Your Property";
+
+      try {
+        const res = await fetch(`/api/geocode?lat=${latitude}&lng=${longitude}`);
+        if (res.ok) {
+          const geoData = await res.json();
+          if (geoData.name) placeName = geoData.name;
+        }
+      } catch (err) {}
+
+      const loc = { lat: latitude, lng: longitude, name: placeName };
+      liveLocationRef.current = loc;
+      setLiveLocation(loc);
+
       const map = mapRef.current;
       if (map) {
         map.flyTo({
@@ -837,25 +930,12 @@ export default function PlotMapWorkspace({
         });
       }
 
-      // Reverse geocode to retrieve exact locality
-      try {
-        const res = await fetch(`/api/geocode?lat=${latitude}&lng=${longitude}`);
-        if (res.ok) {
-          const geoData = await res.json();
-          const placeName = geoData.name || "Your Location";
-          placeLocationPin(latitude, longitude, placeName);
-          setGeoNotice(`Located: ${placeName}`);
-          setTimeout(() => setGeoNotice(null), 4000);
-          if (onLocationDetected) {
-            onLocationDetected(placeName, geoData.displayName || placeName, latitude, longitude);
-          }
-          return;
-        }
-      } catch (err) {}
-
-      placeLocationPin(latitude, longitude, "Your Location");
-      setGeoNotice("Property location detected");
-      setTimeout(() => setGeoNotice(null), 3000);
+      placeLocationPin(latitude, longitude, placeName);
+      setGeoNotice(`Located: ${placeName}`);
+      setTimeout(() => setGeoNotice(null), 4000);
+      if (onLocationDetected) {
+        onLocationDetected(placeName, `${placeName}, Kerala`, latitude, longitude);
+      }
     };
 
     const onGeoError = async (err?: GeolocationPositionError) => {
@@ -882,6 +962,50 @@ export default function PlotMapWorkspace({
       setGeoLocating(false);
     }
   };
+
+  // Auto-detect live location if permitted on load
+  useEffect(() => {
+    if (typeof navigator !== "undefined" && navigator.geolocation && !focusLocation) {
+      navigator.geolocation.getCurrentPosition(
+        async (pos) => {
+          const { latitude, longitude } = pos.coords;
+          let placeName = "Your Property";
+          try {
+            const res = await fetch(`/api/geocode?lat=${latitude}&lng=${longitude}`);
+            if (res.ok) {
+              const geoData = await res.json();
+              if (geoData.name) placeName = geoData.name;
+            }
+          } catch (e) {}
+
+          const loc = { lat: latitude, lng: longitude, name: placeName };
+          liveLocationRef.current = loc;
+          setLiveLocation(loc);
+
+          const map = mapRef.current;
+          if (map) {
+            map.flyTo({
+              center: [longitude, latitude],
+              zoom: 18,
+              pitch: 0,
+              bearing: 0,
+              duration: 1200,
+              essential: true,
+            });
+          }
+
+          placeLocationPin(latitude, longitude, placeName);
+          if (onLocationDetected) {
+            onLocationDetected(placeName, `${placeName}, Kerala`, latitude, longitude);
+          }
+        },
+        () => {
+          fallbackIpGeolocation();
+        },
+        { enableHighAccuracy: true, timeout: 6000, maximumAge: 60000 }
+      );
+    }
+  }, []);
 
   const validation = validatePolygonCoordinates(coordinates);
 
@@ -1005,7 +1129,7 @@ export default function PlotMapWorkspace({
                 className="ml-2 px-2.5 py-1 rounded-xl bg-cyan-500/20 text-cyan-300 border border-cyan-400/40 hover:bg-cyan-500 hover:text-black font-medium transition-all flex items-center gap-1 text-[11px]"
               >
                 <Sparkles className="w-3 h-3" />
-                <span>Try Sample Plot</span>
+                <span>{liveLocation ? `Try Sample Plot at ${liveLocation.name}` : "Try Sample Plot (Live Location)"}</span>
               </button>
             </div>
           ) : !isClosed ? (

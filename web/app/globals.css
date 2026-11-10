@@ -80,3 +80,13 @@ textarea {
 input[type="checkbox"] {
   border-radius: 0.25rem;
 }
+
+/* Completely remove and hide MapLibre default attribution toggle button */
+.maplibregl-ctrl-attrib,
+.maplibregl-ctrl-attrib-button,
+details.maplibregl-ctrl-attrib {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}

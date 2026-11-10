@@ -92,20 +92,48 @@ export default function PlotIntelligencePage() {
     setFocusLocation({ lat, lng, label: displayName });
   };
 
-  // Load realistic sample plot (10.5 Cent Kerala plot) centered at active location or Central Kerala
+  // Load realistic sample plot (10.5 Cent Kerala plot) centered at live location, active focus, or Central Kerala
   const handleLoadSamplePlot = () => {
-    const centerLng = focusLocation ? focusLocation.lng : 76.2999;
-    const centerLat = focusLocation ? focusLocation.lat : 9.9816;
-    const sampleCoords = generateSampleKeralaPlot(centerLng, centerLat, 10.5);
+    if (focusLocation) {
+      const sampleCoords = generateSampleKeralaPlot(focusLocation.lng, focusLocation.lat, 10.5);
+      setCoordinates(sampleCoords);
+      setIsClosed(true);
+      setRoadFacingIndex(0);
+      const label = locationName && !locationName.includes("Sample")
+        ? `${locationName} (Sample 10.5 Cents)`
+        : "Kerala Residential Plot (Sample 10.5 Cents)";
+      setLocationName(label);
+      setFocusLocation(null);
+      return;
+    }
 
+    if (typeof navigator !== "undefined" && navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const { latitude, longitude } = pos.coords;
+          const sampleCoords = generateSampleKeralaPlot(longitude, latitude, 10.5);
+          setCoordinates(sampleCoords);
+          setIsClosed(true);
+          setRoadFacingIndex(0);
+          setLocationName("Your Live Location (Sample 10.5 Cents)");
+        },
+        () => {
+          const sampleCoords = generateSampleKeralaPlot(76.2999, 9.9816, 10.5);
+          setCoordinates(sampleCoords);
+          setIsClosed(true);
+          setRoadFacingIndex(0);
+          setLocationName("Kerala Residential Plot (Sample 10.5 Cents)");
+        },
+        { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+      );
+      return;
+    }
+
+    const sampleCoords = generateSampleKeralaPlot(76.2999, 9.9816, 10.5);
     setCoordinates(sampleCoords);
     setIsClosed(true);
     setRoadFacingIndex(0);
-    const label = locationName && !locationName.includes("Sample")
-      ? `${locationName} (Sample 10.5 Cents)`
-      : "Kerala Residential Plot (Sample 10.5 Cents)";
-    setLocationName(label);
-    setFocusLocation(null);
+    setLocationName("Kerala Residential Plot (Sample 10.5 Cents)");
   };
 
   // Load saved plot from drawer or dashboard
