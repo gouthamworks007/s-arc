@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
-import { Compass, MapPin, Maximize2, Shapes, Navigation, ArrowRight, Check } from "lucide-react";
+import React, { useState, useMemo } from "react";
+import Link from "next/link";
+import { Compass, MapPin, Maximize2, Shapes, Navigation, ArrowRight, Check, Sparkles, Layers, Sliders, DollarSign, Bed, Home, Ruler, ShieldCheck } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface SmartSearchProps {
@@ -12,6 +13,42 @@ interface SmartSearchProps {
     direction: string;
   }) => void;
 }
+
+const PLOT_SIZES = [
+  { label: "5 Cents", sqft: "2,178 Sq.Ft", builtUp: "1,200 – 1,400 Sq.Ft", value: "5 Cents / 1,200 Sq.Ft", dimensions: { w: "35 ft", l: "62 ft" } },
+  { label: "8 Cents", sqft: "3,485 Sq.Ft", builtUp: "1,800 – 2,200 Sq.Ft", value: "8 Cents / 1,900 Sq.Ft", dimensions: { w: "42 ft", l: "83 ft" } },
+  { label: "10 Cents", sqft: "4,356 Sq.Ft", builtUp: "2,400 – 2,800 Sq.Ft", value: "10 Cents / 2,400 Sq.Ft", dimensions: { w: "48 ft", l: "90 ft" } },
+  { label: "12 Cents", sqft: "5,227 Sq.Ft", builtUp: "2,900 – 3,400 Sq.Ft", value: "12 Cents / 2,900 Sq.Ft", dimensions: { w: "55 ft", l: "95 ft" } },
+  { label: "15 Cents", sqft: "6,534 Sq.Ft", builtUp: "3,600 – 4,200 Sq.Ft", value: "15 Cents / 3,600 Sq.Ft", dimensions: { w: "65 ft", l: "100 ft" } },
+  { label: "20+ Cents", sqft: "8,712+ Sq.Ft", builtUp: "4,800 – 6,500 Sq.Ft", value: "20+ Cents / 5,000+ Sq.Ft", dimensions: { w: "80 ft", l: "110 ft" } },
+];
+
+const PLOT_SHAPES = [
+  { id: "Rectangular", label: "Rectangular", desc: "Standard 1:1.5 Ratio", icon: "⬚" },
+  { id: "Square", label: "Square Plot", desc: "Balanced 1:1 Footprint", icon: "⬜" },
+  { id: "Corner Plot", label: "Corner Plot", desc: "Dual Road Frontage", icon: "⬡" },
+  { id: "Narrow Frontage", label: "Narrow Deep", desc: "Linear Courtyard Site", icon: "▮" },
+  { id: "Sloped / Contour", label: "Sloped Contour", desc: "Multi-level Hillside", icon: "〰" },
+];
+
+const ROAD_DIRECTIONS = [
+  { id: "North Facing", label: "North", deg: 0, desc: "Vaastu Compliant" },
+  { id: "East Facing", label: "East", deg: 90, desc: "Morning Sun" },
+  { id: "South Facing", label: "South", deg: 180, desc: "Cooling Breeze" },
+  { id: "West Facing", label: "West", deg: 270, desc: "Sunset Horizon" },
+];
+
+const LOCATIONS = [
+  "Kochi, Kerala",
+  "Trivandrum, Kerala",
+  "Calicut, Kerala",
+  "Thrissur, Kerala",
+  "Kottayam, Kerala",
+  "Kannur, Kerala",
+  "Bengaluru, Karnataka",
+  "Chennai, Tamil Nadu",
+  "Coimbatore, Tamil Nadu",
+];
 
 export default function SmartSearch({ onSearch }: SmartSearchProps) {
   const [activeTab, setActiveTab] = useState<"plot" | "preferences" | "budget">("plot");
@@ -25,9 +62,20 @@ export default function SmartSearch({ onSearch }: SmartSearchProps) {
   // Preferences state
   const [bedrooms, setBedrooms] = useState("3-4 Beds");
   const [stylePreference, setStylePreference] = useState("Contemporary Tropical");
+  const [primaryFeature, setPrimaryFeature] = useState("Central Open Courtyard (Nadumuttam)");
 
   // Budget state
   const [budgetRange, setBudgetRange] = useState("₹70L - ₹1.2 Cr Construction");
+
+  // Selected plot size details
+  const currentSizeObj = useMemo(() => {
+    return PLOT_SIZES.find((s) => s.value === plotSize) || PLOT_SIZES[2];
+  }, [plotSize]);
+
+  // Selected direction rotation degree
+  const currentDirectionObj = useMemo(() => {
+    return ROAD_DIRECTIONS.find((d) => d.id === roadDirection) || ROAD_DIRECTIONS[0];
+  }, [roadDirection]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,47 +88,55 @@ export default function SmartSearch({ onSearch }: SmartSearchProps) {
   };
 
   return (
-    <section id="search-section" className="py-16 sm:py-20 bg-warm-grey border-y border-warm-border">
-      <div className="max-w-7xl mx-auto px-6 sm:px-8">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-start">
+    <section id="search-section" className="py-14 sm:py-20 bg-warm-grey border-y border-warm-border">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start">
           
           {/* Left Column: Heading and Context */}
-          <div className="lg:col-span-4">
-            <h2 className="text-3xl sm:text-4xl lg:text-[44px] font-normal font-serif tracking-[-0.01em] text-charcoal mb-4">
-              What Are We <br />
+          <div className="lg:col-span-4 space-y-4">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-copper/10 border border-copper/20 text-copper text-[10px] sm:text-[11px] font-mono tracking-wider uppercase">
+              <Compass className="w-3.5 h-3.5" />
+              <span>Smart Plot Matcher</span>
+            </div>
+
+            <h2 className="text-3xl sm:text-4xl lg:text-[44px] font-normal font-serif tracking-[-0.01em] text-charcoal leading-[1.08]">
+              What Are We <br className="hidden sm:inline" />
               Building On?
             </h2>
-            <p className="text-[15px] leading-relaxed text-secondaryText mb-6 max-w-sm font-light font-sans">
-              Tell us about your land and get architectural designs that actually fit your topography, orientation, and building bylaws.
+
+            <p className="text-[14px] sm:text-[15px] leading-relaxed text-secondaryText max-w-sm font-light font-sans">
+              Enter your land dimensions, road orientation, and shape. Our interactive CAD simulator computes your buildable zone and matches architect-drawn plans.
             </p>
 
             <div className="pt-2 space-y-3">
-              <a
+              <Link
                 href="/plot-intelligence"
-                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-copper text-white text-xs font-sans font-medium hover:bg-copper-dark transition-all shadow-sm group"
+                className="inline-flex items-center gap-2 px-4 py-3 rounded-xl bg-copper text-white text-xs font-sans font-medium hover:bg-copper-hover transition-all shadow-sm group"
               >
                 <Compass className="w-4 h-4 text-white" />
-                <span>Launch Satellite Plot Intelligence</span>
+                <span>Launch Satellite GIS Workspace</span>
                 <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
-              </a>
-              <div className="text-[11px] text-charcoal/50 font-sans">
-                Mark your property corners on live satellite imagery & calculate Cents.
+              </Link>
+              <div className="text-[11px] text-charcoal/60 font-sans flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                <span>Supports GPS polygon mapping &amp; KMBR 2019 setbacks</span>
               </div>
             </div>
           </div>
 
           {/* Right Column: Search Card + Interactive Plot Diagram */}
-          <div className="lg:col-span-8 bg-white border border-warm-border shadow-subtle p-6 sm:p-8 rounded-2xl">
+          <div className="lg:col-span-8 bg-white border border-warm-border shadow-subtle p-5 sm:p-7 md:p-8 rounded-2xl">
             {/* Tabs */}
-            <div className="flex border-b border-warm-border pb-3 mb-6 space-x-6 sm:space-x-8 text-[13px]">
+            <div className="flex border-b border-warm-border pb-3 mb-6 space-x-6 sm:space-x-8 text-[13px] font-sans">
               <button
                 type="button"
                 onClick={() => setActiveTab("plot")}
-                className={`font-medium pb-2 transition-colors relative ${
+                className={`font-medium pb-2 transition-colors relative flex items-center gap-1.5 ${
                   activeTab === "plot" ? "text-charcoal" : "text-mutedText hover:text-charcoal"
                 }`}
               >
-                By Plot Details
+                <Shapes className="w-3.5 h-3.5 text-copper" />
+                <span>By Plot Details</span>
                 {activeTab === "plot" && (
                   <motion.div
                     layoutId="activeSearchTab"
@@ -92,11 +148,12 @@ export default function SmartSearch({ onSearch }: SmartSearchProps) {
               <button
                 type="button"
                 onClick={() => setActiveTab("preferences")}
-                className={`font-medium pb-2 transition-colors relative ${
+                className={`font-medium pb-2 transition-colors relative flex items-center gap-1.5 ${
                   activeTab === "preferences" ? "text-charcoal" : "text-mutedText hover:text-charcoal"
                 }`}
               >
-                By Preferences
+                <Bed className="w-3.5 h-3.5 text-copper" />
+                <span>By Preferences</span>
                 {activeTab === "preferences" && (
                   <motion.div
                     layoutId="activeSearchTab"
@@ -108,11 +165,12 @@ export default function SmartSearch({ onSearch }: SmartSearchProps) {
               <button
                 type="button"
                 onClick={() => setActiveTab("budget")}
-                className={`font-medium pb-2 transition-colors relative ${
+                className={`font-medium pb-2 transition-colors relative flex items-center gap-1.5 ${
                   activeTab === "budget" ? "text-charcoal" : "text-mutedText hover:text-charcoal"
                 }`}
               >
-                By Budget
+                <DollarSign className="w-3.5 h-3.5 text-copper" />
+                <span>By Budget</span>
                 {activeTab === "budget" && (
                   <motion.div
                     layoutId="activeSearchTab"
@@ -123,12 +181,13 @@ export default function SmartSearch({ onSearch }: SmartSearchProps) {
             </div>
 
             {/* Tab Form and Plot Diagram Row */}
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-center">
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-8 items-center">
               
               {/* Form Parameters */}
               <div className="md:col-span-7">
                 <form onSubmit={handleSearchSubmit} className="space-y-4">
                   <AnimatePresence mode="wait">
+                    {/* TAB 1: PLOT DETAILS */}
                     {activeTab === "plot" && (
                       <motion.div
                         key="plot-tab"
@@ -138,86 +197,116 @@ export default function SmartSearch({ onSearch }: SmartSearchProps) {
                         transition={{ duration: 0.2 }}
                         className="space-y-4"
                       >
-                        {/* Location */}
-                        <div className="border border-warm-border p-3 transition-colors focus-within:border-charcoal bg-warm-card rounded-xl">
-                          <label className="block text-[11px] uppercase tracking-wider text-mutedText mb-1 flex items-center gap-1.5">
-                            <MapPin className="w-3 h-3 text-copper" />
-                            Location
+                        {/* Location Dropdown */}
+                        <div className="border border-warm-border p-2.5 sm:p-3 transition-colors focus-within:border-charcoal bg-warm-card rounded-xl">
+                          <label className="block text-[10px] sm:text-[11px] uppercase tracking-wider text-mutedText mb-1 flex items-center gap-1.5 font-sans font-medium">
+                            <MapPin className="w-3.5 h-3.5 text-copper" />
+                            Location / District Hub
                           </label>
                           <select
                             value={location}
                             onChange={(e) => setLocation(e.target.value)}
-                            className="w-full bg-transparent text-[13px] font-medium text-charcoal outline-none cursor-pointer"
+                            className="w-full bg-transparent text-[13px] font-medium text-charcoal outline-none cursor-pointer font-sans"
                           >
-                            <option value="Kochi, Kerala">Kochi, Kerala</option>
-                            <option value="Bengaluru, Karnataka">Bengaluru, Karnataka</option>
-                            <option value="Trivandrum, Kerala">Trivandrum, Kerala</option>
-                            <option value="Calicut, Kerala">Calicut, Kerala</option>
-                            <option value="Chennai, Tamil Nadu">Chennai, Tamil Nadu</option>
-                            <option value="Coimbatore, Tamil Nadu">Coimbatore, Tamil Nadu</option>
-                            <option value="Hyderabad, Telangana">Hyderabad, Telangana</option>
+                            {LOCATIONS.map((loc) => (
+                              <option key={loc} value={loc}>
+                                {loc}
+                              </option>
+                            ))}
                           </select>
                         </div>
 
-                        {/* Plot Size */}
-                        <div className="border border-warm-border p-3 transition-colors focus-within:border-charcoal bg-warm-card rounded-xl">
-                          <label className="block text-[11px] uppercase tracking-wider text-mutedText mb-1 flex items-center gap-1.5">
-                            <Maximize2 className="w-3 h-3 text-copper" />
-                            Plot Size
+                        {/* Interactive Plot Size Chips */}
+                        <div className="border border-warm-border p-2.5 sm:p-3 bg-warm-card rounded-xl">
+                          <label className="block text-[10px] sm:text-[11px] uppercase tracking-wider text-mutedText mb-2 flex items-center justify-between font-sans font-medium">
+                            <span className="flex items-center gap-1.5">
+                              <Maximize2 className="w-3.5 h-3.5 text-copper" />
+                              Plot Area (Cent &amp; Sq.Ft)
+                            </span>
+                            <span className="text-charcoal font-semibold font-mono text-[11px]">
+                              {currentSizeObj.sqft}
+                            </span>
                           </label>
-                          <select
-                            value={plotSize}
-                            onChange={(e) => setPlotSize(e.target.value)}
-                            className="w-full bg-transparent text-[13px] font-medium text-charcoal outline-none cursor-pointer"
-                          >
-                            <option value="5 Cents / 1,200 Sq.Ft">Compact Plot (5 Cents / 1,200 Sq.Ft)</option>
-                            <option value="8 Cents / 1,900 Sq.Ft">Medium Plot (8 Cents / 1,900 Sq.Ft)</option>
-                            <option value="10 Cents / 2,400 Sq.Ft">Standard Plot (10 Cents / 2,400 Sq.Ft)</option>
-                            <option value="12 Cents / 2,900 Sq.Ft">Villa Plot (12 Cents / 2,900 Sq.Ft)</option>
-                            <option value="15 Cents / 3,600 Sq.Ft">Large Plot (15 Cents / 3,600 Sq.Ft)</option>
-                            <option value="20+ Cents / 5,000+ Sq.Ft">Estate Plot (20+ Cents / 5,000+ Sq.Ft)</option>
-                          </select>
+                          <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5">
+                            {PLOT_SIZES.map((size) => (
+                              <button
+                                key={size.value}
+                                type="button"
+                                onClick={() => setPlotSize(size.value)}
+                                className={`py-1.5 px-2 rounded-lg text-xs font-sans font-medium transition-all text-center ${
+                                  plotSize === size.value
+                                    ? "bg-charcoal text-white shadow-sm"
+                                    : "bg-white text-charcoal border border-warm-border hover:border-charcoal/40"
+                                }`}
+                              >
+                                {size.label}
+                              </button>
+                            ))}
+                          </div>
                         </div>
 
-                        {/* Shape */}
-                        <div className="border border-warm-border p-3 transition-colors focus-within:border-charcoal bg-warm-card rounded-xl">
-                          <label className="block text-[11px] uppercase tracking-wider text-mutedText mb-1 flex items-center gap-1.5">
-                            <Shapes className="w-3 h-3 text-copper" />
-                            Shape
+                        {/* Interactive Shape Selector */}
+                        <div className="border border-warm-border p-2.5 sm:p-3 bg-warm-card rounded-xl">
+                          <label className="block text-[10px] sm:text-[11px] uppercase tracking-wider text-mutedText mb-2 flex items-center gap-1.5 font-sans font-medium">
+                            <Shapes className="w-3.5 h-3.5 text-copper" />
+                            Parcel Geometry / Shape
                           </label>
-                          <select
-                            value={plotShape}
-                            onChange={(e) => setPlotShape(e.target.value)}
-                            className="w-full bg-transparent text-[13px] font-medium text-charcoal outline-none cursor-pointer"
-                          >
-                            <option value="Rectangular">Rectangular (Standard 1:1.5)</option>
-                            <option value="Square">Square Plot</option>
-                            <option value="Corner Plot">Corner / Dual Road Frontage</option>
-                            <option value="Narrow Frontage">Narrow Deep Frontage</option>
-                            <option value="Sloped / Contour">Sloped Terrain / Contour</option>
-                          </select>
+                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+                            {PLOT_SHAPES.map((shape) => (
+                              <button
+                                key={shape.id}
+                                type="button"
+                                onClick={() => setPlotShape(shape.id)}
+                                className={`py-2 px-2.5 rounded-lg text-left transition-all ${
+                                  plotShape === shape.id
+                                    ? "bg-charcoal text-white shadow-sm"
+                                    : "bg-white text-charcoal border border-warm-border hover:border-charcoal/40"
+                                }`}
+                              >
+                                <div className="text-xs font-medium font-sans flex items-center gap-1.5">
+                                  <span>{shape.icon}</span>
+                                  <span>{shape.label}</span>
+                                </div>
+                                <div className={`text-[10px] truncate mt-0.5 ${plotShape === shape.id ? "text-white/70" : "text-mutedText"}`}>
+                                  {shape.desc}
+                                </div>
+                              </button>
+                            ))}
+                          </div>
                         </div>
 
-                        {/* Road Direction */}
-                        <div className="border border-warm-border p-3 transition-colors focus-within:border-charcoal bg-warm-card rounded-xl">
-                          <label className="block text-[11px] uppercase tracking-wider text-mutedText mb-1 flex items-center gap-1.5">
-                            <Compass className="w-3 h-3 text-copper" />
-                            Road Direction
+                        {/* Interactive Road Facing Direction */}
+                        <div className="border border-warm-border p-2.5 sm:p-3 bg-warm-card rounded-xl">
+                          <label className="block text-[10px] sm:text-[11px] uppercase tracking-wider text-mutedText mb-2 flex items-center justify-between font-sans font-medium">
+                            <span className="flex items-center gap-1.5">
+                              <Compass className="w-3.5 h-3.5 text-copper" />
+                              Road Frontage &amp; Orientation
+                            </span>
+                            <span className="text-copper font-medium text-[11px]">
+                              {currentDirectionObj.desc}
+                            </span>
                           </label>
-                          <select
-                            value={roadDirection}
-                            onChange={(e) => setRoadDirection(e.target.value)}
-                            className="w-full bg-transparent text-[13px] font-medium text-charcoal outline-none cursor-pointer"
-                          >
-                            <option value="North Facing">North Facing (Vaastu Compliant)</option>
-                            <option value="East Facing">East Facing (Morning Sun)</option>
-                            <option value="South Facing">South Facing</option>
-                            <option value="West Facing">West Facing (Sunset View)</option>
-                          </select>
+                          <div className="grid grid-cols-4 gap-1.5">
+                            {ROAD_DIRECTIONS.map((dir) => (
+                              <button
+                                key={dir.id}
+                                type="button"
+                                onClick={() => setRoadDirection(dir.id)}
+                                className={`py-1.5 px-2 rounded-lg text-xs font-sans font-medium transition-all text-center flex items-center justify-center gap-1 ${
+                                  roadDirection === dir.id
+                                    ? "bg-copper text-white shadow-sm"
+                                    : "bg-white text-charcoal border border-warm-border hover:border-charcoal/40"
+                                }`}
+                              >
+                                <span>{dir.label}</span>
+                              </button>
+                            ))}
+                          </div>
                         </div>
                       </motion.div>
                     )}
 
+                    {/* TAB 2: PREFERENCES */}
                     {activeTab === "preferences" && (
                       <motion.div
                         key="preferences-tab"
@@ -227,53 +316,83 @@ export default function SmartSearch({ onSearch }: SmartSearchProps) {
                         transition={{ duration: 0.2 }}
                         className="space-y-4"
                       >
+                        {/* Bedrooms */}
                         <div className="border border-warm-border p-3 bg-warm-card rounded-xl">
-                          <label className="block text-[11px] uppercase tracking-wider text-mutedText mb-1">
-                            Bedrooms & Levels
+                          <label className="block text-[11px] uppercase tracking-wider text-mutedText mb-2 font-sans font-medium">
+                            Bedrooms &amp; Levels
                           </label>
-                          <select
-                            value={bedrooms}
-                            onChange={(e) => setBedrooms(e.target.value)}
-                            className="w-full bg-transparent text-[13px] font-medium text-charcoal outline-none cursor-pointer"
-                          >
-                            <option value="2-3 Beds (Single Level)">2-3 Beds (Single Level)</option>
-                            <option value="3-4 Beds">3-4 Beds (G+1 Villa)</option>
-                            <option value="4-5 Beds">4-5 Beds (Luxury G+2 Villa)</option>
-                            <option value="Multi-generation">Multi-generational (Separate Units)</option>
-                          </select>
+                          <div className="grid grid-cols-2 gap-2">
+                            {["2-3 Beds (Single Level)", "3-4 Beds (G+1 Villa)", "4-5 Beds (Luxury G+2)", "Multi-generational"].map((bhk) => (
+                              <button
+                                key={bhk}
+                                type="button"
+                                onClick={() => setBedrooms(bhk)}
+                                className={`p-2.5 rounded-lg text-xs font-sans text-left transition-all ${
+                                  bedrooms === bhk
+                                    ? "bg-charcoal text-white"
+                                    : "bg-white text-charcoal border border-warm-border hover:border-charcoal/40"
+                                }`}
+                              >
+                                {bhk}
+                              </button>
+                            ))}
+                          </div>
                         </div>
 
+                        {/* Architectural Style */}
                         <div className="border border-warm-border p-3 bg-warm-card rounded-xl">
-                          <label className="block text-[11px] uppercase tracking-wider text-mutedText mb-1">
+                          <label className="block text-[11px] uppercase tracking-wider text-mutedText mb-2 font-sans font-medium">
                             Architectural Style
                           </label>
-                          <select
-                            value={stylePreference}
-                            onChange={(e) => setStylePreference(e.target.value)}
-                            className="w-full bg-transparent text-[13px] font-medium text-charcoal outline-none cursor-pointer"
-                          >
-                            <option value="Contemporary Tropical">Contemporary Tropical</option>
-                            <option value="Kerala Courtyard / Traditional">Kerala Courtyard / Traditional</option>
-                            <option value="Minimalist Modern">Minimalist Modern</option>
-                            <option value="Exposed Brick / Earth">Exposed Brick / Earth Architecture</option>
-                            <option value="Mediterranean Coastal">Mediterranean Coastal</option>
-                          </select>
+                          <div className="grid grid-cols-2 gap-2">
+                            {["Contemporary Tropical", "Kerala Courtyard / Traditional", "Minimalist Modern", "Mediterranean Coastal"].map((st) => (
+                              <button
+                                key={st}
+                                type="button"
+                                onClick={() => setStylePreference(st)}
+                                className={`p-2.5 rounded-lg text-xs font-sans text-left transition-all ${
+                                  stylePreference === st
+                                    ? "bg-copper text-white"
+                                    : "bg-white text-charcoal border border-warm-border hover:border-charcoal/40"
+                                }`}
+                              >
+                                {st}
+                              </button>
+                            ))}
+                          </div>
                         </div>
 
+                        {/* Primary Feature */}
                         <div className="border border-warm-border p-3 bg-warm-card rounded-xl">
-                          <label className="block text-[11px] uppercase tracking-wider text-mutedText mb-1">
-                            Primary Feature
+                          <label className="block text-[11px] uppercase tracking-wider text-mutedText mb-2 font-sans font-medium">
+                            Signature Lifestyle Feature
                           </label>
-                          <select className="w-full bg-transparent text-[13px] font-medium text-charcoal outline-none cursor-pointer">
-                            <option>Central Open Courtyard (Nadumuttam)</option>
-                            <option>Plunge Pool & Deck</option>
-                            <option>Double-Height Living Space</option>
-                            <option>Home Office & Library</option>
-                          </select>
+                          <div className="grid grid-cols-2 gap-2">
+                            {[
+                              "Central Open Courtyard (Nadumuttam)",
+                              "Plunge Pool & Deck",
+                              "Double-Height Living Space",
+                              "Covered Charupadi Verandah",
+                            ].map((feat) => (
+                              <button
+                                key={feat}
+                                type="button"
+                                onClick={() => setPrimaryFeature(feat)}
+                                className={`p-2.5 rounded-lg text-xs font-sans text-left transition-all ${
+                                  primaryFeature === feat
+                                    ? "bg-charcoal text-white"
+                                    : "bg-white text-charcoal border border-warm-border hover:border-charcoal/40"
+                                }`}
+                              >
+                                {feat}
+                              </button>
+                            ))}
+                          </div>
                         </div>
                       </motion.div>
                     )}
 
+                    {/* TAB 3: BUDGET */}
                     {activeTab === "budget" && (
                       <motion.div
                         key="budget-tab"
@@ -284,30 +403,49 @@ export default function SmartSearch({ onSearch }: SmartSearchProps) {
                         className="space-y-4"
                       >
                         <div className="border border-warm-border p-3 bg-warm-card rounded-xl">
-                          <label className="block text-[11px] uppercase tracking-wider text-mutedText mb-1">
-                            Estimated Construction Budget
+                          <label className="block text-[11px] uppercase tracking-wider text-mutedText mb-2 font-sans font-medium">
+                            Target Construction Budget
                           </label>
-                          <select
-                            value={budgetRange}
-                            onChange={(e) => setBudgetRange(e.target.value)}
-                            className="w-full bg-transparent text-[13px] font-medium text-charcoal outline-none cursor-pointer"
-                          >
-                            <option value="₹40L - ₹70L">₹40L - ₹70L (Cost-effective)</option>
-                            <option value="₹70L - ₹1.2 Cr Construction">₹70L - ₹1.2 Cr (Premium Residential)</option>
-                            <option value="₹1.2 Cr - ₹2 Cr">₹1.2 Cr - ₹2 Cr (Luxury Estate)</option>
-                            <option value="Above ₹2 Cr">Above ₹2 Cr (Ultra-Luxury Signature)</option>
-                          </select>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                            {[
+                              { label: "₹40L – ₹70L", desc: "Economical / Compact Planning", val: "₹40L - ₹70L" },
+                              { label: "₹70L – ₹1.2 Cr", desc: "Premium Residential Villa", val: "₹70L - ₹1.2 Cr Construction" },
+                              { label: "₹1.2 Cr – ₹2 Cr", desc: "Luxury Architectural Estate", val: "₹1.2 Cr - ₹2 Cr" },
+                              { label: "Above ₹2 Cr", desc: "Ultra-Luxury Signature Compound", val: "Above ₹2 Cr" },
+                            ].map((b) => (
+                              <button
+                                key={b.val}
+                                type="button"
+                                onClick={() => setBudgetRange(b.val)}
+                                className={`p-3 rounded-xl text-left transition-all ${
+                                  budgetRange === b.val
+                                    ? "bg-charcoal text-white shadow-sm"
+                                    : "bg-white text-charcoal border border-warm-border hover:border-charcoal/40"
+                                }`}
+                              >
+                                <div className="text-xs font-semibold font-sans">{b.label}</div>
+                                <div className={`text-[10px] mt-0.5 ${budgetRange === b.val ? "text-white/70" : "text-mutedText"}`}>
+                                  {b.desc}
+                                </div>
+                              </button>
+                            ))}
+                          </div>
                         </div>
 
                         <div className="border border-warm-border p-3 bg-warm-card rounded-xl">
-                          <label className="block text-[11px] uppercase tracking-wider text-mutedText mb-1">
-                            Architectural Plan Package
+                          <label className="block text-[11px] uppercase tracking-wider text-mutedText mb-1.5 font-sans font-medium">
+                            Estimated Cost Analytics
                           </label>
-                          <select className="w-full bg-transparent text-[13px] font-medium text-charcoal outline-none cursor-pointer">
-                            <option>Concept Plan + 3D Elevations (₹50,000)</option>
-                            <option>Complete Structural, MEP & Working CAD (₹85,000)</option>
-                            <option>Turnkey Full Architect Engagement (Custom)</option>
-                          </select>
+                          <div className="grid grid-cols-2 gap-3 text-xs font-sans">
+                            <div className="p-2.5 bg-white rounded-lg border border-warm-border">
+                              <span className="text-[10px] text-mutedText block">Typical Rate / Sq.Ft</span>
+                              <span className="font-semibold text-charcoal">₹2,400 – ₹3,200</span>
+                            </div>
+                            <div className="p-2.5 bg-white rounded-lg border border-warm-border">
+                              <span className="text-[10px] text-mutedText block">Drawing Set Cost</span>
+                              <span className="font-semibold text-copper">₹50,000 – ₹85,000</span>
+                            </div>
+                          </div>
                         </div>
                       </motion.div>
                     )}
@@ -316,86 +454,232 @@ export default function SmartSearch({ onSearch }: SmartSearchProps) {
                   {/* Submit Button */}
                   <button
                     type="submit"
-                    className="w-full mt-2 py-3.5 px-6 bg-charcoal hover:bg-charcoal-light text-white text-[13px] font-medium tracking-wide flex items-center justify-center gap-2 transition-all duration-200 rounded-xl"
+                    className="w-full mt-2 py-3.5 px-6 bg-charcoal hover:bg-copper text-white text-[13px] font-medium tracking-wide flex items-center justify-center gap-2 transition-all duration-300 rounded-xl shadow-sm group"
                   >
                     <span>Find Matching Designs</span>
-                    <ArrowRight className="w-4 h-4 text-copper" />
+                    <ArrowRight className="w-4 h-4 text-white group-hover:translate-x-1 transition-transform" />
                   </button>
                 </form>
               </div>
 
-              {/* Right Side: Architectural Plot Schematic Diagram */}
-              <div className="md:col-span-5 flex flex-col items-center justify-center p-4 bg-warm-card border border-warm-border/60 rounded-xl">
-                <div className="relative w-full aspect-square max-w-[240px] flex items-center justify-center">
-                  
-                  {/* Technical Plot Schematic SVG matching design.png */}
+              {/* Right Side: Advanced Interactive CAD Plot Simulator Diagram */}
+              <div className="md:col-span-5 flex flex-col items-center justify-center p-4 sm:p-5 bg-warm-card border border-warm-border/70 rounded-2xl relative overflow-hidden">
+                {/* Simulator Header */}
+                <div className="w-full flex items-center justify-between text-[10px] font-mono text-mutedText pb-2 mb-2 border-b border-warm-border/60">
+                  <span className="flex items-center gap-1.5 text-charcoal font-semibold">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                    <span>CAD SIMULATOR</span>
+                  </span>
+                  <span>{currentDirectionObj.id.toUpperCase()}</span>
+                </div>
+
+                {/* Dynamic SVG Drawing Canvas */}
+                <div className="relative w-full aspect-square max-w-[250px] flex items-center justify-center">
                   <svg
-                    viewBox="0 0 240 240"
-                    className="w-full h-full text-charcoal/40"
+                    viewBox="0 0 260 260"
+                    className="w-full h-full"
                     fill="none"
                     xmlns="http://www.w3.org/2000/svg"
                   >
-                    {/* Background grid */}
+                    {/* Grid Pattern */}
                     <defs>
-                      <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
-                        <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#E8E6E2" strokeWidth="0.8" />
+                      <pattern id="cadGrid" width="16" height="16" patternUnits="userSpaceOnUse">
+                        <path d="M 16 0 L 0 0 0 16" fill="none" stroke="#E5E2DC" strokeWidth="0.7" />
                       </pattern>
-                      <pattern id="diagonalHatch" width="8" height="8" patternTransform="rotate(45 0 0)" patternUnits="userSpaceOnUse">
-                        <line x1="0" y1="0" x2="0" y2="8" stroke="#AD8065" strokeWidth="1" strokeOpacity="0.25" />
+                      <pattern id="buildableHatch" width="6" height="6" patternTransform="rotate(45 0 0)" patternUnits="userSpaceOnUse">
+                        <line x1="0" y1="0" x2="0" y2="6" stroke="#AD8065" strokeWidth="1" strokeOpacity="0.3" />
                       </pattern>
                     </defs>
 
-                    <rect width="240" height="240" fill="url(#grid)" />
+                    <rect width="260" height="260" fill="url(#cadGrid)" rx="12" />
 
-                    {/* Isometric Plot Outline */}
+                    {/* Access Road Indicator Line */}
+                    <g className="transition-all duration-500">
+                      {roadDirection === "North Facing" && (
+                        <g>
+                          <line x1="20" y1="20" x2="240" y2="20" stroke="#171717" strokeWidth="5" strokeOpacity="0.7" />
+                          <text x="130" y="14" fill="#777777" fontSize="7.5" textAnchor="middle" fontFamily="monospace">
+                            ACCESS ROAD (12M PWD)
+                          </text>
+                        </g>
+                      )}
+                      {roadDirection === "East Facing" && (
+                        <g>
+                          <line x1="242" y1="20" x2="242" y2="240" stroke="#171717" strokeWidth="5" strokeOpacity="0.7" />
+                          <text x="248" y="130" fill="#777777" fontSize="7" transform="rotate(90 248 130)" textAnchor="middle" fontFamily="monospace">
+                            ACCESS ROAD (12M)
+                          </text>
+                        </g>
+                      )}
+                      {roadDirection === "South Facing" && (
+                        <g>
+                          <line x1="20" y1="245" x2="240" y2="245" stroke="#171717" strokeWidth="5" strokeOpacity="0.7" />
+                          <text x="130" y="254" fill="#777777" fontSize="7.5" textAnchor="middle" fontFamily="monospace">
+                            ACCESS ROAD (12M PWD)
+                          </text>
+                        </g>
+                      )}
+                      {roadDirection === "West Facing" && (
+                        <g>
+                          <line x1="16" y1="20" x2="16" y2="240" stroke="#171717" strokeWidth="5" strokeOpacity="0.7" />
+                          <text x="10" y="130" fill="#777777" fontSize="7" transform="rotate(-90 10 130)" textAnchor="middle" fontFamily="monospace">
+                            ACCESS ROAD (12M)
+                          </text>
+                        </g>
+                      )}
+                    </g>
+
+                    {/* Main Morphing Plot Boundary Polygon */}
                     <g transform="translate(10, 10)">
-                      {/* Plot Polygon */}
-                      <polygon
-                        points="80,30 180,60 140,190 40,160"
-                        fill="url(#diagonalHatch)"
-                        stroke="#171717"
-                        strokeWidth="1.5"
-                      />
+                      {plotShape === "Rectangular" && (
+                        <g>
+                          <polygon
+                            points="45,45 195,45 195,205 45,205"
+                            fill="#FFFFFF"
+                            stroke="#171717"
+                            strokeWidth="1.8"
+                          />
+                          {/* Inner Buildable Zone */}
+                          <polygon
+                            points="65,70 175,70 175,185 65,185"
+                            fill="url(#buildableHatch)"
+                            stroke="#AD8065"
+                            strokeWidth="1.4"
+                            strokeDasharray="4 3"
+                          />
+                        </g>
+                      )}
 
-                      {/* Setback line / Building footprint */}
-                      <polygon
-                        points="85,55 160,78 130,170 55,147"
-                        fill="#FFFFFF"
-                        fillOpacity="0.85"
-                        stroke="#AD8065"
-                        strokeWidth="1.2"
-                        strokeDasharray="3 3"
-                      />
+                      {plotShape === "Square" && (
+                        <g>
+                          <polygon
+                            points="45,45 195,45 195,195 45,195"
+                            fill="#FFFFFF"
+                            stroke="#171717"
+                            strokeWidth="1.8"
+                          />
+                          <polygon
+                            points="65,65 175,65 175,175 65,175"
+                            fill="url(#buildableHatch)"
+                            stroke="#AD8065"
+                            strokeWidth="1.4"
+                            strokeDasharray="4 3"
+                          />
+                        </g>
+                      )}
 
-                      {/* North Arrow / Compass indicator */}
-                      <g transform="translate(195, 30)">
-                        <circle cx="0" cy="0" r="10" stroke="#777777" strokeWidth="0.8" fill="#FFF" />
-                        <line x1="0" y1="6" x2="0" y2="-6" stroke="#171717" strokeWidth="1.2" />
-                        <polygon points="0,-7 3,-2 -3,-2" fill="#AD8065" />
-                        <text x="-3" y="-10" fontSize="8" fill="#171717" fontWeight="bold">N</text>
+                      {plotShape === "Corner Plot" && (
+                        <g>
+                          {/* Splayed corner */}
+                          <polygon
+                            points="45,45 170,45 200,75 200,205 45,205"
+                            fill="#FFFFFF"
+                            stroke="#171717"
+                            strokeWidth="1.8"
+                          />
+                          <polygon
+                            points="65,70 155,70 178,92 178,185 65,185"
+                            fill="url(#buildableHatch)"
+                            stroke="#AD8065"
+                            strokeWidth="1.4"
+                            strokeDasharray="4 3"
+                          />
+                          {/* Dual Road Badge */}
+                          <line x1="200" y1="20" x2="200" y2="215" stroke="#171717" strokeWidth="4" strokeOpacity="0.4" />
+                        </g>
+                      )}
+
+                      {plotShape === "Narrow Frontage" && (
+                        <g>
+                          <polygon
+                            points="75,30 165,30 165,220 75,220"
+                            fill="#FFFFFF"
+                            stroke="#171717"
+                            strokeWidth="1.8"
+                          />
+                          <polygon
+                            points="90,55 150,55 150,195 90,195"
+                            fill="url(#buildableHatch)"
+                            stroke="#AD8065"
+                            strokeWidth="1.4"
+                            strokeDasharray="4 3"
+                          />
+                        </g>
+                      )}
+
+                      {plotShape === "Sloped / Contour" && (
+                        <g>
+                          <polygon
+                            points="45,45 195,45 195,205 45,205"
+                            fill="#FFFFFF"
+                            stroke="#171717"
+                            strokeWidth="1.8"
+                          />
+                          {/* Contour Lines */}
+                          <path d="M 45,80 Q 120,60 195,85" stroke="#AD8065" strokeWidth="0.8" strokeDasharray="2 2" fill="none" />
+                          <path d="M 45,125 Q 120,105 195,130" stroke="#AD8065" strokeWidth="0.8" strokeDasharray="2 2" fill="none" />
+                          <path d="M 45,170 Q 120,150 195,175" stroke="#AD8065" strokeWidth="0.8" strokeDasharray="2 2" fill="none" />
+                          
+                          <polygon
+                            points="65,75 175,75 175,180 65,180"
+                            fill="url(#buildableHatch)"
+                            stroke="#AD8065"
+                            strokeWidth="1.4"
+                            strokeDasharray="4 3"
+                          />
+                          <text x="50" y="78" fontSize="6.5" fill="#AD8065" fontFamily="monospace">+1.5m</text>
+                          <text x="50" y="123" fontSize="6.5" fill="#AD8065" fontFamily="monospace">+3.0m</text>
+                        </g>
+                      )}
+
+                      {/* Dimension Labels */}
+                      <text x="120" y="38" fontSize="8" fill="#777777" textAnchor="middle" fontFamily="monospace">
+                        {currentSizeObj.dimensions.w}
+                      </text>
+                      <text x="32" y="130" fontSize="8" fill="#777777" textAnchor="middle" transform="rotate(-90 32 130)" fontFamily="monospace">
+                        {currentSizeObj.dimensions.l}
+                      </text>
+
+                      {/* Center Buildable Label */}
+                      <text x="120" y="120" fontSize="9" fill="#171717" fontWeight="bold" textAnchor="middle" fontFamily="sans-serif">
+                        BUILDABLE ZONE
+                      </text>
+                      <text x="120" y="133" fontSize="7.5" fill="#AD8065" textAnchor="middle" fontFamily="monospace">
+                        KMBR 2019 COMPLIANT
+                      </text>
+
+                      {/* Animated Rotating Compass Dial in Top Right */}
+                      <g
+                        transform="translate(210, 30)"
+                        className="transition-transform duration-700 ease-out"
+                        style={{
+                          transform: `translate(210px, 30px) rotate(${currentDirectionObj.deg}deg)`,
+                          transformOrigin: "center",
+                        }}
+                      >
+                        <circle cx="0" cy="0" r="11" stroke="#D1CDC7" strokeWidth="1" fill="#FFFFFF" />
+                        <line x1="0" y1="7" x2="0" y2="-7" stroke="#171717" strokeWidth="1.2" />
+                        <polygon points="0,-8 3.5,-2 -3.5,-2" fill="#AD8065" />
+                        <polygon points="0,8 3,2 -3,2" fill="#171717" />
+                        <text x="-3" y="-12" fontSize="7.5" fill="#171717" fontWeight="bold" fontFamily="monospace">
+                          N
+                        </text>
                       </g>
-
-                      {/* Dimension Labels matching design.png */}
-                      <text x="125" y="40" fontSize="9" fill="#777777" fontFamily="monospace">60 ft</text>
-                      <text x="18" y="110" fontSize="9" fill="#777777" fontFamily="monospace">40 ft</text>
-
-                      {/* Footprint text */}
-                      <text x="75" y="115" fontSize="8.5" fill="#171717" fontWeight="600" letterSpacing="0.05em">
-                        BUILDABLE
-                      </text>
-                      <text x="78" y="127" fontSize="7.5" fill="#AD8065">
-                        ZONE
-                      </text>
                     </g>
                   </svg>
                 </div>
 
-                <div className="mt-3 text-center">
-                  <div className="text-[11px] font-semibold text-charcoal tracking-wide">
-                    {plotSize.split("(")[0]}
+                {/* Live Telemetry Info Footer */}
+                <div className="w-full mt-3 pt-3 border-t border-warm-border/60 text-center space-y-1">
+                  <div className="text-xs font-semibold text-charcoal font-sans flex items-center justify-center gap-1.5">
+                    <span>{currentSizeObj.label}</span>
+                    <span className="text-mutedText font-normal">({currentSizeObj.sqft})</span>
                   </div>
-                  <div className="text-[10px] text-mutedText uppercase tracking-wider mt-0.5">
+                  <div className="text-[10px] text-mutedText font-mono uppercase tracking-wide">
                     {roadDirection} • {plotShape}
+                  </div>
+                  <div className="text-[10px] text-copper font-medium font-sans">
+                    Estimated Max BUA: {currentSizeObj.builtUp}
                   </div>
                 </div>
               </div>
@@ -408,4 +692,3 @@ export default function SmartSearch({ onSearch }: SmartSearchProps) {
     </section>
   );
 }
-
