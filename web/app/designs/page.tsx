@@ -39,10 +39,12 @@ function DesignsCatalogContent() {
 
     const plotParam = searchParams.get("plot");
     if (plotParam) {
-      if (plotParam.includes("5 Cents") || plotParam.includes("8 Cents")) {
-        setSelectedPlot("< 10 Cents");
-      } else if (plotParam.includes("10 Cents") || plotParam.includes("12 Cents") || plotParam.includes("15 Cents")) {
-        setSelectedPlot("10 - 15 Cents");
+      const match = plotParam.match(/([\d.]+)\s*Cents/i);
+      if (match) {
+        const val = parseFloat(match[1]);
+        if (val < 10) setSelectedPlot("< 10 Cents");
+        else if (val <= 15) setSelectedPlot("10 - 15 Cents");
+        else setSelectedPlot("> 15 Cents");
       } else if (plotParam.includes("20+")) {
         setSelectedPlot("> 15 Cents");
       }

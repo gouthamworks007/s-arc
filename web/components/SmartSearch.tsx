@@ -27,7 +27,6 @@ type Pt = [number, number];
 /*  Data                                                                      */
 /* -------------------------------------------------------------------------- */
 
-// `value`, shape `id` and direction `id` are what onSearch sends, unchanged.
 const PLOT_SIZES = [
   { label: "5 cents", tick: "5", sqft: 2178, plus: false, w: 35, l: 62, builtUp: "1,200 – 1,400", value: "5 Cents / 1,200 Sq.Ft" },
   { label: "8 cents", tick: "8", sqft: 3485, plus: false, w: 42, l: 83, builtUp: "1,800 – 2,200", value: "8 Cents / 1,900 Sq.Ft" },
@@ -59,6 +58,8 @@ const LOCATIONS = [
   "Thrissur, Kerala",
   "Kottayam, Kerala",
   "Kannur, Kerala",
+  "Palakkad, Kerala",
+  "Malappuram, Kerala",
   "Bengaluru, Karnataka",
   "Chennai, Tamil Nadu",
   "Coimbatore, Tamil Nadu",
@@ -73,16 +74,12 @@ const CY = 130;
 const MAX_SCALE = 1.36; // px per ft, so bigger plots visibly grow
 
 // Illustrative setbacks (ft) used only for the diagram and footprint estimate.
-// Swap in your real rules (e.g. KMBR) before presenting these as compliant.
 const FRONT_SETBACK_FT = 10;
 const SIDE_SETBACK_FT = 4;
 const CORNER_CUT_FT = 14;
 
 const NEXT_SIDE: Record<Side, Side> = { N: "E", E: "S", S: "W", W: "N" };
-// Corner order is [top-left, top-right, bottom-right, bottom-left].
-// A corner plot is cut where the main road meets the next road clockwise.
 const CORNER_INDEX: Record<Side, number> = { N: 1, E: 2, S: 3, W: 0 };
-
 const SIDE_NAME: Record<Side, string> = { N: "north", E: "east", S: "south", W: "west" };
 
 const ROADS: Record<
@@ -99,7 +96,6 @@ const ROADS: Record<
   W: { line: { x1: 20, y1: 20, x2: 20, y2: 240 }, hit: { x: 8, y: 16, width: 24, height: 228 }, text: { x: 9, y: 130, rotate: -90 } },
 };
 
-// Always 8 points (two per corner) so shapes morph smoothly into each other.
 function outline(left: number, top: number, right: number, bottom: number, c: number[]): Pt[] {
   return [
     [left, top + c[0]], [left + c[0], top],
@@ -126,14 +122,18 @@ function toPath(pts: Pt[], scale: number) {
   );
 }
 
-function buildModel(sizeIdx: number, shapeId: string, side: Side) {
-  const size = PLOT_SIZES[sizeIdx];
-  let w = size.w;
-  let l = size.l;
-  if (shapeId === "Square") w = l = Math.sqrt(size.w * size.l);
+interface PlotDimensionsInput {
+  w: number;
+  l: number;
+}
+
+function buildModel(dims: PlotDimensionsInput, shapeId: string, side: Side) {
+  let w = dims.w;
+  let l = dims.l;
+  if (shapeId === "Square") w = l = Math.sqrt(dims.w * dims.l);
   if (shapeId === "Narrow Frontage") {
-    w = size.w * 0.7;
-    l = (size.w * size.l) / w;
+    w = dims.w * 0.7;
+    l = (dims.w * dims.l) / w;
   }
 
   const isCorner = shapeId === "Corner Plot";
@@ -366,20 +366,45 @@ function PlotDiagram({
 
 export default function SmartSearch({ onSearch }: SmartSearchProps) {
   const [location, setLocation] = useState("Kochi, Kerala");
-  const [sizeIdx, setSizeIdx] = useState(2);
+  const [sizeIdx, setSizeIdx] = useState(2); // default 10 cents
+  const [isCustom, setIsCustom] = useState(false);
+  const [customCents, setCustomCents] = useState(10);
   const [shapeId, setShapeId] = useState("Rectangular");
   const [directionId, setDirectionId] = useState("North Facing");
 
   const sliderId = useId();
   const locationId = useId();
 
-  const size = PLOT_SIZES[sizeIdx];
+  // Active plot size representation (preset vs custom)
+  const activeSize = useMemo(() => {
+    if (!isCustom) {
+      return PLOT_SIZES[sizeIdx];
+    }
+    const safeCents = customCents > 0 ? customCents : 10;
+    const sqft = Math.round(safeCents * 435.6);
+    // Typical rectangular aspect ratio 1 : 1.55
+    const w = Math.max(15, Math.round(Math.sqrt(sqft / 1.55)));
+    const l = Math.max(20, Math.round(sqft / w));
+    const minBuilt = Math.round((sqft * 0.55) / 50) * 50;
+    const maxBuilt = Math.round((sqft * 0.68) / 50) * 50;
+    return {
+      label: `${safeCents} cents`,
+      tick: `${safeCents}`,
+      sqft,
+      plus: safeCents >= 20,
+      w,
+      l,
+      builtUp: `${minBuilt.toLocaleString("en-IN")} – ${maxBuilt.toLocaleString("en-IN")}`,
+      value: `${safeCents} Cents / ${sqft.toLocaleString("en-IN")} Sq.Ft`,
+    };
+  }, [isCustom, sizeIdx, customCents]);
+
   const shape = PLOT_SHAPES.find((s) => s.id === shapeId) ?? PLOT_SHAPES[0];
   const direction = ROAD_DIRECTIONS.find((d) => d.id === directionId) ?? ROAD_DIRECTIONS[0];
 
   const model = useMemo(
-    () => buildModel(sizeIdx, shapeId, direction.side),
-    [sizeIdx, shapeId, direction.side]
+    () => buildModel(activeSize, shapeId, direction.side),
+    [activeSize, shapeId, direction.side]
   );
 
   const pickSide = (side: Side) => {
@@ -391,14 +416,13 @@ export default function SmartSearch({ onSearch }: SmartSearchProps) {
     e.preventDefault();
     onSearch({
       location,
-      plotSize: size.value,
+      plotSize: activeSize.value,
       shape: shapeId,
       direction: directionId,
     });
   };
 
-  const diagramLabel = `${size.label} ${shape.label.toLowerCase()} plot with the road on the ${SIDE_NAME[direction.side]} side`;
-
+  const diagramLabel = `${activeSize.label} ${shape.label.toLowerCase()} plot with the road on the ${SIDE_NAME[direction.side]} side`;
   const groupTitle = "text-[12px] font-medium text-charcoal font-sans";
 
   return (
@@ -459,7 +483,7 @@ export default function SmartSearch({ onSearch }: SmartSearchProps) {
                       </div>
                       <div className="flex items-baseline justify-between gap-3">
                         <dt className="text-mutedText">Estimated built-up area</dt>
-                        <dd className="font-medium text-copper">{size.builtUp} sq ft</dd>
+                        <dd className="font-medium text-copper">{activeSize.builtUp} sq ft</dd>
                       </div>
                     </dl>
                   </div>
@@ -489,46 +513,170 @@ export default function SmartSearch({ onSearch }: SmartSearchProps) {
                     </div>
                   </div>
 
-                  {/* Plot size */}
+                  {/* Plot size (Presets + Custom) */}
                   <div>
-                    <div className="flex items-baseline justify-between gap-3">
+                    <div className="flex items-baseline justify-between gap-3 mb-1.5">
                       <label htmlFor={sliderId} className={groupTitle}>
                         Plot size
                       </label>
-                      <span className="flex items-baseline gap-2 text-[12px] font-sans">
-                        <span className="font-semibold text-charcoal">{size.label}</span>
-                        <span className="text-mutedText">
-                          {size.sqft.toLocaleString("en-IN")}
-                          {size.plus ? "+" : ""} sq ft
+                      <div className="flex items-center gap-2">
+                        <span className="flex items-baseline gap-1.5 text-[12px] font-sans">
+                          <span className="font-semibold text-charcoal">{activeSize.label}</span>
+                          <span className="text-mutedText">
+                            ({activeSize.sqft.toLocaleString("en-IN")}
+                            {!isCustom && PLOT_SIZES[sizeIdx].plus ? "+" : ""} sq ft)
+                          </span>
                         </span>
-                      </span>
-                    </div>
-                    <input
-                      id={sliderId}
-                      type="range"
-                      min={0}
-                      max={PLOT_SIZES.length - 1}
-                      step={1}
-                      value={sizeIdx}
-                      onChange={(e) => setSizeIdx(Number(e.target.value))}
-                      aria-valuetext={`${size.label}, ${size.sqft.toLocaleString("en-IN")} square feet`}
-                      className="mt-3 w-full h-1.5 cursor-pointer accent-copper"
-                    />
-                    <div className="mt-1 grid grid-cols-6 text-center">
-                      {PLOT_SIZES.map((s, i) => (
                         <button
-                          key={s.value}
                           type="button"
-                          onClick={() => setSizeIdx(i)}
-                          aria-label={s.label}
-                          className={`py-1 text-[12px] font-sans transition-colors ${
-                            i === sizeIdx ? "font-semibold text-charcoal" : "text-mutedText hover:text-charcoal"
+                          onClick={() => {
+                            if (!isCustom) {
+                              const cents = Number((PLOT_SIZES[sizeIdx].sqft / 435.6).toFixed(1));
+                              setCustomCents(cents);
+                              setIsCustom(true);
+                            } else {
+                              setIsCustom(false);
+                            }
+                          }}
+                          className={`text-[11px] font-sans px-2.5 py-0.5 rounded-full border transition-all ${
+                            isCustom
+                              ? "bg-copper text-white border-copper font-medium shadow-xs"
+                              : "border-warm-border text-charcoal/80 hover:text-copper hover:border-copper bg-warm-card"
                           }`}
                         >
-                          {s.tick}
+                          {isCustom ? "Custom Active" : "+ Custom"}
                         </button>
-                      ))}
+                      </div>
                     </div>
+
+                    {!isCustom ? (
+                      <>
+                        <input
+                          id={sliderId}
+                          type="range"
+                          min={0}
+                          max={PLOT_SIZES.length - 1}
+                          step={1}
+                          value={sizeIdx}
+                          onChange={(e) => setSizeIdx(Number(e.target.value))}
+                          aria-valuetext={`${activeSize.label}, ${activeSize.sqft.toLocaleString("en-IN")} square feet`}
+                          className="mt-3 w-full h-1.5 cursor-pointer accent-copper"
+                        />
+                        <div className="mt-1 grid grid-cols-6 text-center">
+                          {PLOT_SIZES.map((s, i) => (
+                            <button
+                              key={s.value}
+                              type="button"
+                              onClick={() => setSizeIdx(i)}
+                              aria-label={s.label}
+                              className={`py-1 text-[12px] font-sans transition-colors ${
+                                i === sizeIdx ? "font-semibold text-charcoal" : "text-mutedText hover:text-charcoal"
+                              }`}
+                            >
+                              {s.tick}
+                            </button>
+                          ))}
+                        </div>
+                      </>
+                    ) : (
+                      <div className="mt-2.5 p-3.5 bg-warm-card border border-warm-border rounded-xl space-y-3">
+                        <div className="flex items-center justify-between text-[11px] font-sans">
+                          <span className="text-mutedText uppercase tracking-wider font-medium">
+                            Custom Parcel Area
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setIsCustom(false)}
+                            className="text-copper hover:underline font-medium"
+                          >
+                            Return to standard presets
+                          </button>
+                        </div>
+
+                        {/* Dual input: Cents and Sq.Ft with live two-way sync */}
+                        <div className="grid grid-cols-2 gap-2.5">
+                          <div className="bg-white border border-warm-border focus-within:border-charcoal rounded-xl px-3 py-2 flex items-center justify-between transition-colors">
+                            <input
+                              type="number"
+                              min={0.5}
+                              max={100}
+                              step={0.1}
+                              value={customCents || ""}
+                              onChange={(e) => {
+                                const val = parseFloat(e.target.value);
+                                setCustomCents(isNaN(val) ? 0 : val);
+                              }}
+                              placeholder="e.g. 7.5"
+                              className="w-full bg-transparent text-[13px] font-semibold text-charcoal outline-none font-mono"
+                            />
+                            <span className="text-[11px] text-mutedText font-sans uppercase font-medium pl-1 shrink-0">
+                              Cents
+                            </span>
+                          </div>
+
+                          <div className="bg-white border border-warm-border focus-within:border-charcoal rounded-xl px-3 py-2 flex items-center justify-between transition-colors">
+                            <input
+                              type="number"
+                              min={200}
+                              max={50000}
+                              step={10}
+                              value={Math.round(customCents * 435.6) || ""}
+                              onChange={(e) => {
+                                const sqft = parseFloat(e.target.value);
+                                if (!isNaN(sqft)) {
+                                  setCustomCents(Number((sqft / 435.6).toFixed(2)));
+                                } else {
+                                  setCustomCents(0);
+                                }
+                              }}
+                              placeholder="e.g. 3267"
+                              className="w-full bg-transparent text-[13px] font-semibold text-charcoal outline-none font-mono"
+                            />
+                            <span className="text-[11px] text-mutedText font-sans uppercase font-medium pl-1 shrink-0">
+                              Sq.Ft
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Continuous Slider for custom cents (1 to 30 Cents) */}
+                        <div>
+                          <input
+                            type="range"
+                            min={1}
+                            max={30}
+                            step={0.5}
+                            value={Math.min(30, Math.max(1, customCents))}
+                            onChange={(e) => setCustomCents(Number(e.target.value))}
+                            className="w-full h-1.5 cursor-pointer accent-copper"
+                          />
+                          <div className="flex justify-between text-[10px] text-mutedText font-mono mt-1">
+                            <span>1 Cent</span>
+                            <span>10 Cents</span>
+                            <span>20 Cents</span>
+                            <span>30+ Cents</span>
+                          </div>
+                        </div>
+
+                        {/* Quick Presets row */}
+                        <div className="flex items-center gap-1.5 pt-2 border-t border-warm-border/60">
+                          <span className="text-[10px] text-mutedText font-sans uppercase">Quick:</span>
+                          {[5, 8, 10, 12, 15, 20].map((c) => (
+                            <button
+                              key={c}
+                              type="button"
+                              onClick={() => setCustomCents(c)}
+                              className={`px-2 py-0.5 rounded text-[11px] font-sans border transition-colors ${
+                                customCents === c
+                                  ? "bg-copper text-white border-copper font-medium"
+                                  : "bg-white text-charcoal/70 border-warm-border hover:border-charcoal hover:text-charcoal"
+                              }`}
+                            >
+                              {c}c
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* Shape */}
