@@ -84,11 +84,6 @@ export default function LoginPage() {
 
       if (res.ok && result.user) {
         login(result.user);
-        if (result.user.role === "admin") {
-          switchRole("admin");
-        } else {
-          switchRole("user", result.user.subRole || "homeowner");
-        }
         setLoginSuccess(true);
         setTimeout(() => {
           router.push("/dashboard");

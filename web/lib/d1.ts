@@ -352,12 +352,27 @@ function queryFallbackStore<T>(sql: string, params: any[]): T[] {
 
   if (normalized.includes("from users")) {
     let rows = [...FALLBACK_USERS];
-    if (params.length > 0 && normalized.includes("where email =")) {
-      const email = String(params[0]).toLowerCase();
-      rows = rows.filter((u) => u.email.toLowerCase() === email);
-    } else if (params.length > 0 && normalized.includes("where id =")) {
-      const id = String(params[0]);
-      rows = rows.filter((u) => u.id === id);
+    if (params && params.length > 0) {
+      if (
+        normalized.includes("email") &&
+        (normalized.includes("lower(email) =") ||
+          normalized.includes("email =") ||
+          normalized.includes("lower(email) = lower(?)") ||
+          normalized.includes("email = lower(?)"))
+      ) {
+        const email = String(params[0]).toLowerCase().trim();
+        rows = rows.filter((u) => u.email.toLowerCase() === email);
+      } else if (
+        normalized.includes("where id =") ||
+        normalized.includes("and id =") ||
+        normalized.includes("id = ?")
+      ) {
+        const id = String(params[0]);
+        rows = rows.filter((u) => u.id === id);
+      } else if (normalized.includes("role =")) {
+        const role = String(params[0]);
+        rows = rows.filter((u) => u.role === role);
+      }
     }
     return rows as unknown as T[];
   }
@@ -409,17 +424,21 @@ function mutateFallbackStore(
 
   if (normalized.startsWith("insert into users") || normalized.startsWith("insert or replace into users")) {
     if (params && params.length >= 4) {
-      const existingIdx = FALLBACK_USERS.findIndex((u) => u.email === params[2]);
+      const cleanEmail = String(params[2]).toLowerCase().trim();
+      const existingIdx = FALLBACK_USERS.findIndex((u) => u.email.toLowerCase() === cleanEmail);
       const userObj = {
         id: params[0],
         name: params[1],
-        email: params[2],
+        email: cleanEmail,
         password_hash: params[3],
         role: params[4] || "user",
         sub_role: params[5] || "homeowner",
+        subRole: params[5] || "homeowner",
         status: params[6] || "active",
         coa_number: params[7] || null,
+        coaNumber: params[7] || null,
         studio_name: params[8] || null,
+        studioName: params[8] || null,
         phone: params[9] || null,
         location: params[10] || null,
         avatar: params[11] || null,
@@ -427,6 +446,7 @@ function mutateFallbackStore(
         permissions: params[13] || "[]",
         review_notes: params[14] || null,
         created_at: new Date().toISOString(),
+        joinedDate: "Just now",
       };
       if (existingIdx >= 0) {
         FALLBACK_USERS[existingIdx] = userObj;

@@ -183,7 +183,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             parsedCur = { ...parsedCur, id: "usr-admin-01", email: "admin@admin.com", name: "Admin", role: "admin" };
             localStorage.setItem(STORAGE_KEY_AUTH_USER, JSON.stringify(parsedCur));
           }
-          const found = activeUsers.find((u: UserAccount) => u.id === parsedCur.id);
+          const found = activeUsers.find(
+            (u: UserAccount) =>
+              u.id === parsedCur.id ||
+              (parsedCur.email && u.email?.toLowerCase() === parsedCur.email.toLowerCase())
+          );
           if (found) {
             setCurrentUser(found);
             setIsLoggedIn(true);
@@ -249,6 +253,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (e) {
       console.error(e);
     }
+    setUsers((prev) => {
+      const exists = prev.some(
+        (u) => u.id === account.id || (account.email && u.email?.toLowerCase() === account.email.toLowerCase())
+      );
+      const updated = exists
+        ? prev.map((u) =>
+            u.id === account.id || (account.email && u.email?.toLowerCase() === account.email.toLowerCase())
+              ? { ...u, ...account }
+              : u
+          )
+        : [account, ...prev];
+      try {
+        localStorage.setItem(STORAGE_KEY_AUTH_USERS, JSON.stringify(updated));
+      } catch (e) {}
+      return updated;
+    });
     logAction("User Signed In", `${account.name} (${account.email})`);
   };
 

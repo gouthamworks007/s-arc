@@ -39,6 +39,20 @@ export function checkRateLimit(
   maxAttempts: number = 5,
   windowMs: number = 15 * 60 * 1000
 ): RateLimitResult {
+  // Relax rate limits for local development / testing environments
+  if (
+    process.env.NODE_ENV !== "production" &&
+    (identifier.includes("127.0.0.1") ||
+      identifier.includes("::1") ||
+      identifier.includes("localhost"))
+  ) {
+    return {
+      allowed: true,
+      remaining: 999,
+      retryAfterSeconds: 0,
+    };
+  }
+
   const now = Date.now();
   const record = store.get(identifier);
 
