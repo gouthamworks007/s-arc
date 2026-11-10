@@ -87,7 +87,7 @@ export default function UnifiedDashboard() {
         {role === "admin" && <AdminView />}
 
         {role === "user" && (
-          currentUser.subRole === "homeowner" ? <HomeownerView /> : <ArchitectView />
+          currentUser.subRole === "architect" ? <ArchitectView /> : <HomeownerView />
         )}
       </div>
 

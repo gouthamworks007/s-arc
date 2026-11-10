@@ -107,7 +107,7 @@ export default function PlotIntelligencePage() {
     setFocusLocation({ lat: 9.9816, lng: 76.3264, label: "Edappally, Kochi (Sample)" });
   };
 
-  // Load saved plot from drawer
+  // Load saved plot from drawer or dashboard
   const handleLoadSavedPlot = (saved: SavedPlotRecord) => {
     try {
       const parsedGeo = typeof saved.geojson === "string" ? JSON.parse(saved.geojson) : saved.geojson;
@@ -117,11 +117,35 @@ export default function PlotIntelligencePage() {
       setCoordinates(cleanCoords);
       setRoadFacingIndex(saved.road_side_index || 0);
       if (saved.location_name) setLocationName(saved.location_name);
+      if (saved.center_lat && saved.center_lng) {
+        setFocusLocation({
+          lat: saved.center_lat,
+          lng: saved.center_lng,
+          label: saved.location_name || saved.name,
+        });
+      }
       setActiveView("workspace");
     } catch (e) {
       console.error("Failed to parse saved plot coordinates:", e);
     }
   };
+
+  // Check if plotId is provided in URL query string (e.g. from Dashboard)
+  React.useEffect(() => {
+    if (typeof window === "undefined") return;
+    const urlParams = new URLSearchParams(window.location.search);
+    const plotId = urlParams.get("plotId");
+    if (plotId) {
+      fetch(`/api/plots/${plotId}`)
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (data && data.plot) {
+            handleLoadSavedPlot(data.plot);
+          }
+        })
+        .catch((err) => console.error("Error loading plot from url:", err));
+    }
+  }, []);
 
   const compatiblePlansCount = compatibilityResults.filter(
     (r) => r.category !== "not_suitable"
