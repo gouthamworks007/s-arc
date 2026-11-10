@@ -273,9 +273,9 @@ export default function SignupPage() {
                     />
                     <span>
                       I agree to the S-ARC{" "}
-                      <Link href="/how-it-works" className="text-copper hover:underline font-medium">
+                      <span className="text-copper font-medium">
                         Platform Terms & Single-Build Licensing Bylaws
-                      </Link>.
+                      </span>.
                     </span>
                   </label>
                   {errors.termsAgreed && (

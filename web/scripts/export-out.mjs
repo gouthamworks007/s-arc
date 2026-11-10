@@ -139,12 +139,6 @@ if (!sitemapStat || sitemapStat.isDirectory()) {
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
-  <url>
-    <loc>https://s-arc.pages.dev/how-it-works</loc>
-    <lastmod>${now}</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
 </urlset>`;
   fs.writeFileSync(outSitemap, sitemapXml, "utf8");
   console.log("  ✓ Generated fallback sitemap.xml in web/out");

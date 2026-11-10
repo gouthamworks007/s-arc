@@ -59,12 +59,12 @@ export default function HomePage() {
       image: "https://images.unsplash.com/photo-1580587771525-78b9dba3b914?auto=format&fit=crop&w=800&q=80",
     },
     {
-      title: "Inside Out (How It Works)",
-      desc: "Inspect 3D axonometric renders, floor plans, setbacks, and complete technical specifications.",
-      href: "/how-it-works",
-      linkText: "Tour 3D & Plans",
-      icon: Box,
-      image: "https://images.unsplash.com/photo-1600585154526-990dced4db0d?auto=format&fit=crop&w=800&q=80",
+      title: "Plot Intelligence GIS",
+      desc: "Top-down satellite mapping, real-time Cent area calculation, and KMBR 2019 setback projections.",
+      href: "/plot-intelligence",
+      linkText: "Launch Satellite Map",
+      icon: Compass,
+      image: "https://images.unsplash.com/photo-1524813686514-a57563d77d66?auto=format&fit=crop&w=800&q=80",
     },
     {
       title: "Featured Architects",

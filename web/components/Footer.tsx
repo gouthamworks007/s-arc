@@ -125,11 +125,6 @@ export default function Footer({ onOpenSellerModal }: FooterProps) {
                 </Link>
               </li>
               <li>
-                <Link href="/how-it-works" className="hover:text-copper transition-colors">
-                  How It Works
-                </Link>
-              </li>
-              <li>
                 <Link href="/login" className="hover:text-copper transition-colors flex items-center gap-1.5">
                   <span className="w-1.5 h-1.5 rounded-full bg-copper" />
                   <span>Architect & Admin Login</span>
@@ -193,9 +188,9 @@ export default function Footer({ onOpenSellerModal }: FooterProps) {
                 </Link>
               </li>
               <li>
-                <Link href="/how-it-works" className="hover:text-copper transition-colors">
+                <a href="#licensing" className="hover:text-copper transition-colors">
                   Licensing Information
-                </Link>
+                </a>
               </li>
             </ul>
           </div>

@@ -34,7 +34,6 @@ export default function Navbar({ onOpenSellerModal, onOpenSearch }: NavbarProps)
     { name: "Plot Intelligence", href: "/plot-intelligence", active: pathname === "/plot-intelligence", isNew: true },
     { name: "Styles", href: "/styles", active: pathname === "/styles" },
     { name: "Architects", href: "/architects", active: pathname === "/architects" },
-    { name: "How It Works", href: "/how-it-works", active: pathname === "/how-it-works" },
   ];
 
   return (

@@ -337,8 +337,8 @@ export default function LoginPage() {
       {/* Footer minimal bar */}
       <footer className="border-t border-[#EAE5DC] bg-white/60 py-4 px-6 sm:px-12 text-center text-[11px] text-stone-500 font-sans">
         © {new Date().getFullYear()} S-ARC (Southern Architecture Marketplace). All rights reserved. •{" "}
-        <Link href="/how-it-works" className="hover:text-charcoal transition-colors underline">
-          Licensing & Bylaws
+        <Link href="/plot-intelligence" className="hover:text-charcoal transition-colors underline">
+          Kerala KMBR & Bylaws
         </Link>
       </footer>
     </div>
