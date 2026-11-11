@@ -303,7 +303,13 @@ export const d1 = {
       }
     }
 
-    // 3. In-memory simulated store
+    // 3. In-memory simulated store (strictly development / build-time only)
+    if (process.env.NODE_ENV === "production" && process.env.NEXT_PHASE !== "phase-production-build") {
+      throw new Error(
+        "[D1 Database Fatal] Cloudflare D1 database connection is not accessible in production environment. In-memory fallback is strictly prohibited in production."
+      );
+    }
+
     return queryFallbackStore<T>(sql, params);
   },
 
@@ -355,7 +361,13 @@ export const d1 = {
       }
     }
 
-    // 3. Simulated mutation store
+    // 3. Simulated mutation store (strictly development / build-time only)
+    if (process.env.NODE_ENV === "production" && process.env.NEXT_PHASE !== "phase-production-build") {
+      throw new Error(
+        "[D1 Database Fatal] Cloudflare D1 database connection is not accessible in production environment. In-memory mutation fallback is strictly prohibited in production."
+      );
+    }
+
     return mutateFallbackStore(sql, params);
   },
 };
