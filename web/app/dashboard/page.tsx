@@ -47,7 +47,7 @@ export default function UnifiedDashboard() {
                 </span>
               </div>
               <div className="text-xs font-mono text-charcoal space-y-1">
-                <div>Email: <strong className="text-copper">admin@admin.com</strong></div>
+                <div>Email: <strong className="text-copper">admin@s-arc.in</strong></div>
                 <div>Password: <strong className="text-copper">admin123</strong></div>
               </div>
             </div>

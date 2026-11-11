@@ -8,7 +8,7 @@ INSERT OR REPLACE INTO users (
 (
   'usr-admin-01',
   'Admin',
-  'admin@admin.com',
+  'admin@s-arc.in',
   '$2b$10$Zo4XQOnpPMvvouGRri14geN0slEoZ7cYVO3ku9W/dWS1K7LJ71/82',
   'admin',
   NULL,
@@ -23,7 +23,7 @@ INSERT OR REPLACE INTO users (
   NULL
 ),
 (
-  'usr-admin-01',
+  'usr-admin-02',
   'Sarah Thomas',
   'sarah.admin@s-arc.in',
   '$2b$10$SO326PzrVOpTOGANzbxJV.EFAPZlJNVIrHDFeVAiVXAoYJgyyXTqW',
@@ -232,7 +232,7 @@ INSERT OR REPLACE INTO audit_logs (
   'aud-001',
   'usr-admin-01',
   'Admin',
-  'admin@admin.com',
+  'admin@s-arc.in',
   'admin',
   'SYSTEM_INITIALIZE',
   's-arc-db',

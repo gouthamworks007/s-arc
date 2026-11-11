@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "node scripts/clean.mjs && next build && node scripts/export-out.mjs",
+    "admin:provision": "node scripts/provision-admin.mjs",
     "start": "next start",
     "lint": "next lint"
   },

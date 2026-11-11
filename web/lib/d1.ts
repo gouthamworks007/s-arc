@@ -2,9 +2,9 @@
  * Universal Cloudflare D1 Database Client for S-ARC
  *
  * Supports:
- * 1. Native Cloudflare D1 Binding (via env.DB or globalThis.DB in Cloudflare Workers/Pages)
+ * 1. Native Cloudflare D1 Binding (via env.DB or globalThis.DB in Cloudflare Workers / Pages)
  * 2. Cloudflare D1 REST API (when CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_API_TOKEN are configured)
- * 3. In-memory fallback (for static build runs and unconfigured environments)
+ * 3. In-memory simulated store (strictly for development, CI, and Next.js static build phases)
  */
 
 export interface D1QueryResult<T = any> {
@@ -19,13 +19,13 @@ export interface D1QueryResult<T = any> {
   };
 }
 
-// In-memory fallback store to ensure zero build/offline failures
+// In-memory fallback store to ensure zero build/offline failures in dev
 const INITIAL_USERS: any[] = [
   {
     id: "usr-admin-01",
     name: "Admin",
-    email: "admin@admin.com",
-    password_hash: "$2b$10$Zo4XQOnpPMvvouGRri14geN0slEoZ7cYVO3ku9W/dWS1K7LJ71/82",
+    email: "admin@s-arc.in",
+    password_hash: "$2b$10$Zo4XQOnpPMvvouGRri14geN0slEoZ7cYVO3ku9W/dWS1K7LJ71/82", // admin123
     role: "admin",
     sub_role: null,
     status: "active",
@@ -33,13 +33,13 @@ const INITIAL_USERS: any[] = [
     phone: "+91 98400 99999",
     location: "Bengaluru, Karnataka",
     created_at: "2025-01-15 10:00:00",
-    permissions: '["all", "manage_users", "manage_finances", "system_settings", "audit_logs"]',
+    permissions: '["all", "manage_users", "manage_finances", "system_settings", "audit_logs", "approve_architects"]',
   },
   {
     id: "usr-arch-01",
     name: "Ar. Nikhil Rajan",
     email: "nikhil@studiovayu.arch",
-    password_hash: "$2b$10$SO326PzrVOpTOGANzbxJV.EFAPZlJNVIrHDFeVAiVXAoYJgyyXTqW",
+    password_hash: "$2b$10$SO326PzrVOpTOGANzbxJV.EFAPZlJNVIrHDFeVAiVXAoYJgyyXTqW", // password123
     role: "user",
     sub_role: "architect",
     status: "active",
@@ -84,34 +84,34 @@ const INITIAL_USERS: any[] = [
   },
 ];
 
-// Attach persistent global references so state survives across Next.js route compilation chunks in dev/edge
+// Attach persistent global references so state survives across Next.js route compilation chunks in dev
 const g = globalThis as any;
 if (!g.__S_ARC_FALLBACK_USERS__) {
   g.__S_ARC_FALLBACK_USERS__ = [...INITIAL_USERS];
 }
 const FALLBACK_USERS: any[] = g.__S_ARC_FALLBACK_USERS__;
 
-const FALLBACK_PROJECTS: any[] = [
+const INITIAL_PROJECTS: any[] = [
   {
     id: "proj-001",
     slug: "the-ridge-house",
     name: "The Ridge House",
     style: "TROPICAL MODERNISM",
     location: "Wayanad, Kerala",
-    plot_size: "11.5 Cents",
-    cents: 11.5,
-    built_up_area: "3,200 Sq.Ft",
-    bedrooms: 3,
+    plot_size: "10.5 Cents",
+    cents: 10.5,
+    built_up_area: "2,850 Sq.Ft",
+    bedrooms: 4,
     floors: 2,
     facing: "North-East",
-    vastu_score: 98,
-    price: "₹48,000",
-    price_numeric: 48000,
-    sheet_count: 46,
+    vastu_score: 96,
+    price: "₹45,000",
+    price_numeric: 45000,
+    sheet_count: 42,
     status: "published",
     featured: 1,
     image: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1600&q=85",
-    description: "Cantilevered tropical pavilion suspended over tea plantation contours with passive cross-ventilation shafts.",
+    description: "Designed for sloping tropical hill tracts with cantilevered living pavilions and rainwater retention courtyards.",
     architect_name: "Ar. Nikhil Rajan",
     architect_studio: "Studio Vayu",
     architect_location: "Kochi, Kerala",
@@ -122,31 +122,31 @@ const FALLBACK_PROJECTS: any[] = [
     id: "proj-002",
     slug: "kerala-courtyard",
     name: "Kerala Courtyard",
-    style: "CONTEMPORARY VERNACULAR",
+    style: "TRADITIONAL KERALA",
     location: "Thrissur, Kerala",
-    plot_size: "14 Cents",
-    cents: 14.0,
-    built_up_area: "3,850 Sq.Ft",
+    plot_size: "12.0 Cents",
+    cents: 12.0,
+    built_up_area: "3,200 Sq.Ft",
     bedrooms: 4,
     floors: 2,
     facing: "East",
-    vastu_score: 100,
-    price: "₹62,000",
-    price_numeric: 62000,
-    sheet_count: 52,
+    vastu_score: 98,
+    price: "₹48,000",
+    price_numeric: 48000,
+    sheet_count: 48,
     status: "published",
     featured: 1,
     image: "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=1600&q=85",
-    description: "Modern Nadumuttam open atrium with copper-clad rainwater catchment and exposed laterite stone masonry.",
-    architect_name: "Ar. Sneha Philip",
-    architect_studio: "Philip Habitat Design",
-    architect_location: "Calicut, Kerala",
-    architect_avatar: "https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=400&q=80",
-    architect_id: "usr-arch-02",
+    description: "Modern interpretation of the classic Nalukettu courtyard home with open central Nadumuttam.",
+    architect_name: "Ar. Nikhil Rajan",
+    architect_studio: "Studio Vayu",
+    architect_location: "Kochi, Kerala",
+    architect_avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80",
+    architect_id: "usr-arch-01",
   },
   {
     id: "proj-003",
-    slug: "minimal-brick-pavilion",
+    slug: "the-brick-pavilion",
     name: "The Brick Pavilion",
     style: "EXPOSED BRICK BRUTALISM",
     location: "Coimbatore, Tamil Nadu",
@@ -171,6 +171,9 @@ const FALLBACK_PROJECTS: any[] = [
     architect_id: "usr-arch-01",
   },
 ];
+
+if (!g.__S_ARC_FALLBACK_PROJECTS__) g.__S_ARC_FALLBACK_PROJECTS__ = [...INITIAL_PROJECTS];
+const FALLBACK_PROJECTS: any[] = g.__S_ARC_FALLBACK_PROJECTS__;
 
 const INITIAL_INQUIRIES: any[] = [
   {
@@ -300,7 +303,7 @@ export const d1 = {
       }
     }
 
-    // 3. In-memory fallback
+    // 3. In-memory simulated store
     return queryFallbackStore<T>(sql, params);
   },
 
@@ -352,13 +355,13 @@ export const d1 = {
       }
     }
 
-    // 3. Fallback mutation
+    // 3. Simulated mutation store
     return mutateFallbackStore(sql, params);
   },
 };
 
 /**
- * Simple in-memory fallback query simulator
+ * In-memory fallback query simulator for dev/build
  */
 function queryFallbackStore<T>(sql: string, params: any[]): T[] {
   const normalized = sql.trim().toLowerCase();
@@ -392,12 +395,17 @@ function queryFallbackStore<T>(sql: string, params: any[]): T[] {
 
   if (normalized.includes("from projects")) {
     let rows = [...FALLBACK_PROJECTS];
-    if (params.length > 0 && normalized.includes("where slug =")) {
-      const slug = String(params[0]);
-      rows = rows.filter((p) => p.slug === slug);
-    } else if (params.length > 0 && normalized.includes("where id =")) {
-      const id = String(params[0]);
-      rows = rows.filter((p) => p.id === id);
+    if (params.length > 0) {
+      if (normalized.includes("where id = ? or slug = ?") || normalized.includes("id = ?")) {
+        const target = String(params[0]);
+        rows = rows.filter((p) => p.id === target || p.slug === target);
+      } else if (normalized.includes("where slug =")) {
+        const slug = String(params[0]);
+        rows = rows.filter((p) => p.slug === slug);
+      } else if (normalized.includes("architect_id = ?")) {
+        const archId = String(params[0]);
+        rows = rows.filter((p) => p.architect_id === archId);
+      }
     }
     return rows as unknown as T[];
   }
@@ -427,7 +435,7 @@ function queryFallbackStore<T>(sql: string, params: any[]): T[] {
 }
 
 /**
- * Simple in-memory mutation simulator
+ * In-memory mutation simulator for dev/build
  */
 function mutateFallbackStore(
   sql: string,
@@ -435,6 +443,7 @@ function mutateFallbackStore(
 ): { success: boolean; changes?: number } {
   const normalized = sql.trim().toLowerCase();
 
+  // 1. Users INSERT
   if (normalized.startsWith("insert into users") || normalized.startsWith("insert or replace into users")) {
     if (params && params.length >= 4) {
       const cleanEmail = String(params[2]).toLowerCase().trim();
@@ -446,12 +455,9 @@ function mutateFallbackStore(
         password_hash: params[3],
         role: params[4] || "user",
         sub_role: params[5] || "homeowner",
-        subRole: params[5] || "homeowner",
         status: params[6] || "active",
         coa_number: params[7] || null,
-        coaNumber: params[7] || null,
         studio_name: params[8] || null,
-        studioName: params[8] || null,
         phone: params[9] || null,
         location: params[10] || null,
         avatar: params[11] || null,
@@ -459,7 +465,6 @@ function mutateFallbackStore(
         permissions: params[13] || "[]",
         review_notes: params[14] || null,
         created_at: new Date().toISOString(),
-        joinedDate: "Just now",
       };
       if (existingIdx >= 0) {
         FALLBACK_USERS[existingIdx] = userObj;
@@ -470,18 +475,96 @@ function mutateFallbackStore(
     }
   }
 
+  // 2. Users UPDATE
   if (normalized.startsWith("update users")) {
-    if (normalized.includes("set status =")) {
-      const status = params[0];
-      const id = params[params.length - 1];
-      const user = FALLBACK_USERS.find((u) => u.id === id);
-      if (user) {
-        user.status = status;
+    const id = params[params.length - 1];
+    const user = FALLBACK_USERS.find((u) => u.id === id);
+    if (user) {
+      if (normalized.includes("status = ?")) {
+        user.status = params[0];
+      }
+      if (normalized.includes("role = ?")) {
+        const roleIdx = normalized.indexOf("role = ?") > normalized.indexOf("status = ?") ? 1 : 0;
+        user.role = params[roleIdx];
+      }
+      return { success: true, changes: 1 };
+    }
+  }
+
+  // 3. Projects INSERT
+  if (normalized.startsWith("insert into projects")) {
+    if (params && params.length >= 10) {
+      const projObj = {
+        id: params[0],
+        slug: params[1],
+        name: params[2],
+        style: params[3],
+        location: params[4],
+        plot_size: params[5],
+        cents: params[6],
+        built_up_area: params[7],
+        bedrooms: params[8],
+        floors: params[9],
+        facing: params[10],
+        vastu_score: params[11],
+        price: params[12],
+        price_numeric: params[13],
+        sheet_count: params[14],
+        status: params[15],
+        featured: params[16] || 0,
+        image: params[17],
+        gallery: params[18] || "[]",
+        floor_plan_image: params[19] || null,
+        description: params[20],
+        highlights: params[21] || "[]",
+        plot_width: params[22] || null,
+        plot_length: params[23] || null,
+        setbacks: params[24] || null,
+        dwg_available: params[25] ?? 1,
+        bim_available: params[26] ?? 1,
+        boq_available: params[27] ?? 1,
+        mep_available: params[28] ?? 1,
+        architect_name: params[29],
+        architect_studio: params[30],
+        architect_location: params[31],
+        architect_avatar: params[32],
+        architect_id: params[33],
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      const existingIdx = FALLBACK_PROJECTS.findIndex((p) => p.id === projObj.id);
+      if (existingIdx >= 0) {
+        FALLBACK_PROJECTS[existingIdx] = projObj;
+      } else {
+        FALLBACK_PROJECTS.unshift(projObj);
+      }
+      return { success: true, changes: 1 };
+    }
+  }
+
+  // 4. Projects UPDATE
+  if (normalized.startsWith("update projects")) {
+    const id = params[params.length - 1];
+    const project = FALLBACK_PROJECTS.find((p) => p.id === id || p.slug === id);
+    if (project) {
+      project.updated_at = new Date().toISOString();
+      return { success: true, changes: 1 };
+    }
+  }
+
+  // 5. Projects DELETE
+  if (normalized.startsWith("delete from projects")) {
+    if (params && params.length > 0) {
+      const id = String(params[0]);
+      const idx = FALLBACK_PROJECTS.findIndex((p) => p.id === id);
+      if (idx >= 0) {
+        FALLBACK_PROJECTS.splice(idx, 1);
         return { success: true, changes: 1 };
       }
     }
   }
 
+  // 6. Inquiries INSERT
   if (normalized.startsWith("insert into inquiries")) {
     FALLBACK_INQUIRIES.unshift({
       id: params[0] || `inq-${Date.now()}`,
@@ -500,6 +583,7 @@ function mutateFallbackStore(
     return { success: true, changes: 1 };
   }
 
+  // 7. Audit Logs INSERT
   if (normalized.startsWith("insert into audit_logs")) {
     FALLBACK_AUDIT_LOGS.unshift({
       id: params[0],
@@ -516,6 +600,7 @@ function mutateFallbackStore(
     return { success: true, changes: 1 };
   }
 
+  // 8. Saved Plots
   if (normalized.startsWith("insert into saved_plots") || normalized.startsWith("insert or replace into saved_plots")) {
     if (params && params.length >= 7) {
       const plotObj = {
@@ -561,4 +646,3 @@ function mutateFallbackStore(
 
   return { success: true, changes: 0 };
 }
-

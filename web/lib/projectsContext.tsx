@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { ArchitecturalProject, ClientInquiry, StudioProfile } from "./types";
 import { FEATURED_PROJECTS } from "./data";
 
@@ -97,14 +97,14 @@ interface ProjectsContextType {
   duplicateProject: (id: string) => void;
   togglePublishStatus: (id: string) => void;
   resetAllData: () => void;
-  // Studio Profile
   profile: StudioProfile;
   updateProfile: (updated: Partial<StudioProfile>) => void;
-  // Inquiries
   inquiries: ClientInquiry[];
   updateInquiryStatus: (id: string, status: ClientInquiry["status"]) => void;
   replyToInquiry: (id: string, replyText: string) => void;
   deleteInquiry: (id: string) => void;
+  isLoading: boolean;
+  refreshProjects: () => Promise<void>;
 }
 
 const ProjectsContext = createContext<ProjectsContextType | undefined>(undefined);
@@ -113,9 +113,30 @@ export function ProjectsProvider({ children }: { children: React.ReactNode }) {
   const [projects, setProjects] = useState<ArchitecturalProject[]>(INITIAL_ENRICHED_PROJECTS);
   const [profile, setProfile] = useState<StudioProfile>(DEFAULT_PROFILE);
   const [inquiries, setInquiries] = useState<ClientInquiry[]>(DEFAULT_INQUIRIES);
-  const [isInitialized, setIsInitialized] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
-  // Load from localStorage on client mount
+  // Sync projects from Cloudflare D1 Backend
+  const refreshProjects = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const res = await fetch("/api/projects?status=all");
+      if (res.ok) {
+        const data = await res.json();
+        if (data.projects && Array.isArray(data.projects) && data.projects.length > 0) {
+          setProjects(data.projects);
+          try {
+            localStorage.setItem(STORAGE_KEY_PROJECTS, JSON.stringify(data.projects));
+          } catch (e) {}
+        }
+      }
+    } catch (err) {
+      console.warn("Failed to fetch projects from backend API, using cached state.", err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  // Initial load
   useEffect(() => {
     try {
       const storedProjects = localStorage.getItem(STORAGE_KEY_PROJECTS);
@@ -134,10 +155,10 @@ export function ProjectsProvider({ children }: { children: React.ReactNode }) {
       }
     } catch (err) {
       console.error("Error reading localStorage", err);
-    } finally {
-      setIsInitialized(true);
     }
-  }, []);
+
+    refreshProjects();
+  }, [refreshProjects]);
 
   // Save projects to localStorage whenever changed
   const saveProjects = (newProjects: ArchitecturalProject[]) => {
@@ -162,15 +183,15 @@ export function ProjectsProvider({ children }: { children: React.ReactNode }) {
     });
   };
 
-  // Add project
+  // Add project with backend API synchronization
   const addProject = (projectData: Omit<ArchitecturalProject, "id"> & { id?: string }) => {
     const slug = (projectData.name || "new-project")
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/(^-|-$)/g, "");
-    
+
     const newId = projectData.id || `${slug}-${Date.now().toString().slice(-4)}`;
-    
+
     const newProject: ArchitecturalProject = {
       ...projectData,
       id: newId,
@@ -188,34 +209,64 @@ export function ProjectsProvider({ children }: { children: React.ReactNode }) {
         studio: profile.studio,
         location: profile.location,
         verified: profile.verified,
-        image: profile.image
-      }
+        image: profile.image,
+      },
     };
 
     const updated = [newProject, ...projects];
     saveProjects(updated);
+
+    // Asynchronously synchronize with Cloudflare D1
+    fetch("/api/projects", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ...newProject,
+        name: newProject.name,
+        price: newProject.price,
+        cents: newProject.cents,
+        builtUpArea: newProject.builtUpArea,
+      }),
+    }).catch((err) => {
+      console.warn("Async project POST failed:", err);
+    });
+
     return newProject;
   };
 
-  // Update project
+  // Update project with backend API synchronization
   const updateProject = (id: string, updatedData: Partial<ArchitecturalProject>) => {
     const updated = projects.map((item) => {
       if (item.id === id) {
         return {
           ...item,
           ...updatedData,
-          updatedAt: "Just now"
+          updatedAt: "Just now",
         };
       }
       return item;
     });
     saveProjects(updated);
+
+    fetch(`/api/projects/${encodeURIComponent(id)}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(updatedData),
+    }).catch((err) => {
+      console.warn("Async project PUT failed:", err);
+    });
   };
 
-  // Delete project
+  // Delete project with backend API synchronization
   const deleteProject = (id: string) => {
     const updated = projects.filter((item) => item.id !== id);
     saveProjects(updated);
+
+    fetch(`/api/projects/${encodeURIComponent(id)}`, {
+      method: "DELETE",
+    }).catch((err) => {
+      console.warn("Async project DELETE failed:", err);
+    });
   };
 
   // Duplicate project
@@ -231,7 +282,7 @@ export function ProjectsProvider({ children }: { children: React.ReactNode }) {
       status: "draft",
       views: 0,
       inquiries: 0,
-      updatedAt: "Just now"
+      updatedAt: "Just now",
     };
 
     const updated = [copyProject, ...projects];
@@ -240,18 +291,11 @@ export function ProjectsProvider({ children }: { children: React.ReactNode }) {
 
   // Toggle Publish / Draft
   const togglePublishStatus = (id: string) => {
-    const updated = projects.map((p) => {
-      if (p.id === id) {
-        const nextStatus = p.status === "draft" ? "published" : "draft";
-        return {
-          ...p,
-          status: (nextStatus as "published" | "draft"),
-          updatedAt: "Just now"
-        };
-      }
-      return p;
-    });
-    saveProjects(updated);
+    const existing = projects.find((p) => p.id === id);
+    if (!existing) return;
+
+    const nextStatus = existing.status === "draft" ? "published" : "draft";
+    updateProject(id, { status: nextStatus });
   };
 
   // Inquiries methods
@@ -275,7 +319,7 @@ export function ProjectsProvider({ children }: { children: React.ReactNode }) {
             ...inq,
             status: "responded" as const,
             replyText,
-            respondedAt: "Just now"
+            respondedAt: "Just now",
           };
         }
         return inq;
@@ -330,7 +374,9 @@ export function ProjectsProvider({ children }: { children: React.ReactNode }) {
         inquiries,
         updateInquiryStatus,
         replyToInquiry,
-        deleteInquiry
+        deleteInquiry,
+        isLoading,
+        refreshProjects,
       }}
     >
       {children}
@@ -345,4 +391,3 @@ export function useProjects() {
   }
   return context;
 }
-

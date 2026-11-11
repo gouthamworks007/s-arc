@@ -110,7 +110,7 @@ export async function POST(req: NextRequest) {
         `aud-${Date.now()}`,
         user?.id || "admin",
         user?.name || "Admin",
-        user?.email || "admin@admin.com",
+        user?.email || "admin@s-arc.in",
         "admin",
         "CREATE_USER",
         newId,

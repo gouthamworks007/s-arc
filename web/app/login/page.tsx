@@ -56,16 +56,10 @@ export default function LoginPage() {
     setValue("password", pass);
   };
 
-  const handleQuickLogin = (role: "admin" | "user", subRole?: "homeowner" | "architect") => {
-    if (role === "admin") {
-      setValue("email", "admin@admin.com");
-      setValue("password", "admin123");
-    }
-    switchRole(role, subRole);
-    setLoginSuccess(true);
-    setTimeout(() => {
-      router.push("/dashboard");
-    }, 500);
+  const handleQuickLogin = (email: string, pass: string) => {
+    setValue("email", email);
+    setValue("password", pass);
+    onSubmit({ email, password: pass, rememberMe: true });
   };
 
   const onSubmit = async (data: LoginFormValues) => {
@@ -259,14 +253,14 @@ export default function LoginPage() {
                       {/* Admin */}
                       <button
                         type="button"
-                        onClick={() => handleAutofill("admin@admin.com", "admin123")}
+                        onClick={() => handleAutofill("admin@s-arc.in", "admin123")}
                         className="p-2 border border-stone-300 bg-stone-100 hover:bg-stone-200/70 rounded-lg text-left transition-colors sm:col-span-2"
                       >
                         <div className="flex items-center gap-1.5 font-serif font-medium text-charcoal text-xs">
                           <ShieldCheck className="w-3.5 h-3.5 text-copper" />
                           <span>Admin Access</span>
                         </div>
-                        <div className="text-[10px] font-mono text-stone-600">admin@admin.com / admin123</div>
+                        <div className="text-[10px] font-mono text-stone-600">admin@s-arc.in / admin123</div>
                       </button>
 
                       {/* Architect */}

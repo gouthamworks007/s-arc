@@ -13,7 +13,7 @@ const DEFAULT_USERS: UserAccount[] = [
   {
     id: "usr-admin-01",
     name: "Admin",
-    email: "admin@admin.com",
+    email: "admin@s-arc.in",
     role: "admin",
     status: "active",
     avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=400&q=80",
@@ -156,13 +156,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Seamlessly migrate legacy superadmin to single admin
         let mutated = false;
         parsed = parsed.map((u: any) => {
-          if (u.role === "super_admin" || u.email === "superadmin@admin.com") {
+          if (u.role === "super_admin" || u.email === "superadmin@admin.com" || u.email === "admin@admin.com") {
             mutated = true;
             return {
               ...u,
               id: "usr-admin-01",
               name: "Admin",
-              email: "admin@admin.com",
+              email: "admin@s-arc.in",
               role: "admin"
             };
           }
@@ -179,8 +179,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const storedCur = localStorage.getItem(STORAGE_KEY_AUTH_USER);
         if (storedCur) {
           let parsedCur = JSON.parse(storedCur);
-          if (parsedCur.role === "super_admin" || parsedCur.email === "superadmin@admin.com") {
-            parsedCur = { ...parsedCur, id: "usr-admin-01", email: "admin@admin.com", name: "Admin", role: "admin" };
+          if (parsedCur.role === "super_admin" || parsedCur.email === "superadmin@admin.com" || parsedCur.email === "admin@admin.com") {
+            parsedCur = { ...parsedCur, id: "usr-admin-01", email: "admin@s-arc.in", name: "Admin", role: "admin" };
             localStorage.setItem(STORAGE_KEY_AUTH_USER, JSON.stringify(parsedCur));
           }
           const found = activeUsers.find(
@@ -316,7 +316,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // Switch role helper
+  // Switch persona helper (development persona inspection strictly among existing registered personas)
   const switchRole = (newRole: UserRole, newSubRole?: UserSubRole) => {
     const match = users.find((u) => {
       if (newRole === "user") {
@@ -327,19 +327,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     if (match) {
       saveCurrentUser(match);
-    } else {
-      // Fallback
-      const fallback: UserAccount = {
-        id: `usr-${newRole}-${Date.now().toString().slice(-4)}`,
-        name: newRole === "admin" ? "Admin" : "Client User",
-        email: newRole === "admin" ? "admin@admin.com" : "client@gmail.com",
-        role: newRole,
-        subRole: newSubRole || "homeowner",
-        status: "active",
-        avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=400&q=80",
-        joinedDate: "Just now"
-      };
-      saveCurrentUser(fallback);
     }
   };
 
@@ -351,7 +338,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // Admin: Update user role
+  // Admin: Update user role in state and synchronize with D1 backend
   const updateUserRole = (userId: string, newRole: UserRole) => {
     const updated = users.map((u) => (u.id === userId ? { ...u, role: newRole } : u));
     saveUsers(updated);
@@ -359,9 +346,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       saveCurrentUser({ ...currentUser, role: newRole });
     }
     logAction(`Changed User Role to ${newRole.toUpperCase()}`, `User ID: ${userId}`);
+
+    // Synchronize to backend database
+    fetch(`/api/users/${encodeURIComponent(userId)}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ role: newRole }),
+    }).catch((err) => {
+      console.warn("Async user role update failed:", err);
+    });
   };
 
-  // Admin can approve accounts (set status to active)
+  // Admin can approve accounts (set status to active in state & D1)
   const updateUserStatus = (userId: string, newStatus: UserAccount["status"], notes?: string) => {
     const targetUser = users.find((u) => u.id === userId);
 
@@ -386,6 +382,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         : `Updated status to ${newStatus}`,
       targetUser ? `${targetUser.name} (${targetUser.email})` : userId
     );
+
+    // Synchronize approval status to Cloudflare D1
+    fetch(`/api/users/${encodeURIComponent(userId)}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: newStatus, reviewNotes: notes }),
+    }).catch((err) => {
+      console.warn("Async user status update failed:", err);
+    });
   };
 
   // Forward recommendations / notes
@@ -401,6 +406,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       "Admin Recorded Practice Audit Note",
       targetUser ? `${targetUser.name} (${targetUser.coaNumber || targetUser.email})` : userId
     );
+
+    fetch(`/api/users/${encodeURIComponent(userId)}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ reviewNotes: notes }),
+    }).catch(() => {});
   };
 
   // Create new user (e.g. Admin invites)
@@ -413,6 +424,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const updated = [newUser, ...users];
     saveUsers(updated);
     logAction(`Created New Account [${userData.role.toUpperCase()}]`, `${userData.name} (${userData.email})`);
+
+    fetch("/api/users", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(userData),
+    }).catch(() => {});
   };
 
   // Admin: Delete user
@@ -421,6 +438,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const updated = users.filter((u) => u.id !== userId);
     saveUsers(updated);
     logAction("Deleted User Account", targetUser ? `${targetUser.name} (${targetUser.email})` : userId);
+
+    fetch(`/api/users/${encodeURIComponent(userId)}`, {
+      method: "DELETE",
+    }).catch((err) => {
+      console.warn("Async user delete failed:", err);
+    });
   };
 
   // User: Apply for Freelance Architect or Agency Firm verification (directly to Admin)
