@@ -15,6 +15,14 @@ const nextConfig = {
       },
     ],
   },
+  async rewrites() {
+    return [
+      {
+        source: '/:font(.*\\.ttf)',
+        destination: '/_next/static/media/:font',
+      },
+    ];
+  },
   async headers() {
     return [
       {

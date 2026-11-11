@@ -170,3 +170,4 @@ VERIFICATION SUMMARY: 12 / 12 PASSED (100%)
    - Setup Cloudflare R2 bucket binding.
    - Implement authenticated presigned download URLs with expiration tokens.
    - Provide CAD drawing set uploads (`.dwg`, `.pdf`, `.bim`) for verified architects.
+

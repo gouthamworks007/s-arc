@@ -14,12 +14,12 @@ export async function GET(req: NextRequest) {
     }
 
     if (!token) {
-      return NextResponse.json({ authenticated: false, user: null }, { status: 401 });
+      return NextResponse.json({ authenticated: false, user: null }, { status: 200 });
     }
 
     const payload = await verifySessionToken(token);
     if (!payload) {
-      return NextResponse.json({ authenticated: false, user: null }, { status: 401 });
+      return NextResponse.json({ authenticated: false, user: null }, { status: 200 });
     }
 
     // Refresh user state against database
