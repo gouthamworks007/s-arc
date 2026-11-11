@@ -121,7 +121,7 @@ export default function SignupPage() {
       </header>
 
       {/* Main Split Layout */}
-      <main className="flex-1 grid grid-cols-1 lg:grid-cols-12 max-w-7xl mx-auto w-full px-6 sm:px-8 py-10 lg:py-16 gap-12 lg:gap-16 items-start">
+      <main id="main-content" className="flex-1 grid grid-cols-1 lg:grid-cols-12 max-w-7xl mx-auto w-full px-6 sm:px-8 py-10 lg:py-16 gap-12 lg:gap-16 items-start">
         
         {/* Left Column: Form (6 cols) */}
         <div className="lg:col-span-6 w-full space-y-6">

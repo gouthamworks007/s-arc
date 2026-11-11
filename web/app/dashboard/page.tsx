@@ -17,7 +17,7 @@ export default function UnifiedDashboard() {
   // Route Guard: Dashboard is strictly accessible using authorized accounts
   if (!isLoggedIn || !currentUser) {
     return (
-      <main className="min-h-screen bg-[#FBFBFA] flex flex-col justify-between">
+      <main id="main-content" className="min-h-screen bg-[#FBFBFA] flex flex-col justify-between">
         <Navbar />
 
         <div className="pt-36 pb-28 max-w-lg mx-auto px-6 w-full text-center">
@@ -76,7 +76,7 @@ export default function UnifiedDashboard() {
   }
 
   return (
-    <main className="min-h-screen bg-[#FBFBFA]">
+    <main id="main-content" className="min-h-screen bg-[#FBFBFA]">
       <Navbar />
 
       <div className="pt-28 pb-24 max-w-7xl mx-auto px-6 sm:px-8">

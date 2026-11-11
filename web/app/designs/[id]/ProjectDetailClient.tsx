@@ -41,6 +41,8 @@ export default function ProjectDetailClient() {
   const [sampleDownloaded, setSampleDownloaded] = useState(false);
   const [inquirySent, setInquirySent] = useState(false);
   const [isSellerModalOpen, setIsSellerModalOpen] = useState(false);
+  const [urlCopied, setUrlCopied] = useState(false);
+  const [checkoutInitiated, setCheckoutInitiated] = useState(false);
 
   if (!project) {
     return (
@@ -77,7 +79,7 @@ export default function ProjectDetailClient() {
   ];
 
   return (
-    <main className="min-h-screen bg-white">
+    <main id="main-content" className="min-h-screen bg-white">
       <Navbar onOpenSellerModal={() => setIsSellerModalOpen(true)} />
 
       {/* Breadcrumb & Header Bar */}
@@ -118,32 +120,42 @@ export default function ProjectDetailClient() {
             {/* Quick Pricing & Actions */}
             <div className="flex items-center gap-3 shrink-0">
               <button
+                type="button"
                 onClick={() => toggleSave(project.id)}
-                className={`p-3 border transition-colors flex items-center gap-1.5 text-xs font-sans font-medium rounded-full ${
+                className={`p-3 min-h-[44px] border transition-colors flex items-center gap-1.5 text-xs font-sans font-medium rounded-full ${
                   bookmarked
-                    ? "bg-copper text-white border-copper"
+                    ? "bg-copper text-white border-copper shadow-sm"
                     : "bg-white text-charcoal border-warm-border hover:border-charcoal"
                 }`}
                 title="Save to shortlist"
+                aria-label={bookmarked ? "Remove from shortlist" : "Save to shortlist"}
               >
                 {bookmarked ? <BookmarkCheck className="w-4 h-4" /> : <Bookmark className="w-4 h-4" />}
                 <span>{bookmarked ? "Shortlisted" : "Shortlist"}</span>
               </button>
 
               <button
+                type="button"
                 onClick={() => {
                   navigator.clipboard.writeText(window.location.href);
-                  alert("Project URL copied to clipboard!");
+                  setUrlCopied(true);
+                  setTimeout(() => setUrlCopied(false), 2500);
                 }}
-                className="p-3 bg-white border border-warm-border hover:border-charcoal text-charcoal transition-colors rounded-full"
-                title="Share project"
+                className="p-3 min-h-[44px] min-w-[44px] bg-white border border-warm-border hover:border-charcoal text-charcoal transition-colors rounded-full relative flex items-center justify-center"
+                title="Share project link"
+                aria-label="Share project link"
               >
                 <Share2 className="w-4 h-4" />
+                {urlCopied && (
+                  <span className="absolute -top-8 left-1/2 -translate-x-1/2 px-2.5 py-1 bg-charcoal text-white text-[10px] rounded shadow-lg whitespace-nowrap animate-fadeIn font-sans">
+                    Link copied!
+                  </span>
+                )}
               </button>
 
               <a
                 href="#download-package"
-                className="px-6 py-3 bg-charcoal hover:bg-copper text-white text-xs font-sans font-medium tracking-wide transition-colors rounded-full"
+                className="px-6 py-3 min-h-[44px] bg-charcoal hover:bg-copper text-white text-xs font-sans font-medium tracking-wide transition-colors rounded-full flex items-center shadow-sm"
               >
                 Get CAD Package • {project.price}
               </a>
@@ -287,20 +299,29 @@ export default function ProjectDetailClient() {
                     <div className="text-xs text-white/60 font-sans mt-0.5">Includes lifetime building license for one site</div>
                   </div>
 
-                  <div className="flex items-center gap-3 w-full sm:w-auto">
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
                     <button
+                      type="button"
                       onClick={() => setSampleDownloaded(true)}
-                      className="w-full sm:w-auto px-5 py-3 border border-white/20 hover:bg-white hover:text-charcoal text-white text-xs font-sans font-medium transition-colors rounded-full"
+                      className="w-full sm:w-auto px-5 py-3.5 min-h-[44px] border border-white/20 hover:bg-white hover:text-charcoal text-white text-xs font-sans font-medium transition-colors rounded-full text-center"
                     >
                       {sampleDownloaded ? "Sample Sheet Downloaded!" : "Download Sample Sheet"}
                     </button>
 
-                    <button
-                      onClick={() => alert(`Proceeding to checkout for ${project.name} CAD Package (${project.price}). Escrow payment gateway will open.`)}
-                      className="w-full sm:w-auto px-6 py-3 bg-copper hover:bg-copper-hover text-white text-xs font-sans font-medium transition-colors rounded-full"
-                    >
-                      Purchase CAD Package
-                    </button>
+                    {checkoutInitiated ? (
+                      <div className="w-full sm:w-auto px-6 py-3.5 bg-emerald-700 text-white text-xs font-sans font-medium rounded-full text-center flex items-center justify-center gap-2">
+                        <CheckCircle2 className="w-4 h-4" />
+                        <span>Escrow Gateway Initialized</span>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setCheckoutInitiated(true)}
+                        className="w-full sm:w-auto px-6 py-3.5 min-h-[44px] bg-copper hover:bg-copper-hover text-white text-xs font-sans font-medium transition-colors rounded-full text-center shadow-sm"
+                      >
+                        Purchase CAD Package
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>

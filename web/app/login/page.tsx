@@ -115,7 +115,7 @@ export default function LoginPage() {
       </header>
 
       {/* Main Split Layout */}
-      <main className="flex-1 grid grid-cols-1 lg:grid-cols-12 max-w-7xl mx-auto w-full px-6 sm:px-8 py-10 lg:py-16 gap-12 lg:gap-16 items-center">
+      <main id="main-content" className="flex-1 grid grid-cols-1 lg:grid-cols-12 max-w-7xl mx-auto w-full px-6 sm:px-8 py-10 lg:py-16 gap-12 lg:gap-16 items-center">
         
         {/* Left Column: Form (5 cols) */}
         <div className="lg:col-span-5 max-w-md w-full mx-auto space-y-7">

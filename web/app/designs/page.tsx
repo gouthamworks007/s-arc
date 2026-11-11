@@ -423,8 +423,17 @@ function DesignsCatalogContent() {
             {filteredAndSortedProjects.map((project) => (
               <div
                 key={project.id}
+                role="button"
+                tabIndex={0}
+                aria-label={`View architectural details for ${project.name}`}
                 onClick={() => setSelectedProject(project)}
-                className="group cursor-pointer bg-white border border-warm-border flex flex-col justify-between transition-all duration-300 hover:shadow-card hover:border-charcoal/40 rounded-2xl overflow-hidden"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    setSelectedProject(project);
+                  }
+                }}
+                className="group cursor-pointer bg-white border border-warm-border flex flex-col justify-between transition-all duration-300 hover:shadow-card hover:border-charcoal/40 rounded-2xl overflow-hidden focus-visible:ring-2 focus-visible:ring-copper focus-visible:ring-offset-2"
               >
                 {/* Project Image */}
                 <div className="relative aspect-[16/10] w-full bg-charcoal overflow-hidden rounded-t-2xl">
@@ -441,18 +450,20 @@ function DesignsCatalogContent() {
 
                   {/* Bookmark Button */}
                   <button
+                    type="button"
                     onClick={(e) => {
                       e.stopPropagation();
                       toggleSave(project.id);
                     }}
-                    className={`absolute top-3 right-3 z-10 w-7 h-7 rounded-full flex items-center justify-center transition-all ${
+                    aria-label={isSaved(project.id) ? `Remove ${project.name} from shortlist` : `Save ${project.name} to shortlist`}
+                    className={`absolute top-3 right-3 z-10 w-9 h-9 rounded-full flex items-center justify-center transition-all ${
                       isSaved(project.id)
                         ? "bg-copper text-white shadow-md"
                         : "bg-black/50 text-white/80 hover:bg-black/80 hover:text-white"
                     }`}
                     title={isSaved(project.id) ? "Remove from shortlist" : "Save to shortlist"}
                   >
-                    {isSaved(project.id) ? <BookmarkCheck className="w-3.5 h-3.5" /> : <Bookmark className="w-3.5 h-3.5" />}
+                    {isSaved(project.id) ? <BookmarkCheck className="w-4 h-4" /> : <Bookmark className="w-4 h-4" />}
                   </button>
 
                   <div className="absolute bottom-3 right-3 bg-white/95 backdrop-blur-sm text-charcoal text-xs font-semibold px-2.5 py-1 shadow-sm font-sans rounded-full">
@@ -530,7 +541,7 @@ function DesignsCatalogContent() {
 
 export default function DesignsPage() {
   return (
-    <main className="min-h-screen bg-white">
+    <main id="main-content" className="min-h-screen bg-white">
       <Navbar />
       <Suspense fallback={
         <div className="min-h-[60vh] flex items-center justify-center font-sans text-xs text-mutedText">

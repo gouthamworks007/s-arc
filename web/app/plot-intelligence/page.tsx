@@ -308,7 +308,7 @@ export default function PlotIntelligencePage() {
   ).length;
 
   return (
-    <main className="min-h-screen bg-warm-card flex flex-col justify-between">
+    <main id="main-content" className="min-h-screen bg-warm-card flex flex-col justify-between">
       <Navbar />
 
       {/* Main Container */}

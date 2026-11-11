@@ -58,7 +58,7 @@ export default function ArchitectsPage() {
   }, [selectedCity, searchQuery]);
 
   return (
-    <main className="min-h-screen bg-white">
+    <main id="main-content" className="min-h-screen bg-white">
       <Navbar onOpenSellerModal={() => setIsSellerModalOpen(true)} />
 
       {/* Hero Header */}
@@ -142,8 +142,17 @@ export default function ArchitectsPage() {
             {filteredArchitects.map((architect) => (
               <div
                 key={architect.id}
+                role="button"
+                tabIndex={0}
+                aria-label={`View profile for ${architect.name}, ${architect.title}`}
                 onClick={() => setSelectedArchitect(architect)}
-                className="group cursor-pointer bg-white border border-warm-border p-6 flex flex-col justify-between transition-all duration-300 hover:shadow-card hover:border-charcoal/40 rounded-2xl"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    setSelectedArchitect(architect);
+                  }
+                }}
+                className="group cursor-pointer bg-white border border-warm-border p-6 flex flex-col justify-between transition-all duration-300 hover:shadow-card hover:border-charcoal/40 rounded-2xl focus-visible:ring-2 focus-visible:ring-copper focus-visible:ring-offset-2"
               >
                 <div>
                   {/* Portrait */}

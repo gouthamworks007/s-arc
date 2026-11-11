@@ -52,6 +52,20 @@ export default function SellerModal({ isOpen, onClose }: SellerModalProps) {
     },
   });
 
+  // Keyboard accessibility and body scroll lock
+  React.useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") handleClose();
+    };
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.body.style.overflow = "";
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   const onSubmit = (data: SellerFormValues) => {
@@ -68,7 +82,15 @@ export default function SellerModal({ isOpen, onClose }: SellerModalProps) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/75 backdrop-blur-md animate-fadeIn">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="seller-modal-title"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) handleClose();
+      }}
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/75 backdrop-blur-md animate-fadeIn"
+    >
       <div className="bg-white max-w-2xl w-full max-h-[92vh] overflow-y-auto border border-warm-border shadow-2xl relative rounded-3xl">
         
         {/* Header */}
@@ -77,14 +99,14 @@ export default function SellerModal({ isOpen, onClose }: SellerModalProps) {
             <span className="text-[10px] tracking-widestExtra uppercase text-copper font-semibold">
               Partner with S-ARC
             </span>
-            <h2 className="text-xl sm:text-2xl font-normal text-charcoal">
+            <h2 id="seller-modal-title" className="text-xl sm:text-2xl font-normal text-charcoal">
               Become a Contributing Architect
             </h2>
           </div>
 
           <button
             onClick={handleClose}
-            className="w-8 h-8 rounded-full border border-warm-border hover:bg-warm-grey flex items-center justify-center text-charcoal transition-colors"
+            className="w-9 h-9 min-h-[36px] min-w-[36px] rounded-full border border-warm-border hover:bg-warm-grey flex items-center justify-center text-charcoal transition-colors focus-visible:ring-2 focus-visible:ring-copper"
             aria-label="Close modal"
           >
             <X className="w-4 h-4" />

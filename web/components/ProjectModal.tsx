@@ -14,13 +14,36 @@ interface ProjectModalProps {
 export default function ProjectModal({ project, onClose }: ProjectModalProps) {
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [downloadSuccess, setDownloadSuccess] = useState(false);
+  const [consultRequested, setConsultRequested] = useState(false);
+
+  // Keyboard accessibility (Escape key) and body scroll lock
+  React.useEffect(() => {
+    if (!project) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.body.style.overflow = "";
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [project, onClose]);
 
   if (!project) return null;
 
   const currentImage = project.gallery[activeImageIndex] || project.image;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/75 backdrop-blur-md animate-fadeIn">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="project-modal-title"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/75 backdrop-blur-md animate-fadeIn"
+    >
       <div className="bg-white max-w-5xl w-full max-h-[92vh] overflow-y-auto border border-warm-border shadow-2xl relative rounded-3xl">
         
         {/* Sticky Header with Close Button */}
@@ -29,14 +52,14 @@ export default function ProjectModal({ project, onClose }: ProjectModalProps) {
             <span className="text-[10px] tracking-widestExtra uppercase text-copper font-semibold">
               {project.style}
             </span>
-            <h2 className="text-xl sm:text-2xl font-normal text-charcoal">
+            <h2 id="project-modal-title" className="text-xl sm:text-2xl font-normal text-charcoal">
               {project.name}
             </h2>
           </div>
 
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-full border border-warm-border hover:bg-warm-grey flex items-center justify-center text-charcoal transition-colors"
+            className="w-9 h-9 min-h-[36px] min-w-[36px] rounded-full border border-warm-border hover:bg-warm-grey flex items-center justify-center text-charcoal transition-colors focus-visible:ring-2 focus-visible:ring-copper"
             aria-label="Close modal"
           >
             <X className="w-4 h-4" />
@@ -162,33 +185,42 @@ export default function ProjectModal({ project, onClose }: ProjectModalProps) {
                 </div>
               </div>
 
-              {/* Actions */}
-              <div className="space-y-2.5">
-                <Link
-                  href={`/designs/${project.id}`}
-                  onClick={onClose}
-                  className="w-full py-3 bg-charcoal hover:bg-copper text-white text-xs font-medium tracking-wide flex items-center justify-center gap-2 transition-colors font-sans rounded-full"
-                >
-                  <span>Open Full Project Showcase</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </Link>
+                {/* Actions */}
+                <div className="space-y-2.5">
+                  <Link
+                    href={`/designs/${project.id}`}
+                    onClick={onClose}
+                    className="w-full py-3.5 min-h-[44px] bg-charcoal hover:bg-copper text-white text-xs font-medium tracking-wide flex items-center justify-center gap-2 transition-colors font-sans rounded-full shadow-sm"
+                  >
+                    <span>Open Full Project Showcase</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </Link>
 
-                <button
-                  onClick={() => setDownloadSuccess(true)}
-                  className="w-full py-3 bg-copper hover:bg-copper-hover text-white text-xs font-medium tracking-wide flex items-center justify-center gap-2 transition-colors rounded-full"
-                >
-                  <Download className="w-3.5 h-3.5" />
-                  <span>{downloadSuccess ? "Sample Package Downloaded!" : "Download Sample Drawings"}</span>
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => setDownloadSuccess(true)}
+                    className="w-full py-3.5 min-h-[44px] bg-copper hover:bg-copper-hover text-white text-xs font-medium tracking-wide flex items-center justify-center gap-2 transition-colors rounded-full shadow-sm"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>{downloadSuccess ? "Sample Package Downloaded!" : "Download Sample Drawings"}</span>
+                  </button>
 
-                <button
-                  onClick={() => alert(`Direct inquiry opened for Ar. ${project.architect.name}. Our architectural coordinator will reach out within 2 hours.`)}
-                  className="w-full py-3 border border-charcoal hover:bg-charcoal hover:text-white text-charcoal text-xs font-medium tracking-wide flex items-center justify-center gap-2 transition-colors rounded-full"
-                >
-                  <MessageSquare className="w-3.5 h-3.5" />
-                  <span>Request Architect Consultation</span>
-                </button>
-              </div>
+                  {consultRequested ? (
+                    <div className="w-full py-3 px-4 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-medium rounded-full text-center flex items-center justify-center gap-1.5 animate-fadeIn">
+                      <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                      <span>Consultation requested with Ar. {project.architect.name}!</span>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setConsultRequested(true)}
+                      className="w-full py-3.5 min-h-[44px] border border-charcoal hover:bg-charcoal hover:text-white text-charcoal text-xs font-medium tracking-wide flex items-center justify-center gap-2 transition-colors rounded-full"
+                    >
+                      <MessageSquare className="w-3.5 h-3.5" />
+                      <span>Request Architect Consultation</span>
+                    </button>
+                  )}
+                </div>
             </div>
           </div>
 

@@ -1028,8 +1028,10 @@ export default function PlotMapWorkspace({
       {/* Top Left: Clean Map Type Switcher */}
       <div className="absolute top-4 left-4 z-20 flex items-center gap-1 bg-black/80 backdrop-blur-md p-1 rounded-2xl border border-white/15 shadow-xl">
         <button
+          type="button"
           onClick={() => switchMapMode("satellite")}
-          className={`px-3 py-1.5 rounded-xl text-xs font-sans font-medium transition-all ${
+          aria-label="Switch to satellite imagery view"
+          className={`px-3 py-1.5 min-h-[36px] rounded-xl text-xs font-sans font-medium transition-all ${
             mapMode === "satellite"
               ? "bg-cyan-500 text-black font-semibold shadow-sm"
               : "text-white/80 hover:text-white"
@@ -1038,8 +1040,10 @@ export default function PlotMapWorkspace({
           Satellite
         </button>
         <button
+          type="button"
           onClick={() => switchMapMode("standard")}
-          className={`px-3 py-1.5 rounded-xl text-xs font-sans font-medium transition-all ${
+          aria-label="Switch to standard street map view"
+          className={`px-3 py-1.5 min-h-[36px] rounded-xl text-xs font-sans font-medium transition-all ${
             mapMode === "standard"
               ? "bg-white text-black font-semibold shadow-sm"
               : "text-white/80 hover:text-white"
@@ -1054,17 +1058,21 @@ export default function PlotMapWorkspace({
         {/* Zoom Controls */}
         <div className="bg-black/80 backdrop-blur-md rounded-2xl p-1 border border-white/15 shadow-xl flex flex-col items-center">
           <button
+            type="button"
             onClick={() => mapRef.current?.zoomIn()}
-            className="p-2.5 rounded-xl text-white/80 hover:text-white hover:bg-white/10 transition-colors"
+            className="p-2.5 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl text-white/80 hover:text-white hover:bg-white/10 transition-colors"
             title="Zoom In"
+            aria-label="Zoom in"
           >
             <ZoomIn className="w-4 h-4" />
           </button>
           <div className="w-4 h-px bg-white/15" />
           <button
+            type="button"
             onClick={() => mapRef.current?.zoomOut()}
-            className="p-2.5 rounded-xl text-white/80 hover:text-white hover:bg-white/10 transition-colors"
+            className="p-2.5 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl text-white/80 hover:text-white hover:bg-white/10 transition-colors"
             title="Zoom Out"
+            aria-label="Zoom out"
           >
             <ZoomOut className="w-4 h-4" />
           </button>
@@ -1072,14 +1080,16 @@ export default function PlotMapWorkspace({
 
         {/* Locate Me */}
         <button
+          type="button"
           onClick={handleCurrentLocation}
           disabled={geoLocating}
-          className={`p-2.5 rounded-2xl border backdrop-blur-md shadow-xl transition-all ${
+          className={`p-2.5 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-2xl border backdrop-blur-md shadow-xl transition-all ${
             geoLocating
               ? "bg-cyan-500/20 text-cyan-300 border-cyan-400 animate-pulse"
               : "bg-black/80 text-white/80 border-white/15 hover:text-white hover:border-cyan-400"
           }`}
           title="Detect Live Location (GPS)"
+          aria-label="Detect live property location with GPS"
         >
           <Locate className="w-4 h-4" />
         </button>
@@ -1087,9 +1097,11 @@ export default function PlotMapWorkspace({
         {/* Fit Bounds */}
         {coordinates.length >= 2 && (
           <button
+            type="button"
             onClick={fitPlotBounds}
-            className="p-2.5 rounded-2xl bg-black/80 backdrop-blur-md border border-white/15 text-white/80 hover:text-white hover:border-cyan-400 shadow-xl transition-colors"
+            className="p-2.5 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-2xl bg-black/80 backdrop-blur-md border border-white/15 text-white/80 hover:text-white hover:border-cyan-400 shadow-xl transition-colors"
             title="Fit Plot in View"
+            aria-label="Fit boundary plot in view"
           >
             <Crosshair className="w-4 h-4 text-cyan-400" />
           </button>
@@ -1153,8 +1165,10 @@ export default function PlotMapWorkspace({
               {/* Complete Boundary button appears when >= 3 points exist */}
               {coordinates.length >= 3 && (
                 <button
+                  type="button"
                   onClick={handleCompleteBoundary}
-                  className="px-3 py-1.5 rounded-xl bg-cyan-500 text-black text-xs font-sans font-bold hover:bg-cyan-400 transition-all flex items-center gap-1.5 shadow-lg shadow-cyan-500/20"
+                  aria-label={`Close property boundary with ${coordinates.length} marked corners`}
+                  className="px-3.5 py-2 min-h-[38px] rounded-xl bg-cyan-500 text-black text-xs font-sans font-bold hover:bg-cyan-400 transition-all flex items-center gap-1.5 shadow-lg shadow-cyan-500/20"
                 >
                   <Check className="w-3.5 h-3.5 stroke-[3]" />
                   <span>Close Boundary ({coordinates.length} Corners)</span>
@@ -1163,18 +1177,22 @@ export default function PlotMapWorkspace({
 
               {/* Undo Last Point */}
               <button
+                type="button"
                 onClick={handleUndo}
-                className="p-1.5 rounded-xl text-white/80 hover:text-white hover:bg-white/10 transition-colors"
+                className="p-2 min-h-[38px] min-w-[38px] flex items-center justify-center rounded-xl text-white/80 hover:text-white hover:bg-white/10 transition-colors"
                 title="Undo last point"
+                aria-label="Undo last placed corner point"
               >
                 <Undo2 className="w-4 h-4" />
               </button>
 
               {/* Reset */}
               <button
+                type="button"
                 onClick={handleClear}
-                className="p-1.5 rounded-xl text-rose-400 hover:text-rose-300 hover:bg-rose-500/20 transition-colors"
+                className="p-2 min-h-[38px] min-w-[38px] flex items-center justify-center rounded-xl text-rose-400 hover:text-rose-300 hover:bg-rose-500/20 transition-colors"
                 title="Reset plot"
+                aria-label="Reset and clear all corner points"
               >
                 <Trash2 className="w-4 h-4" />
               </button>

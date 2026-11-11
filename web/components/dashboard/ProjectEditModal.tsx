@@ -169,6 +169,20 @@ export default function ProjectEditModal({
     setActiveTab("overview");
   }, [project, mode, isOpen]);
 
+  // Keyboard accessibility (Escape key) and body scroll lock
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.body.style.overflow = "";
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   const handleAddHighlight = () => {
@@ -244,7 +258,15 @@ export default function ProjectEditModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto bg-charcoal/70 backdrop-blur-sm transition-all duration-300">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="project-edit-modal-title"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto bg-charcoal/70 backdrop-blur-sm transition-all duration-300"
+    >
       <div 
         className="relative w-full max-w-4xl bg-white border border-warm-border rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] animate-in fade-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}

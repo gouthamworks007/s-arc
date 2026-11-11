@@ -28,6 +28,25 @@ export default function Navbar({ onOpenSellerModal, onOpenSearch }: NavbarProps)
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
+  // Keyboard accessibility and body lock for mobile menu
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && mobileMenuOpen) {
+        setMobileMenuOpen(false);
+      }
+    };
+    if (mobileMenuOpen) {
+      document.body.style.overflow = "hidden";
+      window.addEventListener("keydown", handleKeyDown);
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [mobileMenuOpen]);
+
   // Public navigation: Dashboard is protected and accessible only with an account
   const navLinks = [
     { name: "Explore Designs", href: "/designs", active: pathname === "/designs" },
@@ -163,20 +182,22 @@ export default function Navbar({ onOpenSellerModal, onOpenSearch }: NavbarProps)
         <div className="md:hidden flex items-center gap-3">
           <button
             onClick={() => setIsCompareOpen(true)}
-            className="relative text-charcoal p-1.5"
-            aria-label="Shortlist"
+            className="relative text-charcoal p-2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl hover:bg-warm-grey transition-colors"
+            aria-label="View shortlisted designs"
           >
             <Bookmark className="w-4 h-4" />
             {savedProjects.length > 0 && (
-              <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-copper text-white text-[9px] font-bold flex items-center justify-center font-mono">
+              <span className="absolute top-1 right-1 w-4 h-4 rounded-full bg-copper text-white text-[9px] font-bold flex items-center justify-center font-mono">
                 {savedProjects.length}
               </span>
             )}
           </button>
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="text-charcoal p-1.5"
+            className="text-charcoal p-2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl hover:bg-warm-grey transition-colors"
             aria-label="Toggle navigation menu"
+            aria-expanded={mobileMenuOpen}
+            aria-controls="mobile-navigation-menu"
           >
             {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
@@ -185,7 +206,13 @@ export default function Navbar({ onOpenSellerModal, onOpenSearch }: NavbarProps)
 
       {/* Mobile dropdown */}
       {mobileMenuOpen && (
-        <div className="md:hidden bg-white border-b border-warm-border px-6 py-6 shadow-lg animate-fadeIn font-sans rounded-b-2xl">
+        <div
+          id="mobile-navigation-menu"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Mobile Navigation Menu"
+          className="md:hidden bg-white/95 backdrop-blur-xl border-b border-warm-border px-6 py-6 shadow-2xl animate-fadeIn font-sans rounded-b-3xl max-h-[85vh] overflow-y-auto"
+        >
           <div className="flex flex-col space-y-4 text-sm font-medium text-charcoal">
             {navLinks.map((link) => (
               <Link

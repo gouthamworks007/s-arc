@@ -16,18 +16,40 @@ export default function ArchitectDetailModal({
   onClose,
   onSelectProject,
 }: ArchitectDetailModalProps) {
+  // Keyboard accessibility and body scroll lock
+  React.useEffect(() => {
+    if (!architect) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.body.style.overflow = "";
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [architect, onClose]);
+
   if (!architect) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/75 backdrop-blur-md animate-fadeIn">
-      <div className="bg-white max-w-xl w-full max-h-[92vh] overflow-y-auto border border-warm-border shadow-2xl relative">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="architect-modal-title"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/75 backdrop-blur-md animate-fadeIn"
+    >
+      <div className="bg-white max-w-xl w-full max-h-[92vh] overflow-y-auto border border-warm-border shadow-2xl relative rounded-3xl">
         {/* Header */}
-        <div className="sticky top-0 bg-white/95 backdrop-blur-sm border-b border-warm-border z-30 px-6 py-4 flex items-center justify-between">
+        <div className="sticky top-0 bg-white/95 backdrop-blur-sm border-b border-warm-border z-30 px-6 py-4 flex items-center justify-between rounded-t-3xl">
           <div>
             <span className="text-[10px] tracking-widestExtra uppercase text-copper font-semibold">
               Verified Architect
             </span>
-            <h2 className="text-xl font-normal text-charcoal flex items-center gap-1.5">
+            <h2 id="architect-modal-title" className="text-xl font-normal text-charcoal flex items-center gap-1.5">
               <span>{architect.name}</span>
               <BadgeCheck className="w-4 h-4 fill-copper text-white" />
             </h2>
@@ -35,7 +57,7 @@ export default function ArchitectDetailModal({
 
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-full border border-warm-border hover:bg-warm-grey flex items-center justify-center text-charcoal transition-colors"
+            className="w-9 h-9 min-h-[36px] min-w-[36px] rounded-full border border-warm-border hover:bg-warm-grey flex items-center justify-center text-charcoal transition-colors focus-visible:ring-2 focus-visible:ring-copper"
             aria-label="Close modal"
           >
             <X className="w-4 h-4" />

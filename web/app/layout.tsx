@@ -154,6 +154,12 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${cormorantGaramond.variable} ${spaceGrotesk.variable}`}>
       <body className="bg-white text-charcoal font-sans font-light antialiased selection:bg-copper selection:text-white">
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[9999] focus:px-4 focus:py-2.5 focus:bg-charcoal focus:text-white focus:rounded-xl focus:shadow-floating focus:border focus:border-copper font-sans text-xs font-medium transition-all"
+        >
+          Skip to main content
+        </a>
         <AuthProvider>
           <ProjectsProvider>
             <SavedProjectsProvider>

@@ -77,7 +77,7 @@ export default function HomePage() {
   ];
 
   return (
-    <main className="min-h-screen bg-white">
+    <main id="main-content" className="min-h-screen bg-white">
       {/* 1. Header & Navigation */}
       <Navbar
         onOpenSellerModal={() => setIsSellerModalOpen(true)}

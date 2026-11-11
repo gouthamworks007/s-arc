@@ -37,6 +37,33 @@ h1, h2, h3, .font-serif, .font-heading {
   color: #ffffff;
 }
 
+/* Accessibility: Universal Focus Ring (WCAG 2.2 AA) */
+:focus-visible {
+  outline: 2px solid #ad8065;
+  outline-offset: 2px;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid #ad8065;
+  outline-offset: 2px;
+}
+
+/* Accessibility: Honor Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 /* Custom architectural minimalist scrollbar */
 ::-webkit-scrollbar {
   width: 6px;

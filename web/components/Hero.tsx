@@ -133,7 +133,7 @@ export default function Hero({ onExploreClick, onProjectClick }: HeroProps) {
               <div className="flex flex-wrap items-center gap-3.5 mb-10">
                 <button
                   onClick={onExploreClick}
-                  className="inline-flex items-center gap-2.5 px-6 py-3.5 bg-copper hover:bg-copper-hover text-white text-xs font-medium font-sans tracking-wide rounded-full shadow-subtle hover:shadow transition-all group"
+                  className="inline-flex items-center gap-2.5 px-6 py-3.5 bg-copper hover:bg-copper-hover text-white text-xs font-medium font-sans tracking-wide rounded-full shadow-subtle hover:shadow transition-all group min-h-[44px]"
                 >
                   <span>Explore 500+ Designs</span>
                   <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
@@ -141,7 +141,7 @@ export default function Hero({ onExploreClick, onProjectClick }: HeroProps) {
 
                 <Link
                   href="/plot-intelligence"
-                  className="inline-flex items-center gap-2 px-5 py-3.5 bg-warm-grey hover:bg-warm-border/50 text-charcoal border border-warm-border text-xs font-medium font-sans tracking-wide rounded-full transition-all group"
+                  className="inline-flex items-center gap-2 px-5 py-3.5 bg-warm-grey hover:bg-warm-border/50 text-charcoal border border-warm-border text-xs font-medium font-sans tracking-wide rounded-full transition-all group min-h-[44px]"
                 >
                   <Compass className="w-3.5 h-3.5 text-copper" />
                   <span>Plot Intelligence GIS</span>
@@ -230,7 +230,7 @@ export default function Hero({ onExploreClick, onProjectClick }: HeroProps) {
 
               {/* Animated Moving Dot Indicators */}
               <div className="absolute top-6 right-6 sm:top-8 sm:right-8 z-20 pointer-events-auto">
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-1">
                   {HERO_SLIDES.map((_, idx) => {
                     const isActive = currentSlide === idx;
                     return (
@@ -241,7 +241,7 @@ export default function Hero({ onExploreClick, onProjectClick }: HeroProps) {
                           setCurrentSlide(idx);
                         }}
                         aria-label={`Go to slide ${idx + 1}`}
-                        className="relative w-4 h-4 flex items-center justify-center focus:outline-none group"
+                        className="relative w-8 h-8 flex items-center justify-center focus:outline-none group min-h-[32px] min-w-[32px]"
                       >
                         {/* Base Inactive Dot */}
                         <span className="w-2 h-2 rounded-full bg-white/40 group-hover:bg-white/80 transition-colors drop-shadow" />
@@ -265,21 +265,21 @@ export default function Hero({ onExploreClick, onProjectClick }: HeroProps) {
               </div>
 
               {/* Arrow Controls (Previous / Next) */}
-              <div className="absolute inset-y-0 left-4 sm:left-6 flex items-center z-20">
+              <div className="absolute inset-y-0 left-3 sm:left-6 flex items-center z-20">
                 <button
                   onClick={prevSlide}
                   aria-label="Previous slide"
-                  className="w-10 h-10 rounded-full bg-black/40 hover:bg-black/70 text-white/80 hover:text-white backdrop-blur-md border border-white/10 flex items-center justify-center transition-all duration-200 hover:scale-105"
+                  className="w-11 h-11 min-h-[44px] min-w-[44px] rounded-full bg-black/40 hover:bg-black/70 text-white/80 hover:text-white backdrop-blur-md border border-white/10 flex items-center justify-center transition-all duration-200 hover:scale-105"
                 >
                   <ChevronLeft className="w-5 h-5" />
                 </button>
               </div>
 
-              <div className="absolute inset-y-0 right-4 sm:right-6 flex items-center z-20">
+              <div className="absolute inset-y-0 right-3 sm:right-6 flex items-center z-20">
                 <button
                   onClick={nextSlide}
                   aria-label="Next slide"
-                  className="w-10 h-10 rounded-full bg-black/40 hover:bg-black/70 text-white/80 hover:text-white backdrop-blur-md border border-white/10 flex items-center justify-center transition-all duration-200 hover:scale-105"
+                  className="w-11 h-11 min-h-[44px] min-w-[44px] rounded-full bg-black/40 hover:bg-black/70 text-white/80 hover:text-white backdrop-blur-md border border-white/10 flex items-center justify-center transition-all duration-200 hover:scale-105"
                 >
                   <ChevronRight className="w-5 h-5" />
                 </button>
