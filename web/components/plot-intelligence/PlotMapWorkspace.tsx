@@ -851,7 +851,7 @@ export default function PlotMapWorkspace({
 
     mapRef.current.flyTo({
       center: [lng, lat],
-      zoom: 18,
+      zoom: 17,
       pitch: 0,
       bearing: 0,
       duration: 1400,

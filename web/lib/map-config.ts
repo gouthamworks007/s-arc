@@ -15,11 +15,15 @@ export interface MapLayerConfig {
  * Supported Compliant Providers:
  * 1. Mapbox Satellite (NEXT_PUBLIC_MAPBOX_TOKEN) - High-resolution commercial satellite imagery
  * 2. MapTiler Satellite Hybrid (NEXT_PUBLIC_MAPTILER_KEY) - Official MapLibre partner
- * 3. Google Maps Platform Map Tiles API (NEXT_PUBLIC_GOOGLE_MAPS_KEY) - Official 2D Map Tiles
- * 4. Custom Tile Endpoint (NEXT_PUBLIC_SATELLITE_TILE_URL)
- * 5. High-resolution Development Multi-CDN Shard Fallback
+ * 3. Custom Tile Endpoint (NEXT_PUBLIC_SATELLITE_TILE_URL)
+ * 4. High-resolution Esri World Imagery (ArcGIS Online) multi-CDN mirrors with full CORS and Kerala GIS parcel coverage
  */
-export function resolveSatelliteConfig(): { tiles: string[]; attribution: string; maxzoom: number } {
+export function resolveSatelliteConfig(): {
+  tiles: string[];
+  attribution: string;
+  maxzoom: number;
+  labelTiles?: string[];
+} {
   const customUrl = process.env.NEXT_PUBLIC_SATELLITE_TILE_URL;
   if (customUrl) {
     return {
@@ -49,23 +53,26 @@ export function resolveSatelliteConfig(): { tiles: string[]; attribution: string
     };
   }
 
-  // 3. High-resolution Google Satellite Hybrid multi-CDN tiles
-  // Provides sub-meter parcel coverage across all 14 Kerala districts
+  // 3. High-resolution Esri World Imagery multi-CDN mirrors
+  // Fully CORS-compliant (Access-Control-Allow-Origin: *), high-resolution sub-meter parcel coverage across all 14 Kerala districts
   return {
     tiles: [
-      "https://mt0.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",
-      "https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",
-      "https://mt2.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",
-      "https://mt3.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",
+      "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+      "https://services.arcgisonline.com/arcgis/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
     ],
-    attribution: "Imagery &copy; Google Satellite (Evaluation & GIS Survey Reference)",
-    maxzoom: 20,
+    attribution: "Imagery &copy; Esri, Maxar, Earthstar Geographics, and the GIS User Community",
+    maxzoom: 18,
+    labelTiles: [
+      "https://services.arcgisonline.com/arcgis/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}",
+      "https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}",
+    ],
   };
 }
 
 export const DEFAULT_MAP_CONFIG: MapLayerConfig = {
-  satelliteTileUrl: "https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",
-  satelliteAttribution: "Imagery &copy; Google",
+  satelliteTileUrl:
+    "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+  satelliteAttribution: "Imagery &copy; Esri &mdash; GIS User Community",
   standardTileUrl:
     process.env.NEXT_PUBLIC_STANDARD_TILE_URL ||
     "https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png",
@@ -88,29 +95,54 @@ export function buildMapStyle(mode: MapMode): StyleSpecification {
   const attribution = isSat ? satConfig.attribution : DEFAULT_MAP_CONFIG.standardAttribution;
   const maxzoom = isSat ? satConfig.maxzoom : 19;
 
+  const sources: StyleSpecification["sources"] = {
+    "base-raster-tiles": {
+      type: "raster",
+      tiles: tileUrls,
+      tileSize: 256,
+      attribution,
+      maxzoom,
+    },
+  };
+
+  const layers: StyleSpecification["layers"] = [
+    {
+      id: "base-raster-layer",
+      type: "raster",
+      source: "base-raster-tiles",
+      minzoom: 0,
+      maxzoom: 22,
+      paint: {
+        "raster-opacity": 1.0,
+      },
+    },
+  ];
+
+  // Overlay hybrid place names and road boundaries in satellite mode
+  if (isSat && satConfig.labelTiles && satConfig.labelTiles.length > 0) {
+    sources["satellite-labels"] = {
+      type: "raster",
+      tiles: satConfig.labelTiles,
+      tileSize: 256,
+      attribution: "",
+      maxzoom: 19,
+    };
+    layers.push({
+      id: "satellite-labels-layer",
+      type: "raster",
+      source: "satellite-labels",
+      minzoom: 0,
+      maxzoom: 22,
+      paint: {
+        "raster-opacity": 0.85,
+      },
+    });
+  }
+
   return {
     version: 8,
     name: isSat ? "S-ARC Satellite Workspace" : "S-ARC Standard Map",
-    sources: {
-      "base-raster-tiles": {
-        type: "raster",
-        tiles: tileUrls,
-        tileSize: 256,
-        attribution,
-        maxzoom,
-      },
-    },
-    layers: [
-      {
-        id: "base-raster-layer",
-        type: "raster",
-        source: "base-raster-tiles",
-        minzoom: 0,
-        maxzoom: 22,
-        paint: {
-          "raster-opacity": 1.0,
-        },
-      },
-    ],
+    sources,
+    layers,
   };
 }
