@@ -2,6 +2,9 @@
 const nextConfig = {
   poweredByHeader: false,
   reactStrictMode: true,
+  compiler: {
+    removeConsole: process.env.NODE_ENV === "production" ? { exclude: ["error", "warn"] } : false,
+  },
   images: {
     unoptimized: true,
     remotePatterns: [
