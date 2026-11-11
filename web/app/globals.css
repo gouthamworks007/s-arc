@@ -29,7 +29,8 @@ body {
 
 h1, h2, h3, .font-serif, .font-heading {
   font-family: var(--font-serif), "Cormorant Garamond", Georgia, serif;
-  font-feature-settings: "liga" 1, "dlig" 1;
+  font-feature-settings: "liga" 1, "dlig" 0;
+  font-variant-ligatures: common-ligatures;
 }
 
 ::selection {
