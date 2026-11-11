@@ -133,3 +133,4 @@ This document catalogs every critical blocker preventing S-ARC from operating as
 | **1.1** | Razorpay India Integration (Test Mode API Keys) | Medium | **Critical** | Needs Razorpay Test Keys (Sandbox) |
 | **1.2** | Cloudflare R2 / S3 Asset Storage for CAD Packages | High | **Critical** | Needs R2/S3 Bucket or Local File Mock |
 | **2.2** | CAD File Registry & Signed Timed Download Links | High | **Critical** | Depends on 1.2 & 2.1 |
+

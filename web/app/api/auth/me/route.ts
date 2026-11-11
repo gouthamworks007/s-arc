@@ -46,6 +46,7 @@ export async function GET(req: NextRequest) {
           location: dbUser.location,
           studioName: dbUser.studio_name,
           coaNumber: dbUser.coa_number,
+          bio: dbUser.bio,
         },
       });
     }

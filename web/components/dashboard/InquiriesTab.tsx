@@ -1,7 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
-import { useProjects } from "@/lib/projectsContext";
+import React, { useState, useEffect, useCallback } from "react";
 import { ClientInquiry } from "@/lib/types";
 import { 
   MessageSquare, 
@@ -14,20 +13,81 @@ import {
   Trash2, 
   AlertCircle,
   FileCheck,
-  Filter
+  Filter,
+  Loader2,
+  RefreshCw
 } from "lucide-react";
 
 export default function InquiriesTab() {
-  const { inquiries, updateInquiryStatus, replyToInquiry, deleteInquiry } = useProjects();
+  const [inquiries, setInquiries] = useState<ClientInquiry[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
   const [filter, setFilter] = useState<"all" | "new" | "in_review" | "responded">("all");
   const [selectedInquiry, setSelectedInquiry] = useState<ClientInquiry | null>(null);
   const [replyText, setReplyText] = useState("");
   const [isReplyModalOpen, setIsReplyModalOpen] = useState(false);
+  const [isSubmittingReply, setIsSubmittingReply] = useState(false);
 
-  const filteredInquiries = inquiries.filter((inq) => {
-    if (filter === "all") return true;
-    return inq.status === filter;
-  });
+  // Fetch inquiries from Cloudflare D1
+  const fetchInquiries = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/inquiries");
+      if (!res.ok) {
+        throw new Error("Failed to load inquiries from server.");
+      }
+      const data = await res.json();
+      if (Array.isArray(data.inquiries)) {
+        setInquiries(data.inquiries);
+      }
+    } catch (err: any) {
+      console.error("Error fetching inquiries:", err);
+      setError(err?.message || "Could not load consultation requests.");
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchInquiries();
+  }, [fetchInquiries]);
+
+  const updateInquiryStatus = async (id: string, status: ClientInquiry["status"]) => {
+    try {
+      const res = await fetch(`/api/inquiries/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
+      if (res.ok) {
+        setInquiries((prev) =>
+          prev.map((inq) => (inq.id === id ? { ...inq, status } : inq))
+        );
+      } else {
+        const errData = await res.json();
+        alert(errData.error || "Failed to update inquiry status.");
+      }
+    } catch (err) {
+      console.error("Failed to update status:", err);
+    }
+  };
+
+  const deleteInquiry = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this consultation request?")) return;
+    try {
+      const res = await fetch(`/api/inquiries/${id}`, { method: "DELETE" });
+      if (res.ok) {
+        setInquiries((prev) => prev.filter((inq) => inq.id !== id));
+      } else {
+        const errData = await res.json();
+        alert(errData.error || "Failed to delete inquiry.");
+      }
+    } catch (err) {
+      console.error("Failed to delete inquiry:", err);
+    }
+  };
 
   const handleOpenReply = (inq: ClientInquiry) => {
     setSelectedInquiry(inq);
@@ -35,11 +95,49 @@ export default function InquiriesTab() {
     setIsReplyModalOpen(true);
   };
 
-  const handleSendReply = () => {
+  const handleSendReply = async () => {
     if (!selectedInquiry || !replyText.trim()) return;
-    replyToInquiry(selectedInquiry.id, replyText.trim());
-    setIsReplyModalOpen(false);
+    setIsSubmittingReply(true);
+    try {
+      const res = await fetch(`/api/inquiries/${selectedInquiry.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          replyText: replyText.trim(),
+          status: "responded",
+        }),
+      });
+
+      if (res.ok) {
+        setInquiries((prev) =>
+          prev.map((inq) =>
+            inq.id === selectedInquiry.id
+              ? {
+                  ...inq,
+                  status: "responded" as const,
+                  replyText: replyText.trim(),
+                  respondedAt: "Just now",
+                }
+              : inq
+          )
+        );
+        setIsReplyModalOpen(false);
+      } else {
+        const errData = await res.json();
+        alert(errData.error || "Failed to send response.");
+      }
+    } catch (err) {
+      console.error("Failed to submit reply:", err);
+      alert("Failed to submit response. Please try again.");
+    } finally {
+      setIsSubmittingReply(false);
+    }
   };
+
+  const filteredInquiries = inquiries.filter((inq) => {
+    if (filter === "all") return true;
+    return inq.status === filter;
+  });
 
   const getStatusBadge = (status: ClientInquiry["status"]) => {
     switch (status) {
@@ -67,6 +165,12 @@ export default function InquiriesTab() {
             Completed
           </span>
         );
+      default:
+        return (
+          <span className="px-2.5 py-0.5 rounded-full text-[11px] font-mono font-medium bg-warm-grey text-charcoal">
+            {status}
+          </span>
+        );
     }
   };
 
@@ -76,53 +180,79 @@ export default function InquiriesTab() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-warm-border">
         <div>
           <h2 className="text-2xl font-serif font-normal text-charcoal">
-            Client Inquiries & Customization Requests
+            Client Inquiries &amp; Customization Requests
           </h2>
           <p className="text-xs text-secondaryText font-sans mt-0.5">
             Discerning homeowners requesting site fitments, Vastu orientation checks, and CAD blueprint customizations.
           </p>
         </div>
 
-        {/* Status Filter */}
-        <div className="flex items-center gap-1.5 p-1 bg-warm-grey/60 border border-warm-border rounded-xl">
+        <div className="flex items-center gap-2">
           <button
-            onClick={() => setFilter("all")}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium font-sans transition-all ${
-              filter === "all" ? "bg-white text-charcoal shadow-sm" : "text-secondaryText hover:text-charcoal"
-            }`}
+            type="button"
+            onClick={fetchInquiries}
+            disabled={isLoading}
+            className="p-2 rounded-xl border border-warm-border hover:bg-warm-grey text-secondaryText hover:text-charcoal transition-colors"
+            title="Refresh inquiries"
           >
-            All ({inquiries.length})
+            <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? "animate-spin text-copper" : ""}`} />
           </button>
-          <button
-            onClick={() => setFilter("new")}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium font-sans transition-all ${
-              filter === "new" ? "bg-white text-charcoal shadow-sm" : "text-secondaryText hover:text-charcoal"
-            }`}
-          >
-            New ({inquiries.filter((i) => i.status === "new").length})
-          </button>
-          <button
-            onClick={() => setFilter("in_review")}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium font-sans transition-all ${
-              filter === "in_review" ? "bg-white text-charcoal shadow-sm" : "text-secondaryText hover:text-charcoal"
-            }`}
-          >
-            In Review ({inquiries.filter((i) => i.status === "in_review").length})
-          </button>
-          <button
-            onClick={() => setFilter("responded")}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium font-sans transition-all ${
-              filter === "responded" ? "bg-white text-charcoal shadow-sm" : "text-secondaryText hover:text-charcoal"
-            }`}
-          >
-            Responded ({inquiries.filter((i) => i.status === "responded").length})
-          </button>
+
+          {/* Status Filter */}
+          <div className="flex items-center gap-1.5 p-1 bg-warm-grey/60 border border-warm-border rounded-xl">
+            <button
+              onClick={() => setFilter("all")}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium font-sans transition-all ${
+                filter === "all" ? "bg-white text-charcoal shadow-sm" : "text-secondaryText hover:text-charcoal"
+              }`}
+            >
+              All ({inquiries.length})
+            </button>
+            <button
+              onClick={() => setFilter("new")}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium font-sans transition-all ${
+                filter === "new" ? "bg-white text-charcoal shadow-sm" : "text-secondaryText hover:text-charcoal"
+              }`}
+            >
+              New ({inquiries.filter((i) => i.status === "new").length})
+            </button>
+            <button
+              onClick={() => setFilter("in_review")}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium font-sans transition-all ${
+                filter === "in_review" ? "bg-white text-charcoal shadow-sm" : "text-secondaryText hover:text-charcoal"
+              }`}
+            >
+              In Review ({inquiries.filter((i) => i.status === "in_review").length})
+            </button>
+            <button
+              onClick={() => setFilter("responded")}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium font-sans transition-all ${
+                filter === "responded" ? "bg-white text-charcoal shadow-sm" : "text-secondaryText hover:text-charcoal"
+              }`}
+            >
+              Responded ({inquiries.filter((i) => i.status === "responded").length})
+            </button>
+          </div>
         </div>
       </div>
 
+      {error && (
+        <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-xs font-sans flex items-center justify-between">
+          <span>{error}</span>
+          <button onClick={fetchInquiries} className="underline font-semibold ml-2">
+            Retry
+          </button>
+        </div>
+      )}
+
       {/* Inquiry Cards List */}
       <div className="space-y-4">
-        {filteredInquiries.length === 0 ? (
+        {isLoading ? (
+          <div className="p-16 text-center bg-white border border-warm-border rounded-3xl flex flex-col items-center justify-center">
+            <Loader2 className="w-8 h-8 animate-spin text-copper mb-3" />
+            <p className="text-xs text-secondaryText font-sans">Connecting to Cloudflare D1 inquiries database...</p>
+          </div>
+        ) : filteredInquiries.length === 0 ? (
           <div className="p-12 text-center bg-white border border-warm-border rounded-3xl">
             <MessageSquare className="w-8 h-8 text-secondaryText/40 mx-auto mb-3" />
             <h3 className="text-base font-serif text-charcoal mb-1">No Inquiries Found</h3>
@@ -218,13 +348,15 @@ export default function InquiriesTab() {
                     <Mail className="w-3.5 h-3.5" />
                     <span>{inq.clientEmail}</span>
                   </a>
-                  <a
-                    href={`tel:${inq.clientPhone}`}
-                    className="flex items-center gap-1 hover:text-charcoal transition-colors"
-                  >
-                    <Phone className="w-3.5 h-3.5" />
-                    <span>{inq.clientPhone}</span>
-                  </a>
+                  {inq.clientPhone && (
+                    <a
+                      href={`tel:${inq.clientPhone}`}
+                      className="flex items-center gap-1 hover:text-charcoal transition-colors"
+                    >
+                      <Phone className="w-3.5 h-3.5" />
+                      <span>{inq.clientPhone}</span>
+                    </a>
+                  )}
                 </div>
 
                 <button
@@ -242,7 +374,11 @@ export default function InquiriesTab() {
 
       {/* Reply Modal */}
       {isReplyModalOpen && selectedInquiry && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-charcoal/60 backdrop-blur-sm">
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-charcoal/60 backdrop-blur-sm"
+        >
           <div className="w-full max-w-lg bg-white border border-warm-border rounded-3xl p-6 shadow-2xl animate-in zoom-in-95 duration-150">
             <h3 className="text-xl font-normal font-serif text-charcoal mb-1">
               Respond to {selectedInquiry.clientName}
@@ -256,7 +392,7 @@ export default function InquiriesTab() {
             </div>
 
             <label className="block text-xs font-medium text-charcoal mb-1.5 font-sans">
-              Your Architectural Advice & Custom Quote
+              Your Architectural Advice &amp; Custom Quote
             </label>
             <textarea
               rows={5}
@@ -276,11 +412,21 @@ export default function InquiriesTab() {
               </button>
               <button
                 type="button"
+                disabled={isSubmittingReply}
                 onClick={handleSendReply}
-                className="px-5 py-2 rounded-full bg-copper hover:bg-copper-hover text-white text-xs font-medium flex items-center gap-1.5 transition-colors shadow-sm"
+                className="px-5 py-2 rounded-full bg-copper hover:bg-copper-hover text-white text-xs font-medium flex items-center gap-1.5 transition-colors shadow-sm disabled:opacity-50"
               >
-                <Send className="w-3.5 h-3.5" />
-                <span>Send Response to Homeowner</span>
+                {isSubmittingReply ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>Submitting...</span>
+                  </>
+                ) : (
+                  <>
+                    <Send className="w-3.5 h-3.5" />
+                    <span>Send Response to Homeowner</span>
+                  </>
+                )}
               </button>
             </div>
           </div>
@@ -289,4 +435,3 @@ export default function InquiriesTab() {
     </div>
   );
 }
-

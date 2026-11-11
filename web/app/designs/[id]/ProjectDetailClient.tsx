@@ -7,6 +7,7 @@ import { notFound, useParams } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import SellerModal from "@/components/SellerModal";
+import ConsultArchitectModal from "@/components/plot-intelligence/ConsultArchitectModal";
 import { FEATURED_PROJECTS } from "@/lib/data";
 import { useSavedProjects } from "@/lib/savedProjectsContext";
 import { useProjects } from "@/lib/projectsContext";
@@ -26,7 +27,8 @@ import {
   ChevronLeft,
   Share2,
   Calendar,
-  Compass
+  Compass,
+  X
 } from "lucide-react";
 
 export default function ProjectDetailClient() {
@@ -39,7 +41,8 @@ export default function ProjectDetailClient() {
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [activeFloor, setActiveFloor] = useState<"ground" | "first" | "roof">("ground");
   const [sampleDownloaded, setSampleDownloaded] = useState(false);
-  const [inquirySent, setInquirySent] = useState(false);
+  const [isConsultModalOpen, setIsConsultModalOpen] = useState(false);
+  const [isBlueprintEnlarged, setIsBlueprintEnlarged] = useState(false);
   const [isSellerModalOpen, setIsSellerModalOpen] = useState(false);
   const [urlCopied, setUrlCopied] = useState(false);
   const [checkoutInitiated, setCheckoutInitiated] = useState(false);
@@ -351,39 +354,50 @@ export default function ProjectDetailClient() {
                   </div>
                 </div>
 
-                {/* CAD Schematic graphic */}
-                <div className="relative aspect-square w-full bg-white border border-warm-border p-4 flex items-center justify-center rounded-xl">
-                  <svg viewBox="0 0 240 240" className="w-full h-full text-charcoal/80" fill="none">
-                    <defs>
-                      <pattern id="planGrid" width="12" height="12" patternUnits="userSpaceOnUse">
-                        <path d="M 12 0 L 0 0 0 12" fill="none" stroke="#E8E6E2" strokeWidth="0.6" />
-                      </pattern>
-                    </defs>
-                    <rect width="240" height="240" fill="url(#planGrid)" />
-                    <rect x="25" y="25" width="190" height="190" stroke="#171717" strokeWidth="2.5" fill="#FAFAF9" />
-                    <line x1="25" y1="120" x2="215" y2="120" stroke="#171717" strokeWidth="1.8" />
-                    <line x1="120" y1="25" x2="120" y2="215" stroke="#171717" strokeWidth="1.8" />
-                    
-                    {/* Courtyard / Core */}
-                    <rect x="90" y="90" width="60" height="60" stroke="#AD8065" strokeWidth="1.5" strokeDasharray="3 2" fill="#F5F4F1" />
-                    <text x="96" y="125" fontSize="8" fill="#AD8065" fontWeight="bold">COURTYARD</text>
-
-                    {/* Room tags */}
-                    <text x="40" y="60" fontSize="8" fill="#171717" fontWeight="bold">LIVING ROOM</text>
-                    <text x="40" y="72" fontSize="7" fill="#777">18&apos;-0&quot; x 16&apos;-0&quot;</text>
-
-                    <text x="140" y="60" fontSize="8" fill="#171717" fontWeight="bold">DINING & PANTRY</text>
-                    <text x="140" y="72" fontSize="7" fill="#777">14&apos;-6&quot; x 12&apos;-0&quot;</text>
-
-                    <text x="40" y="160" fontSize="8" fill="#171717" fontWeight="bold">MASTER SUITE</text>
-                    <text x="40" y="172" fontSize="7" fill="#777">16&apos;-0&quot; x 15&apos;-0&quot;</text>
-
-                    <text x="140" y="160" fontSize="8" fill="#171717" fontWeight="bold">GUEST SUITE</text>
-                    <text x="140" y="172" fontSize="7" fill="#777">14&apos;-0&quot; x 13&apos;-6&quot;</text>
-                  </svg>
-                </div>
+                {/* Real Floor Plan Blueprint Viewer */}
+                {project.floorPlanImage ? (
+                  <div className="relative aspect-square w-full bg-white border border-warm-border p-4 flex flex-col items-center justify-center rounded-xl overflow-hidden group">
+                    <div className="relative w-full h-full">
+                      <Image
+                        src={project.floorPlanImage}
+                        alt={`${project.name} ${activeFloor} floor plan blueprint`}
+                        fill
+                        className="object-contain transition-transform duration-300 group-hover:scale-105"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setIsBlueprintEnlarged(true)}
+                      className="absolute bottom-3 right-3 px-3 py-1.5 bg-black/75 hover:bg-black text-white text-[11px] font-sans font-medium rounded-full flex items-center gap-1.5 transition-all shadow-md"
+                    >
+                      <Maximize className="w-3 h-3" />
+                      <span>Enlarge Blueprint</span>
+                    </button>
+                  </div>
+                ) : (
+                  <div className="aspect-square w-full bg-white border border-warm-border p-6 flex flex-col items-center justify-center text-center space-y-3 rounded-xl">
+                    <div className="w-12 h-12 rounded-full bg-warm-grey flex items-center justify-center text-charcoal/40">
+                      <FileText className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-serif text-charcoal">Floor Plan Unavailable</p>
+                      <p className="text-[11px] text-mutedText font-sans max-w-xs mt-1">
+                        Detailed layout schematics for {project.name} are provided directly by {project.architect.studio} upon client consultation.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setIsConsultModalOpen(true)}
+                      className="px-4 py-1.5 rounded-full border border-copper text-copper text-[11px] font-sans font-medium hover:bg-copper hover:text-white transition-colors"
+                    >
+                      Request Layout from Studio
+                    </button>
+                  </div>
+                )}
                 <div className="text-[11px] text-mutedText text-center font-sans">
-                  CAD Blueprint Scale 1:100 • DWG vector layers included
+                  {project.floorPlanImage
+                    ? `Level: ${activeFloor.toUpperCase()} • Architectural CAD Scale 1:100`
+                    : "Customized room schematics available on request"}
                 </div>
               </div>
 
@@ -411,20 +425,14 @@ export default function ProjectDetailClient() {
                   Available for customized plot contour adaptation, municipal clearance assistance, and on-site foundation inspection.
                 </div>
 
-                {inquirySent ? (
-                  <div className="p-3 bg-copper/10 border border-copper text-xs font-sans text-charcoal flex items-center gap-2 rounded-xl">
-                    <CheckCircle2 className="w-4 h-4 text-copper" />
-                    <span>Inquiry sent! Ar. {project.architect.name} will respond within 4 hours.</span>
-                  </div>
-                ) : (
-                  <button
-                    onClick={() => setInquirySent(true)}
-                    className="w-full py-3 border border-charcoal hover:bg-charcoal hover:text-white text-charcoal text-xs font-sans font-medium tracking-wide flex items-center justify-center gap-2 transition-colors rounded-full"
-                  >
-                    <MessageSquare className="w-3.5 h-3.5" />
-                    <span>Request Architect Consultation</span>
-                  </button>
-                )}
+                <button
+                  type="button"
+                  onClick={() => setIsConsultModalOpen(true)}
+                  className="w-full py-3 border border-charcoal hover:bg-charcoal hover:text-white text-charcoal text-xs font-sans font-medium tracking-wide flex items-center justify-center gap-2 transition-colors rounded-full"
+                >
+                  <MessageSquare className="w-3.5 h-3.5" />
+                  <span>Request Architect Consultation</span>
+                </button>
               </div>
 
             </div>
@@ -489,6 +497,60 @@ export default function ProjectDetailClient() {
         isOpen={isSellerModalOpen}
         onClose={() => setIsSellerModalOpen(false)}
       />
+
+      {/* Real Consultation Modal */}
+      {isConsultModalOpen && (
+        <ConsultArchitectModal
+          project={project}
+          locationName={project.location}
+          onClose={() => setIsConsultModalOpen(false)}
+        />
+      )}
+
+      {/* Enlarged Blueprint Lightbox Modal */}
+      {isBlueprintEnlarged && project.floorPlanImage && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="blueprint-modal-title"
+          onClick={() => setIsBlueprintEnlarged(false)}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/85 backdrop-blur-md animate-fadeIn"
+        >
+          <div
+            className="relative max-w-4xl w-full max-h-[90vh] bg-white rounded-3xl p-6 sm:p-8 overflow-hidden flex flex-col items-center shadow-2xl border border-warm-border"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="w-full flex items-center justify-between pb-4 border-b border-warm-border">
+              <div>
+                <span className="text-[10px] tracking-wider uppercase font-mono text-copper font-semibold">
+                  Architectural CAD Blueprint
+                </span>
+                <h3 id="blueprint-modal-title" className="text-lg font-serif text-charcoal">
+                  {project.name} &mdash; {activeFloor.toUpperCase()} Level Schematic
+                </h3>
+              </div>
+              <button
+                onClick={() => setIsBlueprintEnlarged(false)}
+                className="w-8 h-8 rounded-full border border-warm-border hover:bg-warm-grey flex items-center justify-center text-charcoal transition-colors"
+                aria-label="Close enlarged blueprint"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="relative w-full aspect-[4/3] sm:aspect-[16/10] mt-4 bg-warm-grey/30 rounded-2xl overflow-hidden p-2">
+              <Image
+                src={project.floorPlanImage}
+                alt={`${project.name} floor plan enlarged`}
+                fill
+                className="object-contain"
+              />
+            </div>
+            <div className="w-full text-center mt-3 text-xs text-mutedText font-sans">
+              Scale 1:100 • DWG Layered Vector Sheets included in licensed package
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

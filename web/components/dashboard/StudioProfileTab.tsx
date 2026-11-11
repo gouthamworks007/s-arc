@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import { useProjects } from "@/lib/projectsContext";
+import { useAuth } from "@/lib/authContext";
 import { 
   ShieldCheck, 
   Award, 
@@ -14,25 +15,63 @@ import {
   Sparkles,
   Plus,
   Trash2,
-  ExternalLink
+  AlertCircle,
+  Loader2
 } from "lucide-react";
 
 export default function StudioProfileTab() {
   const { profile, updateProfile } = useProjects();
+  const { currentUser } = useAuth();
 
-  const [studio, setStudio] = useState(profile.studio);
-  const [name, setName] = useState(profile.name);
-  const [coaNumber, setCoaNumber] = useState(profile.coaNumber);
-  const [location, setLocation] = useState(profile.location);
-  const [bio, setBio] = useState(profile.bio);
-  const [email, setEmail] = useState(profile.email);
-  const [phone, setPhone] = useState(profile.phone);
-  const [image, setImage] = useState(profile.image);
-  const [coverImage, setCoverImage] = useState(profile.coverImage);
-  const [specialization, setSpecialization] = useState(profile.specialization);
+  const [studio, setStudio] = useState(currentUser?.studioName || profile.studio || "");
+  const [name, setName] = useState(currentUser?.name || profile.name || "");
+  const [coaNumber, setCoaNumber] = useState(currentUser?.coaNumber || profile.coaNumber || "");
+  const [location, setLocation] = useState(currentUser?.location || profile.location || "");
+  const [bio, setBio] = useState(currentUser?.bio || profile.bio || "");
+  const [email, setEmail] = useState(currentUser?.email || profile.email || "");
+  const [phone, setPhone] = useState(currentUser?.phone || profile.phone || "");
+  const [image, setImage] = useState(currentUser?.avatar || profile.image || "");
+  const [coverImage, setCoverImage] = useState(profile.coverImage || "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1600&q=80");
+  const [specialization, setSpecialization] = useState(profile.specialization || "");
   const [awards, setAwards] = useState<string[]>(profile.awards || []);
   const [newAward, setNewAward] = useState("");
+  
+  const [isSaving, setIsSaving] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // Sync state if currentUser loads or changes, or fetch fresh profile from D1
+  useEffect(() => {
+    if (!currentUser?.id) return;
+
+    let isMounted = true;
+    async function loadFreshProfile() {
+      try {
+        const res = await fetch(`/api/users/${encodeURIComponent(currentUser!.id)}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.user && isMounted) {
+            const u = data.user;
+            if (u.studioName) setStudio(u.studioName);
+            if (u.name) setName(u.name);
+            if (u.coaNumber) setCoaNumber(u.coaNumber);
+            if (u.location) setLocation(u.location);
+            if (u.bio) setBio(u.bio);
+            if (u.email) setEmail(u.email);
+            if (u.phone) setPhone(u.phone);
+            if (u.avatar) setImage(u.avatar);
+          }
+        }
+      } catch (e) {
+        console.warn("Could not fetch fresh user profile from D1:", e);
+      }
+    }
+
+    loadFreshProfile();
+    return () => {
+      isMounted = false;
+    };
+  }, [currentUser?.id]);
 
   const handleAddAward = () => {
     if (!newAward.trim()) return;
@@ -44,23 +83,58 @@ export default function StudioProfileTab() {
     setAwards(awards.filter((_, i) => i !== idx));
   };
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    updateProfile({
-      studio,
-      name,
-      coaNumber,
-      location,
-      bio,
-      email,
-      phone,
-      image,
-      coverImage,
-      specialization,
-      awards
-    });
-    setSavedSuccess(true);
-    setTimeout(() => setSavedSuccess(false), 2500);
+    setIsSaving(true);
+    setErrorMessage(null);
+    setSavedSuccess(false);
+
+    try {
+      const targetUserId = currentUser?.id || "usr-arch-01";
+
+      const res = await fetch(`/api/users/${encodeURIComponent(targetUserId)}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: name.trim(),
+          studio_name: studio.trim(),
+          coa_number: coaNumber.trim(),
+          location: location.trim(),
+          bio: bio.trim(),
+          phone: phone.trim(),
+          avatar: image.trim(),
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to update profile in Cloudflare D1.");
+      }
+
+      // Also update local context for real-time reactivity in UI components
+      updateProfile({
+        studio,
+        name,
+        coaNumber,
+        location,
+        bio,
+        email,
+        phone,
+        image,
+        coverImage,
+        specialization,
+        awards,
+      });
+
+      setSavedSuccess(true);
+      setTimeout(() => setSavedSuccess(false), 3000);
+    } catch (err: any) {
+      console.error("Profile save error:", err);
+      setErrorMessage(err.message || "An unexpected error occurred while saving.");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -72,24 +146,42 @@ export default function StudioProfileTab() {
             Studio Profile & Verified Credentials
           </h2>
           <p className="text-xs text-secondaryText font-sans mt-0.5">
-            Manage your public architectural practice profile, Council of Architecture (COA) credentials, and studio philosophy.
+            Manage your public architectural practice profile, Council of Architecture (COA) credentials, and studio philosophy. Changes are synchronized directly to Cloudflare D1.
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           {savedSuccess && (
-            <span className="text-xs text-emerald-600 font-medium flex items-center gap-1.5 animate-in fade-in">
-              <Check className="w-4 h-4" />
-              <span>Profile updated!</span>
+            <span className="text-xs text-emerald-700 font-medium flex items-center gap-1.5 animate-in fade-in bg-emerald-50 px-3 py-1.5 rounded-full border border-emerald-200">
+              <Check className="w-3.5 h-3.5 text-emerald-600" />
+              <span>Saved to D1 Database</span>
             </span>
           )}
+
+          {errorMessage && (
+            <span className="text-xs text-red-600 font-medium flex items-center gap-1.5 bg-red-50 px-3 py-1.5 rounded-full border border-red-200">
+              <AlertCircle className="w-3.5 h-3.5" />
+              <span>{errorMessage}</span>
+            </span>
+          )}
+
           <button
             type="button"
             onClick={handleSave}
-            className="px-6 py-2 rounded-full bg-copper hover:bg-copper-hover text-white text-xs font-medium tracking-wide flex items-center gap-2 transition-all shadow-sm"
+            disabled={isSaving}
+            className="px-6 py-2 rounded-full bg-copper hover:bg-copper-hover disabled:bg-copper/60 text-white text-xs font-medium tracking-wide flex items-center gap-2 transition-all shadow-sm"
           >
-            <Check className="w-4 h-4" />
-            <span>Save Profile</span>
+            {isSaving ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>Saving to D1...</span>
+              </>
+            ) : (
+              <>
+                <Check className="w-4 h-4" />
+                <span>Save Profile</span>
+              </>
+            )}
           </button>
         </div>
       </div>
@@ -144,7 +236,7 @@ export default function StudioProfileTab() {
                     value={coaNumber}
                     onChange={(e) => setCoaNumber(e.target.value)}
                     placeholder="CA/2016/XXXXX"
-                    className="w-full px-4 py-2.5 rounded-xl border border-warm-border text-xs font-mono text-charcoal focus:outline-none focus:border-copper"
+                    className="w-full px-4 py-2.5 rounded-xl border border-warm-border text-xs font-mono text-charcoal focus:outline-none focus:border-copper uppercase"
                   />
                 </div>
 
@@ -202,8 +294,9 @@ export default function StudioProfileTab() {
                   <input
                     type="email"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-xl border border-warm-border text-xs text-charcoal focus:outline-none focus:border-copper font-mono"
+                    disabled
+                    title="Email is linked to account authentication and cannot be changed here."
+                    className="w-full px-4 py-2.5 rounded-xl border border-warm-border text-xs text-secondaryText bg-warm-grey/50 cursor-not-allowed font-mono"
                   />
                 </div>
 
@@ -313,22 +406,32 @@ export default function StudioProfileTab() {
             <div className="bg-white border border-warm-border rounded-3xl overflow-hidden shadow-subtle">
               {/* Cover Banner */}
               <div className="relative h-28 w-full bg-charcoal">
-                <Image src={coverImage} alt="Cover" fill className="object-cover opacity-80" />
+                <Image 
+                  src={coverImage || "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1600&q=80"} 
+                  alt="Cover" 
+                  fill 
+                  className="object-cover opacity-80" 
+                />
               </div>
 
               <div className="p-6 pt-0 relative">
                 {/* Avatar */}
                 <div className="relative -mt-10 mb-3 w-20 h-20 rounded-2xl overflow-hidden border-4 border-white shadow-md bg-charcoal">
-                  <Image src={image} alt={name} fill className="object-cover" />
+                  <Image 
+                    src={image || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80"} 
+                    alt={name || "Architect"} 
+                    fill 
+                    className="object-cover" 
+                  />
                 </div>
 
                 <div className="flex items-start justify-between gap-2 mb-2">
                   <div>
                     <h4 className="text-lg font-serif font-normal text-charcoal leading-snug">
-                      {name}
+                      {name || "Principal Architect"}
                     </h4>
                     <span className="text-xs font-sans text-secondaryText block">
-                      {studio}
+                      {studio || "Architectural Studio"}
                     </span>
                   </div>
 
@@ -339,17 +442,17 @@ export default function StudioProfileTab() {
                 </div>
 
                 <div className="text-[11px] font-mono text-copper font-medium mb-3">
-                  {coaNumber}
+                  {coaNumber || "CA/XXXX/XXXXX"}
                 </div>
 
                 <p className="text-xs text-secondaryText font-sans leading-relaxed mb-4 line-clamp-3">
-                  {bio}
+                  {bio || "Tropical minimalism and climate-responsive architecture."}
                 </p>
 
                 <div className="pt-3 border-t border-warm-border/60 flex items-center justify-between text-xs font-sans">
                   <span className="flex items-center gap-1 text-secondaryText">
                     <MapPin className="w-3 h-3 text-copper" />
-                    {location}
+                    {location || "South India"}
                   </span>
                   <span className="text-copper font-medium">View Practice →</span>
                 </div>
@@ -361,4 +464,3 @@ export default function StudioProfileTab() {
     </div>
   );
 }
-

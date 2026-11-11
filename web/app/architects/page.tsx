@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import SellerModal from "@/components/SellerModal";
@@ -9,11 +9,13 @@ import { FEATURED_ARCHITECTS } from "@/lib/data";
 import { ArchitectProfile } from "@/lib/types";
 import Image from "next/image";
 import Link from "next/link";
-import { BadgeCheck, MapPin, ArrowRight, ShieldCheck, Award, Search, X, CheckCircle2, Sparkles } from "lucide-react";
+import { BadgeCheck, MapPin, ArrowRight, ShieldCheck, Award, Search, X, CheckCircle2, Sparkles, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 export default function ArchitectsPage() {
   const router = useRouter();
+  const [architects, setArchitects] = useState<ArchitectProfile[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [selectedArchitect, setSelectedArchitect] = useState<ArchitectProfile | null>(null);
   const [isSellerModalOpen, setIsSellerModalOpen] = useState(false);
   const [selectedCity, setSelectedCity] = useState("All");
@@ -29,11 +31,41 @@ export default function ArchitectsPage() {
     { id: "Kannur", label: "Kannur" },
   ];
 
+  // Fetch verified architects from Cloudflare D1
+  const fetchArchitects = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const res = await fetch("/api/architects");
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data.architects) && data.architects.length > 0) {
+          // Harmonize projectsCount / projectCount
+          const formatted = data.architects.map((a: any) => ({
+            ...a,
+            projectsCount: a.projectsCount ?? a.projectCount ?? 1,
+          }));
+          setArchitects(formatted);
+          return;
+        }
+      }
+      setArchitects(FEATURED_ARCHITECTS);
+    } catch (e) {
+      console.warn("Failed to fetch architects from API, using default verified catalog:", e);
+      setArchitects(FEATURED_ARCHITECTS);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchArchitects();
+  }, [fetchArchitects]);
+
   const filteredArchitects = useMemo(() => {
-    return FEATURED_ARCHITECTS.filter((arch) => {
+    return architects.filter((arch) => {
       // City Filter
       if (selectedCity !== "All") {
-        const loc = arch.location.toLowerCase();
+        const loc = (arch.location || "").toLowerCase();
         if (selectedCity === "Kochi" && !loc.includes("kochi") && !loc.includes("ernakulam")) return false;
         else if (selectedCity === "Trivandrum" && !loc.includes("trivandrum") && !loc.includes("thiruvananthapuram")) return false;
         else if (selectedCity === "Calicut" && !loc.includes("calicut") && !loc.includes("kozhikode")) return false;
@@ -46,16 +78,16 @@ export default function ArchitectsPage() {
       if (searchQuery.trim()) {
         const query = searchQuery.toLowerCase();
         const matchesName = arch.name.toLowerCase().includes(query);
-        const matchesTitle = arch.title.toLowerCase().includes(query);
-        const matchesSpecialty = arch.specialty.toLowerCase().includes(query);
-        const matchesBio = arch.bio.toLowerCase().includes(query);
-        const matchesLoc = arch.location.toLowerCase().includes(query);
+        const matchesTitle = (arch.title || "").toLowerCase().includes(query);
+        const matchesSpecialty = (arch.specialty || "").toLowerCase().includes(query);
+        const matchesBio = (arch.bio || "").toLowerCase().includes(query);
+        const matchesLoc = (arch.location || "").toLowerCase().includes(query);
         if (!matchesName && !matchesTitle && !matchesSpecialty && !matchesBio && !matchesLoc) return false;
       }
 
       return true;
     });
-  }, [selectedCity, searchQuery]);
+  }, [architects, selectedCity, searchQuery]);
 
   return (
     <main id="main-content" className="min-h-screen bg-white">
@@ -138,98 +170,107 @@ export default function ArchitectsPage() {
             )}
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {filteredArchitects.map((architect) => (
-              <div
-                key={architect.id}
-                role="button"
-                tabIndex={0}
-                aria-label={`View profile for ${architect.name}, ${architect.title}`}
-                onClick={() => setSelectedArchitect(architect)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    setSelectedArchitect(architect);
-                  }
-                }}
-                className="group cursor-pointer bg-white border border-warm-border p-6 flex flex-col justify-between transition-all duration-300 hover:shadow-card hover:border-charcoal/40 rounded-2xl focus-visible:ring-2 focus-visible:ring-copper focus-visible:ring-offset-2"
-              >
-                <div>
-                  {/* Portrait */}
-                  <div className="relative aspect-square w-full mb-5 bg-warm-grey overflow-hidden rounded-xl">
-                    <Image
-                      src={architect.image}
-                      alt={architect.name}
-                      fill
-                      className="object-cover object-top filter grayscale group-hover:grayscale-0 transition-all duration-500 group-hover:scale-105"
-                      sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                    />
-                    {architect.verified && (
-                      <div className="absolute top-3 right-3 bg-white/95 backdrop-blur-sm px-2.5 py-1 text-[11px] font-sans font-semibold text-copper shadow-sm flex items-center gap-1 rounded-full border border-warm-border/50">
-                        <BadgeCheck className="w-3.5 h-3.5 fill-copper text-white" />
-                        <span>COA Verified</span>
-                      </div>
-                    )}
+          {isLoading ? (
+            <div className="py-24 text-center flex flex-col items-center justify-center">
+              <Loader2 className="w-8 h-8 animate-spin text-copper mb-3" />
+              <p className="text-xs text-secondaryText font-sans">
+                Loading verified Council of Architecture studios...
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {filteredArchitects.map((architect) => (
+                <div
+                  key={architect.id}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`View profile for ${architect.name}, ${architect.title}`}
+                  onClick={() => setSelectedArchitect(architect)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      setSelectedArchitect(architect);
+                    }
+                  }}
+                  className="group cursor-pointer bg-white border border-warm-border p-6 flex flex-col justify-between transition-all duration-300 hover:shadow-card hover:border-charcoal/40 rounded-2xl focus-visible:ring-2 focus-visible:ring-copper focus-visible:ring-offset-2"
+                >
+                  <div>
+                    {/* Portrait */}
+                    <div className="relative aspect-square w-full mb-5 bg-warm-grey overflow-hidden rounded-xl">
+                      <Image
+                        src={architect.image}
+                        alt={architect.name}
+                        fill
+                        className="object-cover object-top filter grayscale group-hover:grayscale-0 transition-all duration-500 group-hover:scale-105"
+                        sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                      />
+                      {architect.verified && (
+                        <div className="absolute top-3 right-3 bg-white/95 backdrop-blur-sm px-2.5 py-1 text-[11px] font-sans font-semibold text-copper shadow-sm flex items-center gap-1 rounded-full border border-warm-border/50">
+                          <BadgeCheck className="w-3.5 h-3.5 fill-copper text-white" />
+                          <span>COA Verified</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Info */}
+                    <div className="flex items-center gap-2 mb-1">
+                      <h3 className="text-xl font-normal font-serif text-charcoal group-hover:text-copper transition-colors">
+                        {architect.name}
+                      </h3>
+                    </div>
+
+                    <div className="text-xs text-mutedText font-sans mb-3 flex items-center gap-1">
+                      <MapPin className="w-3.5 h-3.5 text-copper shrink-0" />
+                      <span>{architect.title} • {architect.location}</span>
+                    </div>
+
+                    <p className="text-[13px] text-secondaryText font-light font-sans leading-relaxed line-clamp-3 mb-4">
+                      {architect.bio}
+                    </p>
                   </div>
 
-                  {/* Info */}
-                  <div className="flex items-center gap-2 mb-1">
-                    <h3 className="text-xl font-normal font-serif text-charcoal group-hover:text-copper transition-colors">
-                      {architect.name}
-                    </h3>
-                  </div>
+                  <div className="pt-4 border-t border-warm-border/80 flex items-center justify-between text-xs font-sans">
+                    <span className="bg-warm-grey px-2.5 py-1 text-charcoal font-medium rounded-full">
+                      {architect.specialty}
+                    </span>
 
-                  <div className="text-xs text-mutedText font-sans mb-3 flex items-center gap-1">
-                    <MapPin className="w-3.5 h-3.5 text-copper shrink-0" />
-                    <span>{architect.title} • {architect.location}</span>
+                    <span className="text-copper font-medium flex items-center gap-1 group-hover:translate-x-1 transition-transform">
+                      {architect.projectsCount} {architect.projectsCount === 1 ? "Plan" : "Plans"}
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </span>
                   </div>
+                </div>
+              ))}
 
-                  <p className="text-[13px] text-secondaryText font-light font-sans leading-relaxed line-clamp-3 mb-4">
-                    {architect.bio}
+              {/* Join Network Card */}
+              <div className="bg-[#201c1a] text-white p-8 flex flex-col justify-between relative overflow-hidden group rounded-2xl">
+                <div className="space-y-4 relative z-10">
+                  <span className="text-[10px] tracking-widestExtra text-copper-light uppercase font-sans font-semibold">
+                    For Architects &amp; Studios
+                  </span>
+                  <h3 className="text-2xl sm:text-3xl font-normal font-serif leading-snug">
+                    Publish Your Architectural Work to Thousands of Landowners
+                  </h3>
+                  <p className="text-xs text-white/70 font-light font-sans leading-relaxed">
+                    Join our curated network. Monetize your verified CAD drawings, retain copyright, and connect with clients looking for custom architecture.
                   </p>
                 </div>
 
-                <div className="pt-4 border-t border-warm-border/80 flex items-center justify-between text-xs font-sans">
-                  <span className="bg-warm-grey px-2.5 py-1 text-charcoal font-medium rounded-full">
-                    {architect.specialty}
-                  </span>
-
-                  <span className="text-copper font-medium flex items-center gap-1 group-hover:translate-x-1 transition-transform">
-                    {architect.projectsCount} Plans
+                <div className="pt-8 relative z-10">
+                  <button
+                    onClick={() => setIsSellerModalOpen(true)}
+                    className="w-full py-3.5 px-4 bg-copper hover:bg-copper-hover text-white text-xs font-medium font-sans tracking-wide flex items-center justify-center gap-2 transition-colors shadow-sm rounded-full"
+                  >
+                    <span>Apply to Become a Seller</span>
                     <ArrowRight className="w-3.5 h-3.5" />
-                  </span>
+                  </button>
                 </div>
               </div>
-            ))}
-
-            {/* Join Network Card */}
-            <div className="bg-[#201c1a] text-white p-8 flex flex-col justify-between relative overflow-hidden group rounded-2xl">
-              <div className="space-y-4 relative z-10">
-                <span className="text-[10px] tracking-widestExtra text-copper-light uppercase font-sans font-semibold">
-                  For Architects &amp; Studios
-                </span>
-                <h3 className="text-2xl sm:text-3xl font-normal font-serif leading-snug">
-                  Publish Your Architectural Work to Thousands of Landowners
-                </h3>
-                <p className="text-xs text-white/70 font-light font-sans leading-relaxed">
-                  Join our curated network. Monetize your verified CAD drawings, retain copyright, and connect with clients looking for custom architecture.
-                </p>
-              </div>
-
-              <div className="pt-8 relative z-10">
-                <button
-                  onClick={() => setIsSellerModalOpen(true)}
-                  className="w-full py-3.5 px-4 bg-copper hover:bg-copper-hover text-white text-xs font-medium font-sans tracking-wide flex items-center justify-center gap-2 transition-colors shadow-sm rounded-full"
-                >
-                  <span>Apply to Become a Seller</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </button>
-              </div>
             </div>
-          </div>
+          )}
 
           {/* Empty State */}
-          {filteredArchitects.length === 0 && (
+          {!isLoading && filteredArchitects.length === 0 && (
             <div className="text-center py-20 bg-warm-grey border border-warm-border p-8 rounded-2xl">
               <h3 className="text-2xl font-serif text-charcoal mb-2">No Architects Found</h3>
               <p className="text-sm text-mutedText font-sans max-w-md mx-auto mb-6">
@@ -272,4 +313,3 @@ export default function ArchitectsPage() {
     </main>
   );
 }
-

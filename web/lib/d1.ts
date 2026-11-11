@@ -380,6 +380,12 @@ function queryFallbackStore<T>(sql: string, params: any[]): T[] {
 
   if (normalized.includes("from users")) {
     let rows = [...FALLBACK_USERS];
+    if (normalized.includes("sub_role = 'architect'") || normalized.includes("sub_role = \"architect\"")) {
+      rows = rows.filter((u) => u.sub_role === "architect");
+    }
+    if (normalized.includes("status = 'active'") || normalized.includes("status = \"active\"")) {
+      rows = rows.filter((u) => u.status === "active");
+    }
     if (params && params.length > 0) {
       if (
         normalized.includes("email") &&
@@ -423,7 +429,36 @@ function queryFallbackStore<T>(sql: string, params: any[]): T[] {
   }
 
   if (normalized.includes("from inquiries")) {
-    return [...FALLBACK_INQUIRIES] as unknown as T[];
+    let rows = [...FALLBACK_INQUIRIES];
+    if (params && params.length > 0) {
+      if (normalized.includes("architect_id")) {
+        const archId = String(params[0]);
+        const archProjects = FALLBACK_PROJECTS.filter((p) => p.architect_id === archId);
+        const archProjectIds = new Set(
+          archProjects.flatMap((p) => [
+            p.id,
+            p.slug,
+            p.slug?.replace(/^the-/, ""),
+            `the-${p.slug}`,
+          ]).filter(Boolean)
+        );
+        const secondParam = params[1] ? String(params[1]).toLowerCase() : null;
+        rows = rows.filter((i) => {
+          const pId = i.project_id || i.projectId;
+          const cleanPId = pId ? String(pId).replace(/^the-/, "") : "";
+          const matchesProject = pId && (archProjectIds.has(pId) || archProjectIds.has(cleanPId));
+          const matchesEmail = secondParam && (i.client_email || i.clientEmail || "").toLowerCase() === secondParam;
+          return matchesProject || matchesEmail;
+        });
+      } else if (normalized.includes("where i.id = ?") || normalized.includes("where id = ?") || (normalized.includes("id = ?") && !normalized.includes("project_id"))) {
+        const targetId = String(params[0]);
+        rows = rows.filter((i) => i.id === targetId);
+      } else if (normalized.includes("client_email")) {
+        const email = String(params[0]).toLowerCase();
+        rows = rows.filter((i) => (i.client_email || i.clientEmail || "").toLowerCase() === email);
+      }
+    }
+    return rows as unknown as T[];
   }
 
   if (normalized.includes("from audit_logs")) {
@@ -492,13 +527,30 @@ function mutateFallbackStore(
     const id = params[params.length - 1];
     const user = FALLBACK_USERS.find((u) => u.id === id);
     if (user) {
-      if (normalized.includes("status = ?")) {
-        user.status = params[0];
+      // Parse assignments from the SQL statement
+      const setMatch = sql.match(/SET\s+(.*?)\s+WHERE/i);
+      if (setMatch) {
+        const clauses = setMatch[1].split(",").map((c) => c.trim());
+        let pIdx = 0;
+        for (const clause of clauses) {
+          const col = clause.split("=")[0].trim().toLowerCase();
+          if (clause.includes("?")) {
+            const val = params[pIdx++];
+            if (col === "name") user.name = val;
+            else if (col === "studio_name") user.studio_name = val;
+            else if (col === "phone") user.phone = val;
+            else if (col === "location") user.location = val;
+            else if (col === "avatar") user.avatar = val;
+            else if (col === "bio") user.bio = val;
+            else if (col === "coa_number") user.coa_number = val;
+            else if (col === "status") user.status = val;
+            else if (col === "role") user.role = val;
+            else if (col === "sub_role") user.sub_role = val;
+            else if (col === "review_notes") user.review_notes = val;
+          }
+        }
       }
-      if (normalized.includes("role = ?")) {
-        const roleIdx = normalized.indexOf("role = ?") > normalized.indexOf("status = ?") ? 1 : 0;
-        user.role = params[roleIdx];
-      }
+      user.updated_at = new Date().toISOString();
       return { success: true, changes: 1 };
     }
   }
@@ -593,6 +645,34 @@ function mutateFallbackStore(
       created_at: "Just now",
     });
     return { success: true, changes: 1 };
+  }
+
+  // 6b. Inquiries UPDATE
+  if (normalized.startsWith("update inquiries")) {
+    const id = params[params.length - 1];
+    const inq = FALLBACK_INQUIRIES.find((i) => i.id === id);
+    if (inq) {
+      if (normalized.includes("status = ?")) {
+        inq.status = params[0];
+      }
+      if (normalized.includes("reply_text = ?")) {
+        const replyIdx = normalized.indexOf("reply_text = ?") < normalized.indexOf("status = ?") ? 0 : 1;
+        inq.reply_text = params[replyIdx];
+        inq.replyText = params[replyIdx];
+      }
+      inq.updated_at = new Date().toISOString();
+      return { success: true, changes: 1 };
+    }
+  }
+
+  // 6c. Inquiries DELETE
+  if (normalized.startsWith("delete from inquiries")) {
+    const id = params[0];
+    const idx = FALLBACK_INQUIRIES.findIndex((i) => i.id === id);
+    if (idx >= 0) {
+      FALLBACK_INQUIRIES.splice(idx, 1);
+      return { success: true, changes: 1 };
+    }
   }
 
   // 7. Audit Logs INSERT
