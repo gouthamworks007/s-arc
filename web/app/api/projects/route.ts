@@ -39,6 +39,9 @@ function formatProjectRow(p: any) {
     bimAvailable: Boolean(p.bim_available ?? 1),
     boqAvailable: Boolean(p.boq_available ?? 1),
     mepAvailable: Boolean(p.mep_available ?? 1),
+    cadFileUrl: p.cad_file_url || null,
+    cadFileName: p.cad_file_name || null,
+    cadFileSize: p.cad_file_size || null,
     views: Number(p.views) || 0,
     inquiries: Number(p.inquiries_count) || 0,
     architect: {
@@ -204,10 +207,11 @@ export async function POST(req: NextRequest) {
         id, slug, name, style, location, plot_size, cents, built_up_area,
         bedrooms, floors, facing, vastu_score, price, price_numeric,
         sheet_count, status, featured, image, gallery, floor_plan_image,
+        cad_file_url, cad_file_name, cad_file_size,
         description, highlights, plot_width, plot_length, setbacks,
         dwg_available, bim_available, boq_available, mep_available,
         architect_name, architect_studio, architect_location, architect_avatar, architect_id
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         newId,
         slug,
@@ -229,6 +233,9 @@ export async function POST(req: NextRequest) {
         image || defaultImage,
         JSON.stringify(Array.isArray(gallery) ? gallery : []),
         floorPlanImage || null,
+        body.cadFileUrl || null,
+        body.cadFileName || null,
+        body.cadFileSize || null,
         description || "Curated climate-responsive residential blueprint.",
         JSON.stringify(Array.isArray(body.highlights) ? body.highlights : []),
         dimensions?.plotWidth || "40 ft",

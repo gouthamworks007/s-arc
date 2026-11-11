@@ -279,7 +279,7 @@ export default function ProjectDetailClient() {
                     <h3 className="text-2xl font-serif text-charcoal">42 Construction-Ready Sheets Included</h3>
                   </div>
                   <span className="text-xs bg-warm-grey border border-warm-border px-3 py-1 font-sans text-charcoal rounded-full">
-                    DWG + BIM + PDF
+                    {project.cadFileName ? `${project.cadFileName} (${project.cadFileSize || "CAD"})` : "DWG + BIM + PDF"}
                   </span>
                 </div>
 
@@ -299,7 +299,11 @@ export default function ProjectDetailClient() {
                 <div className="mt-6 p-6 bg-charcoal text-white flex flex-col sm:flex-row items-center justify-between gap-6 rounded-2xl">
                   <div>
                     <div className="text-xl sm:text-2xl font-serif text-white">{project.price}</div>
-                    <div className="text-xs text-white/60 font-sans mt-0.5">Includes lifetime building license for one site</div>
+                    <div className="text-xs text-white/60 font-sans mt-0.5">
+                      {project.cadFileName
+                        ? `Includes verified package: ${project.cadFileName} (${project.cadFileSize || "CAD Archive"})`
+                        : "Includes lifetime building license for one site"}
+                    </div>
                   </div>
 
                   <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">

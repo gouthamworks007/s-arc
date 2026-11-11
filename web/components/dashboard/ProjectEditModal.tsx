@@ -19,7 +19,11 @@ import {
   AlertCircle,
   HelpCircle,
   ShieldCheck,
-  CheckCircle2
+  CheckCircle2,
+  Upload,
+  FileArchive,
+  Loader2,
+  Paperclip
 } from "lucide-react";
 
 interface ProjectEditModalProps {
@@ -88,6 +92,18 @@ export default function ProjectEditModal({
   const [boqAvailable, setBoqAvailable] = useState(true);
   const [mepAvailable, setMepAvailable] = useState(true);
 
+  // Technical Deliverables & File Uploads
+  const [cadFileUrl, setCadFileUrl] = useState<string>("");
+  const [cadFileName, setCadFileName] = useState<string>("");
+  const [cadFileSize, setCadFileSize] = useState<string>("");
+
+  // Upload progress & feedback
+  const [isUploadingFloorPlan, setIsUploadingFloorPlan] = useState(false);
+  const [isUploadingHero, setIsUploadingHero] = useState(false);
+  const [isUploadingGallery, setIsUploadingGallery] = useState(false);
+  const [isUploadingCad, setIsUploadingCad] = useState(false);
+  const [uploadError, setUploadError] = useState("");
+
   // Imagery
   const [image, setImage] = useState("");
   const [gallery, setGallery] = useState<string[]>([]);
@@ -126,6 +142,10 @@ export default function ProjectEditModal({
       setBoqAvailable(project.boqAvailable ?? true);
       setMepAvailable(project.mepAvailable ?? true);
 
+      setCadFileUrl(project.cadFileUrl || "");
+      setCadFileName(project.cadFileName || "");
+      setCadFileSize(project.cadFileSize || "");
+
       setImage(project.image || PRESET_GALLERY_IMAGES[0]);
       setGallery(project.gallery && project.gallery.length > 0 ? project.gallery : PRESET_GALLERY_IMAGES.slice(0, 3));
       setFloorPlanImage(project.floorPlanImage || "https://images.unsplash.com/photo-1600585154526-990dced4db0d?auto=format&fit=crop&w=1200&q=80");
@@ -161,11 +181,16 @@ export default function ProjectEditModal({
       setBoqAvailable(true);
       setMepAvailable(true);
 
+      setCadFileUrl("");
+      setCadFileName("");
+      setCadFileSize("");
+
       setImage(PRESET_GALLERY_IMAGES[0]);
       setGallery(PRESET_GALLERY_IMAGES.slice(0, 3));
       setFloorPlanImage("https://images.unsplash.com/photo-1600585154526-990dced4db0d?auto=format&fit=crop&w=1200&q=80");
     }
     setErrorMsg("");
+    setUploadError("");
     setActiveTab("overview");
   }, [project, mode, isOpen]);
 
@@ -206,6 +231,43 @@ export default function ProjectEditModal({
     setGallery(gallery.filter((_, i) => i !== idx));
   };
 
+  const handleFileUpload = async (
+    file: File,
+    category: "plans" | "imagery" | "cad",
+    onSuccess: (result: { url: string; originalName: string; formattedSize: string }) => void,
+    setLoading: (loading: boolean) => void
+  ) => {
+    setLoading(true);
+    setUploadError("");
+    setErrorMsg("");
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("category", category);
+
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "File upload failed.");
+      }
+
+      onSuccess({
+        url: data.url,
+        originalName: data.originalName,
+        formattedSize: data.formattedSize,
+      });
+    } catch (err: any) {
+      console.error("Upload error:", err);
+      setUploadError(err.message || "Failed to upload file.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSave = () => {
     if (!name.trim()) {
       setErrorMsg("Please provide a design title.");
@@ -244,6 +306,9 @@ export default function ProjectEditModal({
       bimAvailable,
       boqAvailable,
       mepAvailable,
+      cadFileUrl: cadFileUrl || undefined,
+      cadFileName: cadFileName || undefined,
+      cadFileSize: cadFileSize || undefined,
       image: image || PRESET_GALLERY_IMAGES[0],
       gallery: gallery.length > 0 ? gallery : [image],
       floorPlanImage
@@ -761,61 +826,419 @@ export default function ProjectEditModal({
                   </label>
                 </div>
               </div>
+
+              {/* CAD Package Deliverable Upload Section */}
+              <div className="p-5 bg-white border border-warm-border rounded-2xl space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="text-sm font-normal font-serif text-charcoal">
+                      Full Technical CAD Package Deliverable
+                    </h4>
+                    <p className="text-[11px] text-secondaryText font-sans">
+                      Attach the verified master file archive (.dwg, .dxf, .pdf, or .zip, up to 100MB) delivered to buyers upon completed escrow.
+                    </p>
+                  </div>
+                  {cadFileUrl && (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[11px] font-sans">
+                      <ShieldCheck className="w-3.5 h-3.5" />
+                      <span>Ready for Escrow</span>
+                    </span>
+                  )}
+                </div>
+
+                {cadFileUrl ? (
+                  <div className="p-4 bg-warm-grey/60 border border-warm-border rounded-xl flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-10 h-10 rounded-lg bg-white border border-warm-border flex items-center justify-center text-copper shrink-0 shadow-sm">
+                        <FileArchive className="w-5 h-5" />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-xs font-semibold text-charcoal truncate font-sans">
+                          {cadFileName || "Architectural-Package.zip"}
+                        </div>
+                        <div className="text-[11px] text-secondaryText flex items-center gap-2 mt-0.5">
+                          <span className="font-mono">{cadFileSize || "CAD Archive"}</span>
+                          <span>•</span>
+                          <span className="text-emerald-700">Encrypted Deliverable Ready</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 shrink-0">
+                      <label className="cursor-pointer px-3 py-1.5 bg-white border border-warm-border hover:border-charcoal/40 text-charcoal text-xs font-medium rounded-lg transition-colors flex items-center gap-1.5">
+                        <Upload className="w-3 h-3" />
+                        <span>Replace</span>
+                        <input
+                          type="file"
+                          accept=".dwg,.dxf,.pdf,.zip,.rar,.7z,.skp,.rvt,.ifc,.xlsx"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              handleFileUpload(
+                                file,
+                                "cad",
+                                ({ url, originalName, formattedSize }) => {
+                                  setCadFileUrl(url);
+                                  setCadFileName(originalName);
+                                  setCadFileSize(formattedSize);
+                                },
+                                setIsUploadingCad
+                              );
+                            }
+                          }}
+                        />
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCadFileUrl("");
+                          setCadFileName("");
+                          setCadFileSize("");
+                        }}
+                        className="p-1.5 text-secondaryText hover:text-red-600 transition-colors"
+                        title="Remove deliverable"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="relative border-2 border-dashed border-warm-border rounded-xl p-6 text-center hover:border-copper/50 transition-colors bg-warm-card">
+                    {isUploadingCad ? (
+                      <div className="flex flex-col items-center justify-center py-4 space-y-2">
+                        <Loader2 className="w-6 h-6 animate-spin text-copper" />
+                        <span className="text-xs font-sans text-charcoal">
+                          Uploading and verifying architectural drawing package...
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center space-y-2">
+                        <div className="w-10 h-10 rounded-full bg-warm-grey flex items-center justify-center text-charcoal/60">
+                          <FileArchive className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <label className="cursor-pointer text-xs font-medium text-copper hover:underline font-sans">
+                            <span>Click to upload master CAD/BIM archive</span>
+                            <input
+                              type="file"
+                              accept=".dwg,.dxf,.pdf,.zip,.rar,.7z,.skp,.rvt,.ifc,.xlsx"
+                              className="hidden"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) {
+                                  handleFileUpload(
+                                    file,
+                                    "cad",
+                                    ({ url, originalName, formattedSize }) => {
+                                      setCadFileUrl(url);
+                                      setCadFileName(originalName);
+                                      setCadFileSize(formattedSize);
+                                    },
+                                    setIsUploadingCad
+                                  );
+                                }
+                              }}
+                            />
+                          </label>
+                          <p className="text-[11px] text-mutedText mt-1">
+                            Accepted: .dwg, .dxf, .pdf, .zip, .rar, .bim, .rvt (Up to 100MB)
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
           {/* TAB 4: GALLERY & BLUEPRINTS */}
           {activeTab === "imagery" && (
-            <div className="space-y-5 animate-in fade-in-50 duration-150">
-              <div>
-                <label className="block text-xs font-medium text-charcoal mb-1.5 font-sans">
-                  Primary Elevation Hero Image (URL)
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={image}
-                    onChange={(e) => setImage(e.target.value)}
-                    placeholder="https://images.unsplash.com/..."
-                    className="flex-1 px-4 py-2.5 rounded-xl bg-white border border-warm-border text-xs text-charcoal focus:outline-none focus:border-copper font-mono"
-                  />
+            <div className="space-y-6 animate-in fade-in-50 duration-150">
+              {uploadError && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700 flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
+                  <span>{uploadError}</span>
                 </div>
-                
-                {/* Hero Thumbnail Preview */}
-                {image && (
-                  <div className="mt-3 relative aspect-[16/9] w-full max-w-sm rounded-xl overflow-hidden border border-warm-border bg-charcoal">
-                    <Image src={image} alt="Hero preview" fill className="object-cover" />
-                    <span className="absolute bottom-2 left-2 px-2 py-0.5 rounded-full bg-black/60 text-white text-[10px] font-mono">
-                      Hero Banner
+              )}
+
+              {/* Floor Plan Blueprint Layout (Primary Focus for Architects) */}
+              <div className="p-5 bg-white border border-warm-border rounded-2xl space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <label className="text-xs font-semibold text-charcoal font-sans block">
+                      Architectural Floor Plan & Blueprint Layout
+                    </label>
+                    <p className="text-[11px] text-secondaryText font-sans">
+                      Upload the 2D architectural blueprint layout (PNG, JPG, WEBP, SVG, or PDF). Renders directly in the interactive blueprint zoom viewer on the design details page.
+                    </p>
+                  </div>
+                  {floorPlanImage && (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[11px] font-sans">
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      <span>Blueprint Active</span>
                     </span>
+                  )}
+                </div>
+
+                {floorPlanImage ? (
+                  <div className="flex flex-col sm:flex-row items-center gap-4 p-3 bg-warm-grey/60 border border-warm-border rounded-xl">
+                    <div className="relative w-32 h-32 bg-white rounded-lg border border-warm-border overflow-hidden shrink-0">
+                      <Image
+                        src={floorPlanImage}
+                        alt="Floor plan blueprint preview"
+                        fill
+                        className="object-contain p-2"
+                      />
+                    </div>
+                    <div className="flex-1 min-w-0 space-y-2">
+                      <div className="text-xs text-charcoal font-medium truncate font-sans">
+                        {floorPlanImage.split("/").pop() || "Floor plan blueprint"}
+                      </div>
+                      <div className="text-[11px] text-secondaryText">
+                        Active in marketplace blueprint viewer with full pan and zoom controls.
+                      </div>
+                      <div className="flex items-center gap-2 pt-1">
+                        <label className="cursor-pointer px-3 py-1.5 bg-white border border-warm-border hover:border-charcoal/40 text-charcoal text-xs font-medium rounded-lg transition-colors flex items-center gap-1.5">
+                          {isUploadingFloorPlan ? (
+                            <>
+                              <Loader2 className="w-3.5 h-3.5 animate-spin text-copper" />
+                              <span>Uploading...</span>
+                            </>
+                          ) : (
+                            <>
+                              <Upload className="w-3 h-3" />
+                              <span>Replace Blueprint</span>
+                            </>
+                          )}
+                          <input
+                            type="file"
+                            accept="image/*,.pdf"
+                            className="hidden"
+                            disabled={isUploadingFloorPlan}
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                handleFileUpload(
+                                  file,
+                                  "plans",
+                                  ({ url }) => setFloorPlanImage(url),
+                                  setIsUploadingFloorPlan
+                                );
+                              }
+                            }}
+                          />
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => setFloorPlanImage("")}
+                          className="px-3 py-1.5 border border-red-200 text-red-600 hover:bg-red-50 text-xs rounded-lg transition-colors"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="relative border-2 border-dashed border-warm-border rounded-xl p-6 text-center hover:border-copper/50 transition-colors bg-warm-card">
+                    {isUploadingFloorPlan ? (
+                      <div className="flex flex-col items-center justify-center py-4 space-y-2">
+                        <Loader2 className="w-6 h-6 animate-spin text-copper" />
+                        <span className="text-xs font-sans text-charcoal">
+                          Uploading and processing floor plan blueprint...
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center space-y-2">
+                        <div className="w-10 h-10 rounded-full bg-warm-grey flex items-center justify-center text-charcoal/60">
+                          <ImageIcon className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <label className="cursor-pointer text-xs font-medium text-copper hover:underline font-sans">
+                            <span>Click to upload 2D Floor Plan layout</span>
+                            <input
+                              type="file"
+                              accept="image/*,.pdf"
+                              className="hidden"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) {
+                                  handleFileUpload(
+                                    file,
+                                    "plans",
+                                    ({ url }) => setFloorPlanImage(url),
+                                    setIsUploadingFloorPlan
+                                  );
+                                }
+                              }}
+                            />
+                          </label>
+                          <p className="text-[11px] text-mutedText mt-1">
+                            PNG, JPG, WEBP, SVG, or PDF (Up to 20MB)
+                          </p>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
+
+                <div className="pt-1">
+                  <span className="text-[11px] text-secondaryText block mb-1 font-sans">Or enter external blueprint image URL:</span>
+                  <input
+                    type="text"
+                    value={floorPlanImage}
+                    onChange={(e) => setFloorPlanImage(e.target.value)}
+                    placeholder="https://..."
+                    className="w-full px-3.5 py-2 rounded-xl border border-warm-border text-xs text-charcoal font-mono"
+                  />
+                </div>
+              </div>
+
+              {/* Primary Elevation Hero Image */}
+              <div className="p-5 bg-white border border-warm-border rounded-2xl space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <label className="text-xs font-semibold text-charcoal font-sans block">
+                      Primary Elevation Hero Image
+                    </label>
+                    <p className="text-[11px] text-secondaryText font-sans">
+                      Main high-resolution exterior perspective rendered in marketplace catalog cards and hero banner.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                  {image && (
+                    <div className="relative aspect-[16/9] w-48 rounded-xl overflow-hidden border border-warm-border bg-charcoal shrink-0">
+                      <Image src={image} alt="Hero preview" fill className="object-cover" />
+                      <span className="absolute bottom-2 left-2 px-2 py-0.5 rounded-full bg-black/60 text-white text-[10px] font-mono">
+                        Hero Banner
+                      </span>
+                    </div>
+                  )}
+
+                  <div className="flex-1 space-y-2 w-full">
+                    <div className="flex items-center gap-2">
+                      <label className="cursor-pointer px-4 py-2 bg-charcoal hover:bg-charcoal/90 text-white text-xs font-medium rounded-xl transition-colors flex items-center gap-1.5">
+                        {isUploadingHero ? (
+                          <>
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            <span>Uploading...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Upload className="w-3.5 h-3.5" />
+                            <span>Upload Hero Photo</span>
+                          </>
+                        )}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          disabled={isUploadingHero}
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              handleFileUpload(
+                                file,
+                                "imagery",
+                                ({ url }) => setImage(url),
+                                setIsUploadingHero
+                              );
+                            }
+                          }}
+                        />
+                      </label>
+                    </div>
+
+                    <div className="pt-1">
+                      <span className="text-[11px] text-secondaryText block mb-1">Or direct image URL:</span>
+                      <input
+                        type="text"
+                        value={image}
+                        onChange={(e) => setImage(e.target.value)}
+                        placeholder="https://images.unsplash.com/..."
+                        className="w-full px-3.5 py-2 rounded-xl border border-warm-border text-xs text-charcoal font-mono"
+                      />
+                    </div>
+                  </div>
+                </div>
               </div>
 
               {/* Gallery Images List */}
-              <div className="p-4 bg-white border border-warm-border rounded-2xl space-y-3">
+              <div className="p-5 bg-white border border-warm-border rounded-2xl space-y-4">
                 <div className="flex items-center justify-between">
-                  <label className="text-xs font-medium text-charcoal font-sans">
-                    Additional Architectural Gallery Shots
-                  </label>
+                  <div>
+                    <label className="text-xs font-semibold text-charcoal font-sans block">
+                      Additional Architectural Gallery Shots
+                    </label>
+                    <p className="text-[11px] text-secondaryText font-sans">
+                      Interior renderings, courtyard views, and construction detail photos.
+                    </p>
+                  </div>
                   <span className="text-[11px] text-secondaryText">{gallery.length} Images</span>
                 </div>
 
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={newImageUrl}
-                    onChange={(e) => setNewImageUrl(e.target.value)}
-                    placeholder="Paste image URL..."
-                    className="flex-1 px-4 py-2 rounded-xl border border-warm-border text-xs text-charcoal focus:outline-none focus:border-copper font-mono"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => handleAddGalleryImage(newImageUrl)}
-                    className="px-4 py-2 bg-charcoal text-white text-xs font-medium rounded-xl hover:bg-charcoal/90 transition-colors"
-                  >
-                    Add to Gallery
-                  </button>
+                <div className="flex flex-wrap items-center gap-2">
+                  <label className="cursor-pointer px-4 py-2 bg-charcoal hover:bg-charcoal/90 text-white text-xs font-medium rounded-xl transition-colors flex items-center gap-1.5">
+                    {isUploadingGallery ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        <span>Uploading...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-3.5 h-3.5" />
+                        <span>Upload Photos</span>
+                      </>
+                    )}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      className="hidden"
+                      disabled={isUploadingGallery}
+                      onChange={async (e) => {
+                        const files = Array.from(e.target.files || []);
+                        if (files.length === 0) return;
+                        setIsUploadingGallery(true);
+                        setUploadError("");
+                        try {
+                          for (const f of files) {
+                            const formData = new FormData();
+                            formData.append("file", f);
+                            formData.append("category", "imagery");
+                            const res = await fetch("/api/upload", { method: "POST", body: formData });
+                            const data = await res.json();
+                            if (res.ok && data.url) {
+                              setGallery((prev) => [...prev, data.url]);
+                            }
+                          }
+                        } catch (err: any) {
+                          setUploadError(err.message || "Failed to upload gallery photos.");
+                        } finally {
+                          setIsUploadingGallery(false);
+                        }
+                      }}
+                    />
+                  </label>
+                  <div className="flex-1 min-w-[200px] flex gap-2">
+                    <input
+                      type="text"
+                      value={newImageUrl}
+                      onChange={(e) => setNewImageUrl(e.target.value)}
+                      placeholder="Or paste image URL..."
+                      className="flex-1 px-4 py-2 rounded-xl border border-warm-border text-xs text-charcoal focus:outline-none focus:border-copper font-mono"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleAddGalleryImage(newImageUrl)}
+                      className="px-4 py-2 border border-warm-border hover:border-charcoal/40 text-charcoal text-xs font-medium rounded-xl transition-colors"
+                    >
+                      Add URL
+                    </button>
+                  </div>
                 </div>
 
                 {/* Preset Suggestions */}
@@ -857,20 +1280,6 @@ export default function ProjectEditModal({
                     </div>
                   ))}
                 </div>
-              </div>
-
-              {/* Floor Plan Image */}
-              <div>
-                <label className="block text-xs font-medium text-charcoal mb-1.5 font-sans">
-                  Floor Plan / Technical Drawing Preview Image (URL)
-                </label>
-                <input
-                  type="text"
-                  value={floorPlanImage}
-                  onChange={(e) => setFloorPlanImage(e.target.value)}
-                  placeholder="https://images.unsplash.com/..."
-                  className="w-full px-4 py-2.5 rounded-xl bg-white border border-warm-border text-xs text-charcoal focus:outline-none focus:border-copper font-mono"
-                />
               </div>
             </div>
           )}

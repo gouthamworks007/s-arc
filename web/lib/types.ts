@@ -47,6 +47,9 @@ export interface ArchitecturalProject {
   bimAvailable?: boolean;
   boqAvailable?: boolean;
   mepAvailable?: boolean;
+  cadFileUrl?: string;
+  cadFileName?: string;
+  cadFileSize?: string;
   updatedAt?: string;
 }
 

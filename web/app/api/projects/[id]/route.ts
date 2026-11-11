@@ -28,6 +28,9 @@ function formatProjectRow(p: any) {
     image: p.image || "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1600&q=85",
     gallery: typeof p.gallery === "string" ? JSON.parse(p.gallery || "[]") : (p.gallery || []),
     floorPlanImage: p.floor_plan_image || null,
+    cadFileUrl: p.cad_file_url || null,
+    cadFileName: p.cad_file_name || null,
+    cadFileSize: p.cad_file_size || null,
     description: p.description || "",
     highlights: typeof p.highlights === "string" ? JSON.parse(p.highlights || "[]") : (p.highlights || []),
     dimensions: {
@@ -158,6 +161,9 @@ export async function PUT(
       description: "description",
       image: "image",
       floorPlanImage: "floor_plan_image",
+      cadFileUrl: "cad_file_url",
+      cadFileName: "cad_file_name",
+      cadFileSize: "cad_file_size",
       status: "status",
       featured: "featured",
     };

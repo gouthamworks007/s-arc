@@ -27,10 +27,10 @@ body {
   color: var(--charcoal);
 }
 
-h1, h2, h3, .font-serif, .font-heading {
+h1, h2, h3, h4, h5, h6, .font-serif, .font-heading, [class*="font-serif"] {
   font-family: var(--font-serif), "Cormorant Garamond", Georgia, serif;
-  font-feature-settings: "liga" 1, "dlig" 0;
-  font-variant-ligatures: common-ligatures;
+  font-feature-settings: "liga" 1, "dlig" 0, "hlig" 0 !important;
+  font-variant-ligatures: common-ligatures no-discretionary-ligatures no-historical-ligatures !important;
 }
 
 ::selection {

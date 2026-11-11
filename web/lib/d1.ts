@@ -558,6 +558,19 @@ function mutateFallbackStore(
   // 3. Projects INSERT
   if (normalized.startsWith("insert into projects")) {
     if (params && params.length >= 10) {
+      const hasCadParams = normalized.includes("cad_file_url");
+      let offset = 0;
+      let cad_file_url = null;
+      let cad_file_name = null;
+      let cad_file_size = null;
+
+      if (hasCadParams) {
+        cad_file_url = params[20] || null;
+        cad_file_name = params[21] || null;
+        cad_file_size = params[22] || null;
+        offset = 3;
+      }
+
       const projObj = {
         id: params[0],
         slug: params[1],
@@ -579,20 +592,23 @@ function mutateFallbackStore(
         image: params[17],
         gallery: params[18] || "[]",
         floor_plan_image: params[19] || null,
-        description: params[20],
-        highlights: params[21] || "[]",
-        plot_width: params[22] || null,
-        plot_length: params[23] || null,
-        setbacks: params[24] || null,
-        dwg_available: params[25] ?? 1,
-        bim_available: params[26] ?? 1,
-        boq_available: params[27] ?? 1,
-        mep_available: params[28] ?? 1,
-        architect_name: params[29],
-        architect_studio: params[30],
-        architect_location: params[31],
-        architect_avatar: params[32],
-        architect_id: params[33],
+        cad_file_url,
+        cad_file_name,
+        cad_file_size,
+        description: params[20 + offset],
+        highlights: params[21 + offset] || "[]",
+        plot_width: params[22 + offset] || null,
+        plot_length: params[23 + offset] || null,
+        setbacks: params[24 + offset] || null,
+        dwg_available: params[25 + offset] ?? 1,
+        bim_available: params[26 + offset] ?? 1,
+        boq_available: params[27 + offset] ?? 1,
+        mep_available: params[28 + offset] ?? 1,
+        architect_name: params[29 + offset],
+        architect_studio: params[30 + offset],
+        architect_location: params[31 + offset],
+        architect_avatar: params[32 + offset],
+        architect_id: params[33 + offset],
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
@@ -611,6 +627,39 @@ function mutateFallbackStore(
     const id = params[params.length - 1];
     const project = FALLBACK_PROJECTS.find((p) => p.id === id || p.slug === id);
     if (project) {
+      const setMatch = sql.match(/SET\s+(.*?)\s+WHERE/i);
+      if (setMatch) {
+        const clauses = setMatch[1].split(",").map((c) => c.trim());
+        let pIdx = 0;
+        for (const clause of clauses) {
+          const col = clause.split("=")[0].trim().toLowerCase();
+          if (clause.includes("?")) {
+            const val = params[pIdx++];
+            if (col === "name") project.name = val;
+            else if (col === "style") project.style = val;
+            else if (col === "location") project.location = val;
+            else if (col === "built_up_area") project.built_up_area = val;
+            else if (col === "price") project.price = val;
+            else if (col === "price_numeric") project.price_numeric = val;
+            else if (col === "cents") project.cents = val;
+            else if (col === "plot_size") project.plot_size = val;
+            else if (col === "bedrooms") project.bedrooms = val;
+            else if (col === "floors") project.floors = val;
+            else if (col === "facing") project.facing = val;
+            else if (col === "vastu_score") project.vastu_score = val;
+            else if (col === "description") project.description = val;
+            else if (col === "image") project.image = val;
+            else if (col === "gallery") project.gallery = val;
+            else if (col === "floor_plan_image") project.floor_plan_image = val;
+            else if (col === "cad_file_url") project.cad_file_url = val;
+            else if (col === "cad_file_name") project.cad_file_name = val;
+            else if (col === "cad_file_size") project.cad_file_size = val;
+            else if (col === "status") project.status = val;
+            else if (col === "featured") project.featured = val;
+            else if (col === "highlights") project.highlights = val;
+          }
+        }
+      }
       project.updated_at = new Date().toISOString();
       return { success: true, changes: 1 };
     }
