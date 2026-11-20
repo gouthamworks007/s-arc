@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { authenticateRequest } from "@/lib/auth-middleware";
 import { d1 } from "@/lib/d1";
-import { formatPackageRow } from "../route";
+import { formatPackageRow } from "@/lib/package-utils";
 
 /**
  * GET /api/packages/[id]
