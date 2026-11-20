@@ -7,7 +7,6 @@ import { useAuth } from "@/lib/authContext";
 import { 
   ShieldCheck, 
   Building, 
-  Home, 
   LogOut, 
   MapPin, 
   Layers, 
@@ -67,13 +66,6 @@ export default function TierSwitcherBar() {
                 <span className="px-3 py-0.5 rounded-full text-[11px] font-mono tracking-wider font-semibold uppercase bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 flex items-center gap-1.5 shadow-sm">
                   <Building className="w-3.5 h-3.5 text-emerald-400" />
                   <span>{currentUser.studioName ? `${currentUser.studioName}` : "Architect Studio"}</span>
-                </span>
-              )}
-
-              {isHomeowner && (
-                <span className="px-3 py-0.5 rounded-full text-[11px] font-mono tracking-wider font-semibold uppercase bg-copper/20 text-copper-light border border-copper/40 flex items-center gap-1.5 shadow-sm">
-                  <Home className="w-3.5 h-3.5 text-copper" />
-                  <span>Landowner & Client Account</span>
                 </span>
               )}
 
