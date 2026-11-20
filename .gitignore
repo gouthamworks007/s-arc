@@ -33,6 +33,8 @@ pnpm-debug.log*
 !.env.example
 web/.env
 !web/.env.example
+.dev.vars
+.dev.vars.*
 
 # OS files
 .DS_Store
