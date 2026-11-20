@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "node scripts/clean.mjs && next dev",
     "build": "node scripts/clean.mjs && next build && node scripts/export-out.mjs",
     "admin:provision": "node scripts/provision-admin.mjs",
     "start": "next start",
