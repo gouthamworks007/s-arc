@@ -220,7 +220,7 @@ export default function ProjectDetailClient() {
   ];
 
   return (
-    <main id="main-content" className="min-h-screen bg-white">
+    <main id="main-content" className="min-h-screen bg-white pb-24 md:pb-0">
       <Navbar onOpenSellerModal={() => setIsSellerModalOpen(true)} />
 
       {/* Breadcrumb & Header Bar */}
@@ -1081,6 +1081,44 @@ export default function ProjectDetailClient() {
           </div>
         </div>
       )}
+
+      {/* Sticky Mobile Action Bar (Jakob's Law: Standard Airbnb/Zillow mobile listing pattern) */}
+      <aside 
+        aria-label="Design booking and consultation actions"
+        className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-xl border-t border-warm-border p-3.5 px-4 pb-[max(0.85rem,env(safe-area-inset-bottom))] shadow-[0_-4px_24px_rgba(0,0,0,0.08)] flex items-center justify-between gap-3"
+      >
+        <div className="flex flex-col">
+          <span className="text-[10px] uppercase font-mono tracking-wider text-mutedText">
+            Starting License
+          </span>
+          <div className="font-serif text-lg font-normal text-charcoal flex items-baseline gap-1">
+            <span>{project.price || "₹45,000"}</span>
+            <span className="text-[10px] font-sans text-mutedText">/ Blueprint</span>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => toggleSave(project.id)}
+            className={`w-11 h-11 rounded-2xl border flex items-center justify-center transition-all ${
+              bookmarked
+                ? "bg-copper text-white border-copper shadow-sm"
+                : "border-warm-border text-charcoal hover:border-copper bg-warm-card"
+            }`}
+            aria-label={bookmarked ? "Remove from shortlist" : "Save to shortlist"}
+          >
+            {bookmarked ? <BookmarkCheck className="w-5 h-5" /> : <Bookmark className="w-5 h-5" />}
+          </button>
+
+          <button
+            onClick={() => setIsConsultModalOpen(true)}
+            className="px-4 py-2.5 rounded-2xl bg-copper hover:bg-copper-hover text-white text-xs font-sans font-medium transition-colors shadow-sm flex items-center gap-1.5 min-h-[44px]"
+          >
+            <MessageSquare className="w-4 h-4" />
+            <span>Consult Studio</span>
+          </button>
+        </div>
+      </aside>
     </main>
   );
 }

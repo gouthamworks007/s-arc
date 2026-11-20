@@ -12,34 +12,39 @@ export default function CompareModal() {
   if (!isCompareOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/80 backdrop-blur-md animate-fadeIn">
-      <div className="bg-white max-w-6xl w-full max-h-[92vh] overflow-y-auto border border-warm-border shadow-2xl relative flex flex-col rounded-3xl">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-6 bg-black/80 backdrop-blur-md animate-fadeIn">
+      <div className="bg-white max-w-6xl w-full max-h-[92vh] sm:max-h-[88vh] overflow-y-auto border-t sm:border border-warm-border shadow-2xl relative flex flex-col rounded-t-[28px] sm:rounded-3xl">
         
+        {/* Mobile Pull Handle (Jakob's Law: Standard iOS/Android Bottom Sheet affordance) */}
+        <div className="sm:hidden pt-2.5 pb-1 flex justify-center sticky top-0 bg-white/95 backdrop-blur-sm z-40 rounded-t-[28px]">
+          <div className="w-12 h-1.5 bg-charcoal/20 rounded-full" />
+        </div>
+
         {/* Sticky Header */}
-        <div className="sticky top-0 bg-white/95 backdrop-blur-sm border-b border-warm-border z-30 px-6 py-4 flex items-center justify-between rounded-t-3xl">
+        <div className="sticky top-0 sm:top-0 bg-white/95 backdrop-blur-sm border-b border-warm-border z-30 px-5 sm:px-6 py-3.5 sm:py-4 flex items-center justify-between">
           <div>
             <span className="text-[10px] tracking-widestExtra uppercase text-copper font-semibold font-sans">
               Side-by-Side Blueprint Comparison
             </span>
-            <h2 className="text-xl sm:text-2xl font-normal font-serif text-charcoal">
+            <h2 className="text-lg sm:text-2xl font-normal font-serif text-charcoal">
               Compare Shortlisted Designs ({savedProjects.length}/4)
             </h2>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3 sm:gap-4">
             {savedProjects.length > 0 && (
               <button
                 onClick={clearAllSaved}
-                className="text-xs text-mutedText hover:text-red-500 font-sans flex items-center gap-1 transition-colors"
+                className="text-xs text-mutedText hover:text-red-500 font-sans flex items-center gap-1 transition-colors min-h-[36px] px-2"
               >
                 <Trash2 className="w-3.5 h-3.5" />
-                Clear Shortlist
+                <span className="hidden sm:inline">Clear Shortlist</span>
               </button>
             )}
 
             <button
               onClick={() => setIsCompareOpen(false)}
-              className="w-8 h-8 rounded-full border border-warm-border hover:bg-warm-grey flex items-center justify-center text-charcoal transition-colors"
+              className="w-9 h-9 sm:w-8 sm:h-8 rounded-full border border-warm-border hover:bg-warm-grey flex items-center justify-center text-charcoal transition-colors min-h-[36px] min-w-[36px]"
               aria-label="Close comparison"
             >
               <X className="w-4 h-4" />

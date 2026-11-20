@@ -10,7 +10,7 @@ import { FEATURED_PROJECTS } from "@/lib/data";
 import { ArchitecturalProject } from "@/lib/types";
 import Image from "next/image";
 import Link from "next/link";
-import { Search, Maximize, Bed, Layers, ArrowRight, ArrowUpDown, X, Bookmark, BookmarkCheck, Compass, Sparkles, CheckCircle2 } from "lucide-react";
+import { Search, Maximize, Bed, Layers, ArrowRight, ArrowUpDown, X, Bookmark, BookmarkCheck, Compass, Sparkles, CheckCircle2, SlidersHorizontal } from "lucide-react";
 import { useSavedProjects } from "@/lib/savedProjectsContext";
 import { useProjects } from "@/lib/projectsContext";
 
@@ -20,6 +20,7 @@ function DesignsCatalogContent() {
   const { projects } = useProjects();
   const [selectedProject, setSelectedProject] = useState<ArchitecturalProject | null>(null);
   const [isSellerModalOpen, setIsSellerModalOpen] = useState(false);
+  const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
 
   // Filters state
   const [searchQuery, setSearchQuery] = useState("");
@@ -28,6 +29,16 @@ function DesignsCatalogContent() {
   const [selectedBhk, setSelectedBhk] = useState("All");
   const [selectedArchitect, setSelectedArchitect] = useState("All");
   const [sortBy, setSortBy] = useState<"featured" | "price-asc" | "price-desc" | "plot-asc" | "plot-desc">("featured");
+
+  const activeFilterCount = useMemo(() => {
+    let count = 0;
+    if (selectedStyle !== "All") count++;
+    if (selectedPlot !== "All") count++;
+    if (selectedBhk !== "All") count++;
+    if (selectedArchitect !== "All") count++;
+    if (sortBy !== "featured") count++;
+    return count;
+  }, [selectedStyle, selectedPlot, selectedBhk, selectedArchitect, sortBy]);
 
   // Read URL query parameters on load
   useEffect(() => {
@@ -165,8 +176,45 @@ function DesignsCatalogContent() {
             Every architectural drawing set is vetted for regional climate adaptability, local building bylaws, and structural compliance.
           </p>
 
-          {/* Search & Filter Controls Grid */}
-          <div className="mt-5 sm:mt-6 bg-white border border-warm-border p-4 sm:p-5 shadow-subtle grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3 sm:gap-4 items-center rounded-2xl">
+          {/* Mobile Search Bar & Filter Button (Jakob's Law: Compact single-row pattern) */}
+          <div className="md:hidden mt-4 flex items-center gap-2">
+            <div className="flex-1 relative flex items-center border border-warm-border px-3.5 py-2.5 bg-white rounded-xl shadow-xs">
+              <Search className="w-4 h-4 text-mutedText mr-2 shrink-0" />
+              <input
+                type="text"
+                placeholder="Search designs, styles, cities..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full bg-transparent text-sm text-charcoal outline-none placeholder:text-mutedText font-sans"
+              />
+              {searchQuery && (
+                <button onClick={() => setSearchQuery("")} className="text-mutedText hover:text-charcoal p-0.5" aria-label="Clear search">
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+
+            <button
+              onClick={() => setIsMobileFilterOpen(true)}
+              className={`flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl border text-xs font-sans font-medium transition-all shrink-0 shadow-xs ${
+                activeFilterCount > 0
+                  ? "bg-charcoal text-white border-charcoal"
+                  : "bg-white text-charcoal border-warm-border hover:border-copper"
+              }`}
+              aria-label="Open filter options"
+            >
+              <SlidersHorizontal className="w-4 h-4 text-copper" />
+              <span>Filters</span>
+              {activeFilterCount > 0 && (
+                <span className="w-4 h-4 rounded-full bg-copper text-white text-[10px] font-bold flex items-center justify-center font-mono">
+                  {activeFilterCount}
+                </span>
+              )}
+            </button>
+          </div>
+
+          {/* Desktop Search & Filter Controls Grid (hidden on mobile) */}
+          <div className="hidden md:grid mt-5 sm:mt-6 bg-white border border-warm-border p-4 sm:p-5 shadow-subtle grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3 sm:gap-4 items-center rounded-2xl">
             {/* Search Input */}
             <div className="lg:col-span-4 relative flex items-center border border-warm-border px-3 py-2.5 bg-warm-card rounded-xl">
               <Search className="w-4 h-4 text-mutedText mr-2 shrink-0" />
@@ -258,14 +306,14 @@ function DesignsCatalogContent() {
             </div>
           </div>
 
-          {/* Quick Filter Tag Chips */}
-          <div className="flex flex-wrap items-center gap-2 mt-4 pt-2">
-            <span className="text-[11px] text-mutedText font-medium font-sans uppercase tracking-wider mr-1">
+          {/* Quick Filter Tag Chips (Mobile: Horizontally Swipeable Thumb-Carousel) */}
+          <div className="flex items-center gap-2 mt-3 pt-1 overflow-x-auto no-scrollbar -mx-6 px-6 sm:mx-0 sm:px-0">
+            <span className="text-[11px] text-mutedText font-medium font-sans uppercase tracking-wider shrink-0 mr-1 hidden sm:inline">
               Quick Filter:
             </span>
             <button
               onClick={() => setSelectedStyle(selectedStyle === "COURTYARD" ? "All" : "COURTYARD")}
-              className={`px-3 py-1 rounded-full text-xs font-sans transition-all ${
+              className={`shrink-0 px-3.5 py-1.5 rounded-full text-xs font-sans transition-all min-h-[36px] ${
                 selectedStyle === "COURTYARD"
                   ? "bg-copper text-white shadow-sm font-medium"
                   : "bg-white text-charcoal border border-warm-border hover:border-charcoal/40"
@@ -275,7 +323,7 @@ function DesignsCatalogContent() {
             </button>
             <button
               onClick={() => setSelectedPlot(selectedPlot === "< 10 Cents" ? "All" : "< 10 Cents")}
-              className={`px-3 py-1 rounded-full text-xs font-sans transition-all ${
+              className={`shrink-0 px-3.5 py-1.5 rounded-full text-xs font-sans transition-all min-h-[36px] ${
                 selectedPlot === "< 10 Cents"
                   ? "bg-copper text-white shadow-sm font-medium"
                   : "bg-white text-charcoal border border-warm-border hover:border-charcoal/40"
@@ -285,7 +333,7 @@ function DesignsCatalogContent() {
             </button>
             <button
               onClick={() => setSelectedPlot(selectedPlot === "10 - 15 Cents" ? "All" : "10 - 15 Cents")}
-              className={`px-3 py-1 rounded-full text-xs font-sans transition-all ${
+              className={`shrink-0 px-3.5 py-1.5 rounded-full text-xs font-sans transition-all min-h-[36px] ${
                 selectedPlot === "10 - 15 Cents"
                   ? "bg-copper text-white shadow-sm font-medium"
                   : "bg-white text-charcoal border border-warm-border hover:border-charcoal/40"
@@ -295,7 +343,7 @@ function DesignsCatalogContent() {
             </button>
             <button
               onClick={() => setSelectedBhk(selectedBhk === "4" ? "All" : "4")}
-              className={`px-3 py-1 rounded-full text-xs font-sans transition-all ${
+              className={`shrink-0 px-3.5 py-1.5 rounded-full text-xs font-sans transition-all min-h-[36px] ${
                 selectedBhk === "4"
                   ? "bg-copper text-white shadow-sm font-medium"
                   : "bg-white text-charcoal border border-warm-border hover:border-charcoal/40"
@@ -305,7 +353,7 @@ function DesignsCatalogContent() {
             </button>
             <button
               onClick={() => setSelectedStyle(selectedStyle === "TRADITIONAL" ? "All" : "TRADITIONAL")}
-              className={`px-3 py-1 rounded-full text-xs font-sans transition-all ${
+              className={`shrink-0 px-3.5 py-1.5 rounded-full text-xs font-sans transition-all min-h-[36px] ${
                 selectedStyle === "TRADITIONAL"
                   ? "bg-copper text-white shadow-sm font-medium"
                   : "bg-white text-charcoal border border-warm-border hover:border-charcoal/40"
@@ -315,7 +363,7 @@ function DesignsCatalogContent() {
             </button>
             <button
               onClick={() => setSelectedStyle(selectedStyle === "MODERN TROPICAL" ? "All" : "MODERN TROPICAL")}
-              className={`px-3 py-1 rounded-full text-xs font-sans transition-all ${
+              className={`shrink-0 px-3.5 py-1.5 rounded-full text-xs font-sans transition-all min-h-[36px] ${
                 selectedStyle === "MODERN TROPICAL"
                   ? "bg-copper text-white shadow-sm font-medium"
                   : "bg-white text-charcoal border border-warm-border hover:border-charcoal/40"
@@ -326,7 +374,7 @@ function DesignsCatalogContent() {
             {hasActiveFilters && (
               <button
                 onClick={resetAllFilters}
-                className="px-2.5 py-1 text-xs text-copper hover:underline font-sans font-medium flex items-center gap-1 ml-1"
+                className="shrink-0 px-2.5 py-1.5 text-xs text-copper hover:underline font-sans font-medium flex items-center gap-1 ml-1"
               >
                 <X className="w-3 h-3" />
                 Clear All
@@ -335,6 +383,166 @@ function DesignsCatalogContent() {
           </div>
         </div>
       </section>
+
+      {/* Mobile Filter Bottom Sheet (Jakob's Law: Standard Airbnb/E-commerce Slide-up Pattern) */}
+      {isMobileFilterOpen && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-white w-full max-h-[85vh] rounded-t-[28px] flex flex-col shadow-2xl animate-in slide-in-from-bottom duration-300">
+            {/* Pull Handle */}
+            <div className="pt-3 pb-1 flex justify-center">
+              <div className="w-12 h-1.5 bg-charcoal/20 rounded-full" />
+            </div>
+
+            {/* Header */}
+            <div className="px-6 py-3 border-b border-warm-border flex items-center justify-between">
+              <div>
+                <h3 className="font-serif text-xl text-charcoal font-normal">Filters & Refinements</h3>
+                <p className="text-xs text-mutedText font-sans">Customise architectural criteria</p>
+              </div>
+              <button
+                onClick={() => setIsMobileFilterOpen(false)}
+                className="w-8 h-8 rounded-full border border-warm-border flex items-center justify-center text-charcoal"
+                aria-label="Close filters"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Scrollable Filter Options */}
+            <div className="p-6 overflow-y-auto space-y-6 flex-1 font-sans">
+              
+              {/* Style Selector */}
+              <div>
+                <label className="block text-xs uppercase tracking-wider text-mutedText font-semibold mb-2.5">
+                  Architectural Style
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { label: "All Styles", val: "All" },
+                    { label: "Courtyard", val: "COURTYARD" },
+                    { label: "Modern Tropical", val: "MODERN TROPICAL" },
+                    { label: "Traditional", val: "TRADITIONAL" },
+                    { label: "Contemporary", val: "CONTEMPORARY" },
+                    { label: "Minimalist", val: "MINIMALIST" },
+                  ].map((item) => (
+                    <button
+                      key={item.val}
+                      onClick={() => setSelectedStyle(item.val)}
+                      className={`p-2.5 rounded-xl text-xs font-medium text-left border transition-all ${
+                        selectedStyle === item.val
+                          ? "bg-copper text-white border-copper shadow-xs"
+                          : "bg-warm-grey border-warm-border text-charcoal hover:border-copper"
+                      }`}
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Plot Size Selector */}
+              <div>
+                <label className="block text-xs uppercase tracking-wider text-mutedText font-semibold mb-2.5">
+                  Plot Size (Cents)
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { label: "All Sizes", val: "All" },
+                    { label: "< 10 Cents", val: "< 10 Cents" },
+                    { label: "10 - 15 Cents", val: "10 - 15 Cents" },
+                    { label: "> 15 Cents", val: "> 15 Cents" },
+                  ].map((item) => (
+                    <button
+                      key={item.val}
+                      onClick={() => setSelectedPlot(item.val)}
+                      className={`p-2.5 rounded-xl text-xs font-medium text-left border transition-all ${
+                        selectedPlot === item.val
+                          ? "bg-copper text-white border-copper shadow-xs"
+                          : "bg-warm-grey border-warm-border text-charcoal hover:border-copper"
+                      }`}
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Bedrooms Selector */}
+              <div>
+                <label className="block text-xs uppercase tracking-wider text-mutedText font-semibold mb-2.5">
+                  Bedrooms (BHK)
+                </label>
+                <div className="flex gap-2">
+                  {[
+                    { label: "All", val: "All" },
+                    { label: "3 BHK", val: "3" },
+                    { label: "4 BHK", val: "4" },
+                    { label: "5+ BHK", val: "5" },
+                  ].map((item) => (
+                    <button
+                      key={item.val}
+                      onClick={() => setSelectedBhk(item.val)}
+                      className={`flex-1 py-2.5 rounded-xl text-xs font-medium border text-center transition-all ${
+                        selectedBhk === item.val
+                          ? "bg-copper text-white border-copper shadow-xs"
+                          : "bg-warm-grey border-warm-border text-charcoal hover:border-copper"
+                      }`}
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Sort By */}
+              <div>
+                <label className="block text-xs uppercase tracking-wider text-mutedText font-semibold mb-2.5 flex items-center gap-1.5">
+                  <ArrowUpDown className="w-3.5 h-3.5 text-copper" />
+                  Sort Order
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { label: "Featured First", val: "featured" },
+                    { label: "Price: Low to High", val: "price-asc" },
+                    { label: "Price: High to Low", val: "price-desc" },
+                    { label: "Plot: Small to Large", val: "plot-asc" },
+                  ].map((item) => (
+                    <button
+                      key={item.val}
+                      onClick={() => setSortBy(item.val as any)}
+                      className={`p-2.5 rounded-xl text-xs font-medium text-left border transition-all ${
+                        sortBy === item.val
+                          ? "bg-charcoal text-white border-charcoal shadow-xs"
+                          : "bg-warm-grey border-warm-border text-charcoal hover:border-copper"
+                      }`}
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+            </div>
+
+            {/* Bottom Actions */}
+            <div className="p-4 border-t border-warm-border bg-white flex items-center gap-3">
+              <button
+                onClick={resetAllFilters}
+                className="py-3 px-4 rounded-xl border border-warm-border text-xs font-medium text-charcoal hover:bg-warm-grey transition-colors"
+              >
+                Reset All
+              </button>
+              <button
+                onClick={() => setIsMobileFilterOpen(false)}
+                className="flex-1 py-3 px-4 rounded-xl bg-copper hover:bg-copper-hover text-white text-xs font-medium transition-colors shadow-sm flex items-center justify-center gap-2"
+              >
+                <span>Show {filteredAndSortedProjects.length} Plans</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Projects Grid Section */}
       <section className="py-8 sm:py-10 bg-white">

@@ -172,20 +172,18 @@ export default function Navbar({ onOpenSellerModal, onOpenSearch }: NavbarProps)
           </Link>
         </div>
 
-        {/* Mobile menu button */}
-        <div className="md:hidden flex items-center gap-3">
-          <button
-            onClick={() => setIsCompareOpen(true)}
-            className="relative text-charcoal p-2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl hover:bg-warm-grey transition-colors"
-            aria-label="View shortlisted designs"
-          >
-            <Bookmark className="w-4 h-4" />
-            {savedProjects.length > 0 && (
-              <span className="absolute top-1 right-1 w-4 h-4 rounded-full bg-copper text-white text-[9px] font-bold flex items-center justify-center font-mono">
-                {savedProjects.length}
-              </span>
-            )}
-          </button>
+        {/* Mobile quick actions (Jakob's Law: Search + Menu in top bar, core tabs in bottom bar) */}
+        <div className="md:hidden flex items-center gap-1">
+          {onOpenSearch && (
+            <button
+              onClick={onOpenSearch}
+              className="text-charcoal p-2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl hover:bg-warm-grey transition-colors"
+              aria-label="Search architectural designs"
+            >
+              <Search className="w-4 h-4 text-charcoal/80" />
+            </button>
+          )}
+
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             className="text-charcoal p-2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl hover:bg-warm-grey transition-colors"

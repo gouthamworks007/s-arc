@@ -11,7 +11,7 @@ export default function ShortlistFloatingBar() {
   if (savedProjects.length === 0) return null;
 
   return (
-    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-charcoal text-white px-5 py-3 shadow-2xl border border-white/10 flex items-center gap-4 sm:gap-6 animate-fadeIn max-w-[90vw] rounded-full">
+    <div className="hidden md:flex fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-charcoal text-white px-5 py-3 shadow-2xl border border-white/10 items-center gap-4 sm:gap-6 animate-fadeIn max-w-[90vw] rounded-full">
       {/* Icon & Count */}
       <div className="flex items-center gap-2.5">
         <div className="w-7 h-7 rounded-full bg-copper/20 border border-copper flex items-center justify-center text-copper">
