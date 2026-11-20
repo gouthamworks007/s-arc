@@ -98,48 +98,19 @@ export default function PlotIntelligencePage() {
     setFocusLocation({ lat, lng, label: displayName });
   };
 
-  // Load realistic sample plot (10.5 Cent Kerala plot) centered at live location, active focus, or Central Kerala
+  // Load realistic sample plot (10.5 Cent Kerala plot) centered at active focus or Central Kerala
   const handleLoadSamplePlot = () => {
-    if (focusLocation) {
-      const sampleCoords = generateSampleKeralaPlot(focusLocation.lng, focusLocation.lat, 10.5);
-      setCoordinates(sampleCoords);
-      setIsClosed(true);
-      setRoadFacingIndex(0);
-      const label = locationName && !locationName.includes("Sample")
-        ? `${locationName} (Sample 10.5 Cents)`
-        : "Kerala Residential Plot (Sample 10.5 Cents)";
-      setLocationName(label);
-      setFocusLocation(null);
-      return;
-    }
-
-    if (typeof navigator !== "undefined" && navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          const { latitude, longitude } = pos.coords;
-          const sampleCoords = generateSampleKeralaPlot(longitude, latitude, 10.5);
-          setCoordinates(sampleCoords);
-          setIsClosed(true);
-          setRoadFacingIndex(0);
-          setLocationName("Your Live Location (Sample 10.5 Cents)");
-        },
-        () => {
-          const sampleCoords = generateSampleKeralaPlot(76.2999, 9.9816, 10.5);
-          setCoordinates(sampleCoords);
-          setIsClosed(true);
-          setRoadFacingIndex(0);
-          setLocationName("Kerala Residential Plot (Sample 10.5 Cents)");
-        },
-        { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
-      );
-      return;
-    }
-
-    const sampleCoords = generateSampleKeralaPlot(76.2999, 9.9816, 10.5);
+    const lat = focusLocation?.lat ?? 9.9816;
+    const lng = focusLocation?.lng ?? 76.2999;
+    const sampleCoords = generateSampleKeralaPlot(lng, lat, 10.5);
     setCoordinates(sampleCoords);
     setIsClosed(true);
     setRoadFacingIndex(0);
-    setLocationName("Kerala Residential Plot (Sample 10.5 Cents)");
+    const label = locationName && !locationName.includes("Sample")
+      ? `${locationName} (Sample 10.5 Cents)`
+      : "Kerala Residential Plot (Sample 10.5 Cents)";
+    setLocationName(label);
+    setFocusLocation(null);
   };
 
   // Load saved plot from drawer or dashboard
@@ -312,13 +283,13 @@ export default function PlotIntelligencePage() {
       <Navbar />
 
       {/* Main Container */}
-      <div className="pt-24 sm:pt-28 pb-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full flex-1 space-y-6">
+      <div className="pt-20 sm:pt-24 pb-8 sm:pb-10 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full flex-1 space-y-5 sm:space-y-6">
         {/* Feature Hero Header */}
-        <div className="bg-white rounded-3xl border border-warm-border p-6 sm:p-8 shadow-card flex flex-col md:flex-row md:items-center justify-between gap-6 relative overflow-hidden">
+        <div className="bg-white rounded-3xl border border-warm-border p-5 sm:p-6 shadow-card flex flex-col md:flex-row md:items-center justify-between gap-5 sm:gap-6 relative overflow-hidden">
           <div className="space-y-2 max-w-2xl relative z-10">
             <div className="flex items-center gap-2">
-              <span className="px-3 py-1 rounded-full bg-copper-subtle text-copper text-[11px] font-mono font-bold tracking-wider uppercase border border-copper/30">
-                S-ARC GIS Engine
+              <span className="px-3 py-1 rounded-full bg-copper-subtle text-copper text-[11px] font-mono font-medium tracking-wider uppercase border border-copper/30">
+                Satellite Survey
               </span>
               <span className="text-xs text-charcoal/50 font-sans">
                 Kerala Land Survey Calibration
@@ -361,7 +332,7 @@ export default function PlotIntelligencePage() {
                 ) : (
                   <>
                     <Ruler className="w-4 h-4 text-copper" />
-                    <span>Back to GIS Workspace</span>
+                    <span>Back to Workspace</span>
                   </>
                 )}
               </button>
@@ -462,17 +433,21 @@ export default function PlotIntelligencePage() {
         isLoggedIn={isLoggedIn}
       />
 
-      <ConsultArchitectModal
-        project={selectedConsultProject}
-        analysis={analysis}
-        locationName={locationName}
-        onClose={() => setSelectedConsultProject(null)}
-      />
+      {selectedConsultProject && (
+        <ConsultArchitectModal
+          project={selectedConsultProject}
+          analysis={analysis}
+          locationName={locationName}
+          onClose={() => setSelectedConsultProject(null)}
+        />
+      )}
 
-      <ProjectModal
-        project={selectedProjectModal}
-        onClose={() => setSelectedProjectModal(null)}
-      />
+      {selectedProjectModal && (
+        <ProjectModal
+          project={selectedProjectModal}
+          onClose={() => setSelectedProjectModal(null)}
+        />
+      )}
 
       {isGuideOpen && (
         <PlotGuideOverlay

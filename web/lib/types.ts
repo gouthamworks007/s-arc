@@ -53,6 +53,22 @@ export interface ArchitecturalProject {
   updatedAt?: string;
 }
 
+export type PackageStatus = "draft" | "published" | "archived";
+
+export interface ProjectPackage {
+  id: string;
+  projectId: string;
+  architectId: string;
+  name: string;
+  description: string;
+  pricePaise: number;
+  currency: string;
+  deliverables: string[];
+  status: PackageStatus;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export interface ClientInquiry {
   id: string;
   clientName: string;
@@ -108,6 +124,23 @@ export interface ArchitectProfile {
 export type UserRole = "admin" | "user";
 export type UserSubRole = "homeowner" | "architect" | "contractor";
 
+export interface PlotDetails {
+  status?: "owns_land" | "buying_land" | "ancestral" | "exploring" | string;
+  district?: string;
+  cents?: number | string;
+  budgetRange?: string;
+  timeline?: string;
+  preferredStyle?: string;
+}
+
+export interface ContractorDetails {
+  firmName?: string;
+  operatingDistricts?: string[];
+  capacityPerYear?: string;
+  yearsInPractice?: string;
+  gstNumber?: string;
+}
+
 export interface UserAccount {
   id: string;
   name: string;
@@ -127,6 +160,8 @@ export interface UserAccount {
   permissions?: string[];
   reviewNotes?: string;
   reviewedByAdmin?: boolean;
+  plotDetails?: PlotDetails;
+  contractorDetails?: ContractorDetails;
 }
 
 export interface PlatformSettings {

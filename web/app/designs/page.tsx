@@ -156,7 +156,7 @@ function DesignsCatalogContent() {
   return (
     <>
       {/* Header Banner */}
-      <section className="pt-32 pb-12 sm:pb-16 bg-warm-grey border-b border-warm-border">
+      <section className="pt-24 sm:pt-28 pb-8 sm:pb-10 bg-warm-grey border-b border-warm-border">
         <div className="max-w-7xl mx-auto px-6 sm:px-8">
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-normal font-serif tracking-tight text-charcoal mb-4">
             Architecture Worth Exploring.
@@ -166,7 +166,7 @@ function DesignsCatalogContent() {
           </p>
 
           {/* Search & Filter Controls Grid */}
-          <div className="mt-8 bg-white border border-warm-border p-4 sm:p-5 shadow-subtle grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3 sm:gap-4 items-center rounded-2xl">
+          <div className="mt-5 sm:mt-6 bg-white border border-warm-border p-4 sm:p-5 shadow-subtle grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3 sm:gap-4 items-center rounded-2xl">
             {/* Search Input */}
             <div className="lg:col-span-4 relative flex items-center border border-warm-border px-3 py-2.5 bg-warm-card rounded-xl">
               <Search className="w-4 h-4 text-mutedText mr-2 shrink-0" />
@@ -337,7 +337,7 @@ function DesignsCatalogContent() {
       </section>
 
       {/* Projects Grid Section */}
-      <section className="py-12 sm:py-16 bg-white">
+      <section className="py-8 sm:py-10 bg-white">
         <div className="max-w-7xl mx-auto px-6 sm:px-8">
           
           {/* Plot Intelligence Banner / Active Plot Action */}
@@ -350,12 +350,9 @@ function DesignsCatalogContent() {
                 <div>
                   <div className="text-[13px] font-medium font-sans text-white flex items-center gap-2">
                     <span>Active Plot: <strong>{activePlotInfo.label}</strong></span>
-                    <span className="px-2 py-0.5 rounded-full text-[10px] bg-copper text-white font-mono font-bold">
-                      Live GIS Guide
-                    </span>
                   </div>
                   <div className="text-xs text-white/70 font-light font-sans mt-0.5">
-                    Project this exact {activePlotInfo.cents} Cent parcel onto your physical property with interactive satellite guidance.
+                    Project this {activePlotInfo.cents} Cent parcel onto your physical property with interactive satellite guidance.
                   </div>
                 </div>
               </div>
@@ -365,7 +362,7 @@ function DesignsCatalogContent() {
                 className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-copper hover:bg-copper-hover text-white text-xs font-medium font-sans rounded-xl shrink-0 transition-all shadow-md group relative z-10 hover:scale-[1.02]"
               >
                 <Compass className="w-4 h-4 text-white" />
-                <span>Use same plot in live location with Plot Guide</span>
+                <span>Open in Plot Guide</span>
                 <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
               </Link>
             </div>
@@ -378,10 +375,9 @@ function DesignsCatalogContent() {
                 <div>
                   <div className="text-[13px] font-medium font-sans text-white flex items-center gap-2">
                     <span>Have a specific plot boundary or land in Kerala?</span>
-                    <span className="px-1.5 py-0.2 rounded-full text-[9px] bg-copper/30 text-copper-light font-mono font-bold">GIS</span>
                   </div>
                   <div className="text-xs text-white/60 font-light font-sans mt-0.5">
-                    Draw your exact perimeter on top-down satellite imagery to filter plans fitting inside your KMBR setbacks.
+                    Draw your boundary on satellite imagery to find plans fitting your KMBR setbacks.
                   </div>
                 </div>
               </div>
@@ -390,7 +386,7 @@ function DesignsCatalogContent() {
                 href="/plot-intelligence"
                 className="inline-flex items-center gap-2 px-4 py-2.5 bg-copper hover:bg-copper-hover text-white text-xs font-medium font-sans rounded-full shrink-0 transition-colors shadow-sm self-start sm:self-auto"
               >
-                <span>Open Satellite Workspace</span>
+                <span>Open Plot Intelligence</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </Link>
             </div>
@@ -508,7 +504,7 @@ function DesignsCatalogContent() {
 
           {/* Empty State */}
           {filteredAndSortedProjects.length === 0 && (
-            <div className="text-center py-20 bg-warm-grey border border-warm-border p-8 rounded-2xl">
+            <div className="text-center py-12 bg-warm-grey border border-warm-border p-6 rounded-2xl">
               <h3 className="text-2xl font-serif text-charcoal mb-2">No Matching Architectural Plans Found</h3>
               <p className="text-sm text-mutedText font-sans max-w-md mx-auto mb-6">
                 Try clearing one or more filters or modifying your search terms to see available projects.

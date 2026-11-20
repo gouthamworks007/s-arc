@@ -108,7 +108,7 @@ export default function PlanRecommendationsView({
         <div className="space-y-1">
           <div className="flex items-center gap-2">
             <span className="text-[10px] tracking-widestExtra uppercase text-copper font-semibold">
-              Plot Recommendation Engine
+              Plan Matching
             </span>
             <span className="w-1.5 h-1.5 rounded-full bg-copper" />
             <span className="text-xs font-mono text-charcoal/60">
@@ -410,7 +410,7 @@ export default function PlanRecommendationsView({
                       onClick={() => setExpandedPlanId(isExpanded ? null : project.id)}
                       className="text-[11px] font-sans text-copper hover:underline flex items-center gap-1 font-medium pt-1"
                     >
-                      <span>{isExpanded ? "Less Details" : "Inspect Detailed Checklist"}</span>
+                      <span>{isExpanded ? "Show Less" : "View Breakdown"}</span>
                       {isExpanded ? (
                         <ChevronUp className="w-3 h-3" />
                       ) : (

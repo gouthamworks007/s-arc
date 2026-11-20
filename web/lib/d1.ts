@@ -216,6 +216,88 @@ const FALLBACK_AUDIT_LOGS: any[] = g.__S_ARC_FALLBACK_AUDIT_LOGS__;
 if (!g.__S_ARC_FALLBACK_SAVED_PLOTS__) g.__S_ARC_FALLBACK_SAVED_PLOTS__ = [];
 const FALLBACK_SAVED_PLOTS: any[] = g.__S_ARC_FALLBACK_SAVED_PLOTS__;
 
+const INITIAL_PACKAGES = [
+  {
+    id: "pkg-ridge-01",
+    project_id: "proj-001",
+    architect_id: "usr-arch-01",
+    name: "Essential Permit Set",
+    description: "Sanction-ready 2D drawings formatted specifically for KMBR local municipality clearance and setting out.",
+    price_paise: 3500000,
+    currency: "INR",
+    deliverables: JSON.stringify([
+      "Ground Floor Setting Out Plan (1:50)",
+      "First Floor Dimensioned Layout",
+      "Front & Rear Elevation Schematics",
+      "Building Longitudinal Cross-Section",
+      "KMBR Municipal Sanction Drawing Sheet",
+    ]),
+    status: "published",
+    created_at: "2026-11-01T10:00:00Z",
+    updated_at: "2026-11-01T10:00:00Z",
+  },
+  {
+    id: "pkg-ridge-02",
+    project_id: "proj-001",
+    architect_id: "usr-arch-01",
+    name: "Executive Builder Package",
+    description: "Comprehensive architectural and structural blueprint package for turnkey contractor execution.",
+    price_paise: 6500000,
+    currency: "INR",
+    deliverables: JSON.stringify([
+      "Complete 2D Architectural Working Drawings",
+      "Detailed Foundation & Column Layouts",
+      "RCC Slab & Beam Rebar Schedules",
+      "Electrical Conduit & Distribution Routing",
+      "Plumbing, Waste Water & Rainwater Schematics",
+      "Window & Door Joinery Schedule",
+    ]),
+    status: "published",
+    created_at: "2026-11-01T10:00:00Z",
+    updated_at: "2026-11-01T10:00:00Z",
+  },
+  {
+    id: "pkg-ridge-03",
+    project_id: "proj-001",
+    architect_id: "usr-arch-01",
+    name: "Complete Master BIM & BOQ Package",
+    description: "Turnkey architectural master set with parametric 3D model, material quantities, and full technical specifications.",
+    price_paise: 9500000,
+    currency: "INR",
+    deliverables: JSON.stringify([
+      "Complete 42-Sheet Architectural & Structural Set",
+      "Parametric 3D BIM Model (Revit / SketchUp)",
+      "Detailed Material & Quantity Takeoff (BOQ)",
+      "MEP Electrical, Sanitary & Solar Conduit Schematics",
+      "High-Resolution 4K Photorealistic Renders",
+      "Foundation Cross-Ventilation Analysis",
+    ]),
+    status: "published",
+    created_at: "2026-11-01T10:00:00Z",
+    updated_at: "2026-11-01T10:00:00Z",
+  },
+  {
+    id: "pkg-ridge-draft",
+    project_id: "proj-001",
+    architect_id: "usr-arch-01",
+    name: "Custom Interior Detail Addon (Draft)",
+    description: "Internal drafting package including bespoke teak joinery and lighting fixtures.",
+    price_paise: 2500000,
+    currency: "INR",
+    deliverables: JSON.stringify([
+      "Bespoke Teak Joinery Details",
+      "Courtyard Water Feature Plumbing",
+      "Mood Lighting Automation Schematic",
+    ]),
+    status: "draft",
+    created_at: "2026-11-02T10:00:00Z",
+    updated_at: "2026-11-02T10:00:00Z",
+  },
+];
+
+if (!g.__S_ARC_FALLBACK_PACKAGES__) g.__S_ARC_FALLBACK_PACKAGES__ = [...INITIAL_PACKAGES];
+const FALLBACK_PACKAGES: any[] = g.__S_ARC_FALLBACK_PACKAGES__;
+
 /**
  * Access the Cloudflare D1 Native binding if available
  */
@@ -478,6 +560,30 @@ function queryFallbackStore<T>(sql: string, params: any[]): T[] {
     return rows as unknown as T[];
   }
 
+  if (normalized.includes("from project_packages")) {
+    let rows = [...FALLBACK_PACKAGES];
+    if (params && params.length > 0) {
+      if (normalized.includes("where id = ?") || normalized.includes("id = ?")) {
+        const targetId = String(params[0]);
+        rows = rows.filter((p) => p.id === targetId);
+      } else if (normalized.includes("project_id = ?") && normalized.includes("status = ?")) {
+        const projId = String(params[0]);
+        const status = String(params[1]);
+        rows = rows.filter((p) => (p.project_id === projId || p.projectId === projId) && p.status === status);
+      } else if (normalized.includes("project_id = ?")) {
+        const projId = String(params[0]);
+        rows = rows.filter((p) => p.project_id === projId || p.projectId === projId);
+      } else if (normalized.includes("architect_id = ?")) {
+        const archId = String(params[0]);
+        rows = rows.filter((p) => p.architect_id === archId || p.architectId === archId);
+      }
+    }
+    if (normalized.includes("status = 'published'")) {
+      rows = rows.filter((p) => p.status === "published");
+    }
+    return rows as unknown as T[];
+  }
+
   return [] as T[];
 }
 
@@ -511,6 +617,8 @@ function mutateFallbackStore(
         bio: params[12] || null,
         permissions: params[13] || "[]",
         review_notes: params[14] || null,
+        plotDetails: (params as any)[15] || undefined,
+        contractorDetails: (params as any)[16] || undefined,
         created_at: new Date().toISOString(),
       };
       if (existingIdx >= 0) {
@@ -780,6 +888,70 @@ function mutateFallbackStore(
       const idx = FALLBACK_SAVED_PLOTS.findIndex((p) => p.id === id);
       if (idx >= 0) {
         FALLBACK_SAVED_PLOTS.splice(idx, 1);
+        return { success: true, changes: 1 };
+      }
+    }
+  }
+
+  // 9. Project Packages INSERT
+  if (normalized.startsWith("insert into project_packages") || normalized.startsWith("insert or ignore into project_packages")) {
+    if (params && params.length >= 7) {
+      const pkgObj = {
+        id: params[0],
+        project_id: params[1],
+        architect_id: params[2],
+        name: params[3],
+        description: params[4] || "",
+        price_paise: Number(params[5]),
+        currency: params[6] || "INR",
+        deliverables: typeof params[7] === "string" ? params[7] : JSON.stringify(params[7] || []),
+        status: params[8] || "draft",
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      const existingIdx = FALLBACK_PACKAGES.findIndex((p) => p.id === pkgObj.id);
+      if (existingIdx >= 0) {
+        FALLBACK_PACKAGES[existingIdx] = pkgObj;
+      } else {
+        FALLBACK_PACKAGES.unshift(pkgObj);
+      }
+      return { success: true, changes: 1 };
+    }
+  }
+
+  // 10. Project Packages UPDATE
+  if (normalized.startsWith("update project_packages")) {
+    const id = params[params.length - 1];
+    const pkg = FALLBACK_PACKAGES.find((p) => p.id === id);
+    if (pkg) {
+      const setMatch = sql.match(/SET\s+(.*?)\s+WHERE/i);
+      if (setMatch) {
+        const clauses = setMatch[1].split(",").map((c) => c.trim());
+        let pIdx = 0;
+        for (const clause of clauses) {
+          const col = clause.split("=")[0].trim().toLowerCase();
+          if (clause.includes("?")) {
+            const val = params[pIdx++];
+            if (col === "name") pkg.name = val;
+            else if (col === "description") pkg.description = val;
+            else if (col === "price_paise") pkg.price_paise = Number(val);
+            else if (col === "deliverables") pkg.deliverables = typeof val === "string" ? val : JSON.stringify(val);
+            else if (col === "status") pkg.status = val;
+          }
+        }
+      }
+      pkg.updated_at = new Date().toISOString();
+      return { success: true, changes: 1 };
+    }
+  }
+
+  // 11. Project Packages DELETE
+  if (normalized.startsWith("delete from project_packages")) {
+    if (params && params.length > 0) {
+      const id = String(params[0]);
+      const idx = FALLBACK_PACKAGES.findIndex((p) => p.id === id);
+      if (idx >= 0) {
+        FALLBACK_PACKAGES.splice(idx, 1);
         return { success: true, changes: 1 };
       }
     }

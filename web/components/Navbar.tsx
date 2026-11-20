@@ -50,7 +50,7 @@ export default function Navbar({ onOpenSellerModal, onOpenSearch }: NavbarProps)
   // Public navigation: Dashboard is protected and accessible only with an account
   const navLinks = [
     { name: "Explore Designs", href: "/designs", active: pathname === "/designs" },
-    { name: "Plot Intelligence", href: "/plot-intelligence", active: pathname === "/plot-intelligence", isNew: true },
+    { name: "Plot Intelligence", href: "/plot-intelligence", active: pathname === "/plot-intelligence" },
     { name: "Styles", href: "/styles", active: pathname === "/styles" },
     { name: "Architects", href: "/architects", active: pathname === "/architects" },
   ];
@@ -63,7 +63,7 @@ export default function Navbar({ onOpenSellerModal, onOpenSearch }: NavbarProps)
           : "bg-white/90 backdrop-blur-sm border-b border-warm-border/40 py-4"
       }`}
     >
-      <div className="max-w-7xl mx-auto px-6 sm:px-8 flex items-center justify-between">
+      <div className="max-w-7xl mx-auto px-4 sm:px-8 flex items-center justify-between">
         {/* Brand Logo */}
         <Link href="/" className="flex items-center group">
           <div className="relative h-9 w-[124px] sm:h-10 sm:w-[138px] flex items-center">
@@ -88,12 +88,6 @@ export default function Navbar({ onOpenSellerModal, onOpenSearch }: NavbarProps)
               }`}
             >
               <span>{link.name}</span>
-              {link.isNew && (
-                <span className="ml-1.5 px-1.5 py-0.5 rounded-full text-[9px] bg-copper/10 text-copper font-mono uppercase font-bold border border-copper/30 flex items-center gap-1 shadow-sm">
-                  <span className="w-1.5 h-1.5 rounded-full bg-copper animate-pulse" />
-                  <span>GIS</span>
-                </span>
-              )}
               <span
                 className={`absolute bottom-0 left-0 h-[1.5px] bg-copper transition-all duration-300 ${
                   link.active ? "w-full" : "w-0 group-hover:w-full"
@@ -224,12 +218,6 @@ export default function Navbar({ onOpenSellerModal, onOpenSearch }: NavbarProps)
                 }`}
               >
                 <span>{link.name}</span>
-                {link.isNew && (
-                  <span className="px-2 py-0.5 rounded-full text-[9px] bg-copper/10 text-copper font-mono uppercase font-bold border border-copper/30 flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-copper animate-pulse" />
-                    <span>GIS Tool</span>
-                  </span>
-                )}
               </Link>
             ))}
 

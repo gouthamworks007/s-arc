@@ -107,6 +107,7 @@ const DEFAULT_AUDIT_LOGS: AuditLog[] = [
 interface AuthContextType {
   currentUser: UserAccount | null;
   isLoggedIn: boolean;
+  isLoading: boolean;
   users: UserAccount[];
   role: UserRole | null;
   login: (user: UserAccount) => void;
@@ -140,6 +141,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Visitors start as guests (not logged in) until explicitly signing into an account
   const [currentUser, setCurrentUser] = useState<UserAccount | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   const [users, setUsers] = useState<UserAccount[]>(DEFAULT_USERS);
   const [settings, setSettings] = useState<PlatformSettings>(DEFAULT_SETTINGS);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>(DEFAULT_AUDIT_LOGS);
@@ -229,9 +231,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         })
         .catch(() => {
           // Offline / build environment resilience
+        })
+        .finally(() => {
+          setIsLoading(false);
         });
     } catch (e) {
       console.error(e);
+      setIsLoading(false);
     }
   }, []);
 
@@ -527,6 +533,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       value={{
         currentUser,
         isLoggedIn,
+        isLoading,
         users,
         role: currentUser ? currentUser.role : null,
         login,

@@ -7,7 +7,7 @@ import { ArrowRight } from "lucide-react";
 
 export default function PreFooterBanner() {
   return (
-    <section className="relative bg-charcoal text-white overflow-hidden py-24 sm:py-28">
+    <section className="relative bg-charcoal text-white overflow-hidden py-14 sm:py-18">
       {/* Background Architectural Atmosphere */}
       <div className="absolute inset-0 opacity-40">
         <Image
@@ -19,12 +19,12 @@ export default function PreFooterBanner() {
       </div>
       <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/75 to-black/60" />
 
-      <div className="relative z-10 max-w-7xl mx-auto px-6 sm:px-8">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center justify-between">
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-8">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 sm:gap-10 items-center justify-between">
           
           {/* Left: Typography */}
           <div className="lg:col-span-7">
-            <h2 className="text-4xl sm:text-5xl lg:text-6xl font-normal font-serif leading-[1.08] tracking-[-0.01em] mb-5">
+            <h2 className="text-3xl sm:text-5xl lg:text-6xl font-normal font-serif leading-[1.08] tracking-[-0.01em] mb-4 sm:mb-5">
               Design <br />
               Build <br />
               Belong.

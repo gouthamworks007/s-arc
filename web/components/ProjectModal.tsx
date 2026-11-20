@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { X, Check, Bed, Layers, Maximize, MapPin, Download, MessageSquare, ShieldCheck, FileCheck, ArrowRight } from "lucide-react";
 import { ArchitecturalProject } from "@/lib/types";
+import ConsultArchitectModal from "@/components/plot-intelligence/ConsultArchitectModal";
 
 interface ProjectModalProps {
   project: ArchitecturalProject | null;
@@ -14,7 +15,7 @@ interface ProjectModalProps {
 export default function ProjectModal({ project, onClose }: ProjectModalProps) {
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [downloadSuccess, setDownloadSuccess] = useState(false);
-  const [consultRequested, setConsultRequested] = useState(false);
+  const [isConsultModalOpen, setIsConsultModalOpen] = useState(false);
 
   // Keyboard accessibility (Escape key) and body scroll lock
   React.useEffect(() => {
@@ -34,15 +35,31 @@ export default function ProjectModal({ project, onClose }: ProjectModalProps) {
 
   const currentImage = project.gallery[activeImageIndex] || project.image;
 
+  const handleDownloadSample = () => {
+    try {
+      const link = document.createElement("a");
+      link.href = "/downloads/sarc-sample-permit-sheet.pdf";
+      link.download = `${project.name.replace(/[^a-zA-Z0-9]/g, "_")}_Sample_Permit_Sheet.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setDownloadSuccess(true);
+      setTimeout(() => setDownloadSuccess(false), 4000);
+    } catch {
+      setDownloadSuccess(true);
+    }
+  };
+
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="project-modal-title"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/75 backdrop-blur-md animate-fadeIn"
+    <>
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="project-modal-title"
+        onClick={(e) => {
+          if (e.target === e.currentTarget) onClose();
+        }}
+        className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/75 backdrop-blur-md animate-fadeIn"
     >
       <div className="bg-white max-w-5xl w-full max-h-[92vh] overflow-y-auto border border-warm-border shadow-2xl relative rounded-3xl">
         
@@ -198,28 +215,21 @@ export default function ProjectModal({ project, onClose }: ProjectModalProps) {
 
                   <button
                     type="button"
-                    onClick={() => setDownloadSuccess(true)}
+                    onClick={handleDownloadSample}
                     className="w-full py-3.5 min-h-[44px] bg-copper hover:bg-copper-hover text-white text-xs font-medium tracking-wide flex items-center justify-center gap-2 transition-colors rounded-full shadow-sm"
                   >
                     <Download className="w-3.5 h-3.5" />
-                    <span>{downloadSuccess ? "Sample Package Downloaded!" : "Download Sample Drawings"}</span>
+                    <span>{downloadSuccess ? "Sample Permit PDF Downloaded!" : "Download Sample Drawings"}</span>
                   </button>
 
-                  {consultRequested ? (
-                    <div className="w-full py-3 px-4 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-medium rounded-full text-center flex items-center justify-center gap-1.5 animate-fadeIn">
-                      <ShieldCheck className="w-4 h-4 text-emerald-600" />
-                      <span>Consultation requested with Ar. {project.architect.name}!</span>
-                    </div>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => setConsultRequested(true)}
-                      className="w-full py-3.5 min-h-[44px] border border-charcoal hover:bg-charcoal hover:text-white text-charcoal text-xs font-medium tracking-wide flex items-center justify-center gap-2 transition-colors rounded-full"
-                    >
-                      <MessageSquare className="w-3.5 h-3.5" />
-                      <span>Request Architect Consultation</span>
-                    </button>
-                  )}
+                  <button
+                    type="button"
+                    onClick={() => setIsConsultModalOpen(true)}
+                    className="w-full py-3.5 min-h-[44px] border border-charcoal hover:bg-charcoal hover:text-white text-charcoal text-xs font-medium tracking-wide flex items-center justify-center gap-2 transition-colors rounded-full"
+                  >
+                    <MessageSquare className="w-3.5 h-3.5" />
+                    <span>Request Architect Consultation</span>
+                  </button>
                 </div>
             </div>
           </div>
@@ -227,6 +237,14 @@ export default function ProjectModal({ project, onClose }: ProjectModalProps) {
         </div>
       </div>
     </div>
+
+    {isConsultModalOpen && (
+      <ConsultArchitectModal
+        project={project}
+        onClose={() => setIsConsultModalOpen(false)}
+      />
+    )}
+  </>
   );
 }
 

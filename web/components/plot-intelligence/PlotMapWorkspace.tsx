@@ -317,6 +317,7 @@ export default function PlotMapWorkspace({
       pitchWithRotate: false,
       touchPitch: false,
       attributionControl: false,
+      cooperativeGestures: true,
     });
 
     map.touchZoomRotate.disableRotation();
@@ -422,7 +423,18 @@ export default function PlotMapWorkspace({
 
     mapRef.current = map;
 
+    const container = mapContainerRef.current;
+    const resizeObserver = new ResizeObserver(() => {
+      if (mapRef.current) {
+        mapRef.current.resize();
+      }
+    });
+    if (container) {
+      resizeObserver.observe(container);
+    }
+
     return () => {
+      resizeObserver.disconnect();
       map.remove();
       mapRef.current = null;
     };
@@ -968,50 +980,6 @@ export default function PlotMapWorkspace({
       setGeoLocating(false);
     }
   };
-
-  // Auto-detect live location if permitted on load
-  useEffect(() => {
-    if (typeof navigator !== "undefined" && navigator.geolocation && !focusLocation) {
-      navigator.geolocation.getCurrentPosition(
-        async (pos) => {
-          const { latitude, longitude } = pos.coords;
-          let placeName = "Your Property";
-          try {
-            const res = await fetch(`/api/geocode?lat=${latitude}&lng=${longitude}`);
-            if (res.ok) {
-              const geoData = await res.json();
-              if (geoData.name) placeName = geoData.name;
-            }
-          } catch (e) {}
-
-          const loc = { lat: latitude, lng: longitude, name: placeName };
-          liveLocationRef.current = loc;
-          setLiveLocation(loc);
-
-          const map = mapRef.current;
-          if (map) {
-            map.flyTo({
-              center: [longitude, latitude],
-              zoom: 18,
-              pitch: 0,
-              bearing: 0,
-              duration: 1200,
-              essential: true,
-            });
-          }
-
-          placeLocationPin(latitude, longitude, placeName);
-          if (onLocationDetected) {
-            onLocationDetected(placeName, `${placeName}, Kerala`, latitude, longitude);
-          }
-        },
-        () => {
-          fallbackIpGeolocation();
-        },
-        { enableHighAccuracy: true, timeout: 6000, maximumAge: 60000 }
-      );
-    }
-  }, []);
 
   const validation = validatePolygonCoordinates(coordinates);
 

@@ -94,14 +94,14 @@ export default function PlotReportModal({
                 />
               </div>
               <p className="text-xs text-charcoal/60 tracking-wide uppercase">
-                Geospatial Land Telemetry & Architectural Planning Report
+                Plot Dimension &amp; Planning Report
               </p>
             </div>
 
             <div className="text-right text-xs font-mono">
               <div className="font-bold text-charcoal">DOSSIER #{Date.now().toString().slice(-6)}</div>
               <div className="text-charcoal/60">{currentDate}</div>
-              <div className="text-copper font-medium mt-1">Kerala GIS Calibration</div>
+              <div className="text-copper font-medium mt-1">Kerala Land Survey Calibration</div>
             </div>
           </div>
 

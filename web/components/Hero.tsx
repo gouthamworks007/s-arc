@@ -61,6 +61,7 @@ export default function Hero({ onExploreClick, onProjectClick }: HeroProps) {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [direction, setDirection] = useState<1 | -1>(1);
   const [isPaused, setIsPaused] = useState(false);
+  const touchStartX = useRef<number | null>(null);
 
   const nextSlide = useCallback(() => {
     setDirection(1);
@@ -71,6 +72,25 @@ export default function Hero({ onExploreClick, onProjectClick }: HeroProps) {
     setDirection(-1);
     setCurrentSlide((prev) => (prev - 1 + HERO_SLIDES.length) % HERO_SLIDES.length);
   }, []);
+
+  // Touch swipe support for mobile
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartX.current === null) return;
+    const touchEndX = e.changedTouches[0].clientX;
+    const diff = touchStartX.current - touchEndX;
+    if (Math.abs(diff) > 40) {
+      if (diff > 0) {
+        nextSlide();
+      } else {
+        prevSlide();
+      }
+    }
+    touchStartX.current = null;
+  };
 
   // Continuous scrolling animation in loop every 5.5 seconds (5500ms) with calm ease
   useEffect(() => {
@@ -100,40 +120,40 @@ export default function Hero({ onExploreClick, onProjectClick }: HeroProps) {
   };
 
   return (
-    <section className="relative pt-24 sm:pt-28 pb-16 lg:pb-24 bg-white overflow-hidden">
+    <section className="relative pt-20 sm:pt-24 pb-10 sm:pb-12 lg:pb-14 bg-white overflow-hidden">
       <div className="max-w-7xl mx-auto px-6 sm:px-8">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-8 items-stretch">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-8 items-stretch">
           
           {/* Left Column: Editorial Typography & Stats */}
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
-            className="lg:col-span-5 flex flex-col justify-between pt-4 lg:pt-8"
+            className="lg:col-span-5 flex flex-col justify-between pt-2 lg:pt-4"
           >
             <div>
               {/* Overline tag */}
-              <div className="text-[11px] font-semibold tracking-widestExtra text-copper uppercase mb-5">
+              <div className="text-[11px] font-semibold tracking-widestExtra text-copper uppercase mb-3">
                 Architecture for a better tomorrow
               </div>
 
               {/* Main Headline */}
-              <h1 className="text-4xl sm:text-5xl lg:text-[62px] leading-[1.04] font-normal tracking-[-0.01em] text-charcoal mb-6 font-serif">
+              <h1 className="text-4xl sm:text-5xl lg:text-[62px] leading-[1.04] font-normal tracking-[-0.01em] text-charcoal mb-4 font-serif">
                 Turn Your <br />
                 Land Into <br />
                 <span className="italic font-normal">A Home.</span>
               </h1>
 
               {/* Supporting Text */}
-              <p className="text-[15px] sm:text-base leading-relaxed text-secondaryText max-w-md mb-8 font-light font-sans">
+              <p className="text-[15px] sm:text-base leading-relaxed text-secondaryText max-w-md mb-6 font-light font-sans">
                 Discover, customise and purchase architectural designs from verified architects across South India.
               </p>
 
               {/* Primary & Secondary Action CTAs */}
-              <div className="flex flex-wrap items-center gap-3.5 mb-10">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-3.5 mb-7 sm:mb-8">
                 <button
                   onClick={onExploreClick}
-                  className="inline-flex items-center gap-2.5 px-6 py-3.5 bg-copper hover:bg-copper-hover text-white text-xs font-medium font-sans tracking-wide rounded-full shadow-subtle hover:shadow transition-all group min-h-[44px]"
+                  className="inline-flex items-center justify-center gap-2.5 px-6 py-3.5 bg-copper hover:bg-copper-hover text-white text-xs font-medium font-sans tracking-wide rounded-full shadow-subtle hover:shadow transition-all group min-h-[44px] w-full sm:w-auto"
                 >
                   <span>Explore 500+ Designs</span>
                   <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
@@ -141,62 +161,61 @@ export default function Hero({ onExploreClick, onProjectClick }: HeroProps) {
 
                 <Link
                   href="/plot-intelligence"
-                  className="inline-flex items-center gap-2 px-5 py-3.5 bg-warm-grey hover:bg-warm-border/50 text-charcoal border border-warm-border text-xs font-medium font-sans tracking-wide rounded-full transition-all group min-h-[44px]"
+                  className="inline-flex items-center justify-center gap-2 px-5 py-3.5 bg-warm-grey hover:bg-warm-border/50 text-charcoal border border-warm-border text-xs font-medium font-sans tracking-wide rounded-full transition-all group min-h-[44px] w-full sm:w-auto"
                 >
                   <Compass className="w-3.5 h-3.5 text-copper" />
-                  <span>Plot Intelligence GIS</span>
-                  <span className="ml-0.5 px-1.5 py-0.5 rounded-full text-[9px] bg-copper-subtle text-copper font-mono uppercase font-bold border border-copper/30">
-                    Live
-                  </span>
+                  <span>Plot Intelligence</span>
                 </Link>
               </div>
             </div>
 
             {/* Platform Metrics / Statistics */}
-            <div className="pt-8 border-t border-warm-border/80 grid grid-cols-4 gap-2 sm:gap-4">
+            <div className="pt-4 sm:pt-6 border-t border-warm-border/80 grid grid-cols-4 gap-1.5 sm:gap-4">
               <div>
-                <div className="text-xl sm:text-2xl font-medium tracking-tight text-charcoal">
+                <div className="text-lg sm:text-2xl font-medium tracking-tight text-charcoal">
                   500<span className="text-copper">+</span>
                 </div>
-                <div className="text-[11px] text-mutedText tracking-wider uppercase mt-1">
+                <div className="text-[10px] sm:text-[11px] text-mutedText tracking-wider uppercase mt-0.5 sm:mt-1 truncate">
                   Designs
                 </div>
               </div>
 
               <div>
-                <div className="text-xl sm:text-2xl font-medium tracking-tight text-charcoal">
+                <div className="text-lg sm:text-2xl font-medium tracking-tight text-charcoal">
                   100<span className="text-copper">+</span>
                 </div>
-                <div className="text-[11px] text-mutedText tracking-wider uppercase mt-1">
+                <div className="text-[10px] sm:text-[11px] text-mutedText tracking-wider uppercase mt-0.5 sm:mt-1 truncate">
                   Architects
                 </div>
               </div>
 
               <div>
-                <div className="text-xl sm:text-2xl font-medium tracking-tight text-charcoal">
+                <div className="text-lg sm:text-2xl font-medium tracking-tight text-charcoal">
                   12<span className="text-copper">+</span>
                 </div>
-                <div className="text-[11px] text-mutedText tracking-wider uppercase mt-1">
+                <div className="text-[10px] sm:text-[11px] text-mutedText tracking-wider uppercase mt-0.5 sm:mt-1 truncate">
                   Cities
                 </div>
               </div>
 
               <div>
-                <div className="text-xl sm:text-2xl font-medium tracking-tight text-charcoal">
+                <div className="text-lg sm:text-2xl font-medium tracking-tight text-charcoal">
                   10K<span className="text-copper">+</span>
                 </div>
-                <div className="text-[11px] text-mutedText tracking-wider uppercase mt-1">
+                <div className="text-[10px] sm:text-[11px] text-mutedText tracking-wider uppercase mt-0.5 sm:mt-1 truncate">
                   Builders
                 </div>
               </div>
             </div>
           </motion.div>
 
-          {/* Right Column: Continuous Scrolling Carousel (Looping every 1.5s) */}
+          {/* Right Column: Continuous Scrolling Carousel (Looping every 5.5s + Swipeable on Mobile) */}
           <div 
-            className="lg:col-span-7 relative min-h-[460px] sm:min-h-[540px] lg:min-h-[620px] w-full"
+            className="lg:col-span-7 relative min-h-[330px] sm:min-h-[460px] md:min-h-[540px] lg:min-h-[620px] h-[340px] sm:h-auto w-full select-none"
             onMouseEnter={() => setIsPaused(true)}
             onMouseLeave={() => setIsPaused(false)}
+            onTouchStart={handleTouchStart}
+            onTouchEnd={handleTouchEnd}
           >
             <div className="relative w-full h-full overflow-hidden rounded-2xl sm:rounded-3xl bg-charcoal group shadow-card">
               
@@ -265,23 +284,23 @@ export default function Hero({ onExploreClick, onProjectClick }: HeroProps) {
               </div>
 
               {/* Arrow Controls (Previous / Next) */}
-              <div className="absolute inset-y-0 left-3 sm:left-6 flex items-center z-20">
+              <div className="absolute inset-y-0 left-2 sm:left-6 flex items-center z-20">
                 <button
                   onClick={prevSlide}
                   aria-label="Previous slide"
-                  className="w-11 h-11 min-h-[44px] min-w-[44px] rounded-full bg-black/40 hover:bg-black/70 text-white/80 hover:text-white backdrop-blur-md border border-white/10 flex items-center justify-center transition-all duration-200 hover:scale-105"
+                  className="w-9 h-9 sm:w-11 sm:h-11 rounded-full bg-black/40 hover:bg-black/70 text-white/80 hover:text-white backdrop-blur-md border border-white/10 flex items-center justify-center transition-all duration-200 hover:scale-105"
                 >
-                  <ChevronLeft className="w-5 h-5" />
+                  <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5" />
                 </button>
               </div>
 
-              <div className="absolute inset-y-0 right-3 sm:right-6 flex items-center z-20">
+              <div className="absolute inset-y-0 right-2 sm:right-6 flex items-center z-20">
                 <button
                   onClick={nextSlide}
                   aria-label="Next slide"
-                  className="w-11 h-11 min-h-[44px] min-w-[44px] rounded-full bg-black/40 hover:bg-black/70 text-white/80 hover:text-white backdrop-blur-md border border-white/10 flex items-center justify-center transition-all duration-200 hover:scale-105"
+                  className="w-9 h-9 sm:w-11 sm:h-11 rounded-full bg-black/40 hover:bg-black/70 text-white/80 hover:text-white backdrop-blur-md border border-white/10 flex items-center justify-center transition-all duration-200 hover:scale-105"
                 >
-                  <ChevronRight className="w-5 h-5" />
+                  <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5" />
                 </button>
               </div>
 
@@ -294,12 +313,12 @@ export default function Hero({ onExploreClick, onProjectClick }: HeroProps) {
                   exit={{ opacity: 0, y: -8 }}
                   transition={{ duration: 0.25 }}
                   onClick={() => onProjectClick(activeSlide.id)}
-                  className="absolute bottom-6 right-6 sm:bottom-8 sm:right-8 bg-charcoal/85 hover:bg-charcoal text-white backdrop-blur-md px-4 py-3 text-left border border-white/15 transition-all duration-300 group max-w-[270px] z-20 shadow-lg rounded-xl"
+                  className="absolute bottom-3 left-3 right-3 sm:left-auto sm:right-8 sm:bottom-8 bg-charcoal/85 hover:bg-charcoal text-white backdrop-blur-md px-3.5 py-2.5 sm:px-4 sm:py-3 text-left border border-white/15 transition-all duration-300 group sm:max-w-[270px] z-20 shadow-lg rounded-xl"
                 >
-                  <div className="text-[10px] tracking-widest uppercase text-white/60 mb-0.5">
+                  <div className="text-[9px] sm:text-[10px] tracking-widest uppercase text-white/60 mb-0.5">
                     Featured Project
                   </div>
-                  <div className="text-[13px] font-medium tracking-wide flex items-center justify-between gap-3 text-white group-hover:text-copper transition-colors">
+                  <div className="text-xs sm:text-[13px] font-medium tracking-wide flex items-center justify-between gap-3 text-white group-hover:text-copper transition-colors">
                     <div className="truncate">
                       <div>{activeSlide.title}</div>
                       <div className="text-[10px] text-white/50 font-normal tracking-normal truncate">{activeSlide.subtitle}</div>

@@ -100,7 +100,7 @@ export default function PlotAnalysisSidebar({
         </div>
 
         <div className="pt-4 border-t border-warm-border text-[11px] text-charcoal/50 font-sans leading-relaxed">
-          Measurements are computed directly from geographic coordinate geodesics calibrated to Kerala land survey standards.
+          Measurements are calibrated to Kerala land survey standards.
         </div>
       </div>
     );
@@ -124,7 +124,7 @@ export default function PlotAnalysisSidebar({
   };
 
   return (
-    <div className="bg-white rounded-3xl border border-warm-border p-6 shadow-card space-y-6 flex flex-col justify-between h-full overflow-y-auto max-h-[calc(100vh-140px)]">
+    <div className="bg-white rounded-3xl border border-warm-border p-6 shadow-card space-y-6 flex flex-col justify-between">
       <div className="space-y-6">
         {/* Header with Title and Saved Plots Link */}
         <div className="flex items-center justify-between pb-3 border-b border-warm-border">
@@ -446,7 +446,7 @@ export default function PlotAnalysisSidebar({
           className="w-full py-3.5 px-4 rounded-2xl bg-copper text-white hover:bg-copper-dark transition-all text-xs font-sans font-semibold tracking-wide flex items-center justify-center gap-2 shadow-card"
         >
           <Sparkles className="w-4 h-4" />
-          <span>Find Suitable Architectural Plans ({matchedCount})</span>
+          <span>Find Matching Plans ({matchedCount})</span>
           <ArrowRight className="w-4 h-4 ml-1" />
         </button>
 

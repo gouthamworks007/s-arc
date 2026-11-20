@@ -104,17 +104,17 @@ export default function StylesPage() {
       <Navbar onOpenSellerModal={() => setIsSellerModalOpen(true)} />
 
       {/* Hero Header */}
-      <section className="pt-32 pb-14 bg-warm-grey border-b border-warm-border">
+      <section className="pt-24 sm:pt-28 pb-8 sm:pb-10 bg-warm-grey border-b border-warm-border">
         <div className="max-w-7xl mx-auto px-6 sm:px-8">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-copper/10 border border-copper/20 text-copper text-[11px] font-mono tracking-wider uppercase mb-4">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-copper/10 border border-copper/20 text-copper text-[11px] font-mono tracking-wider uppercase mb-3 sm:mb-4">
             <Compass className="w-3.5 h-3.5 text-copper" />
             <span>Architectural Taxonomy &amp; Vernacular Philosophy</span>
           </div>
 
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-normal font-serif tracking-tight text-charcoal mb-4">
+          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-normal font-serif tracking-tight text-charcoal mb-3 sm:mb-4">
             Find Your Architectural Language.
           </h1>
-          <p className="text-[15px] sm:text-base leading-relaxed text-secondaryText max-w-2xl font-light font-sans mb-8">
+          <p className="text-[15px] sm:text-base leading-relaxed text-secondaryText max-w-2xl font-light font-sans mb-5 sm:mb-6">
             Every architectural style on S-ARC represents a distinct philosophy of living, structural system, and climate response engineered for Southern Indian geography.
           </p>
 
@@ -134,13 +134,13 @@ export default function StylesPage() {
       </section>
 
       {/* Detailed Styles Showcase */}
-      <section className="py-16 sm:py-24 bg-white">
-        <div className="max-w-7xl mx-auto px-6 sm:px-8 space-y-24">
+      <section className="py-10 sm:py-14 bg-white">
+        <div className="max-w-7xl mx-auto px-6 sm:px-8 space-y-12 sm:space-y-14">
           {styleDetails.map((style, idx) => (
             <div
               key={style.id}
               id={style.id}
-              className={`grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-center pb-20 border-b border-warm-border scroll-mt-28 ${
+              className={`grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center pb-10 sm:pb-12 border-b border-warm-border scroll-mt-24 ${
                 idx % 2 === 1 ? "lg:flex-row-reverse" : ""
               }`}
             >

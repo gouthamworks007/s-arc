@@ -94,17 +94,17 @@ export default function ArchitectsPage() {
       <Navbar onOpenSellerModal={() => setIsSellerModalOpen(true)} />
 
       {/* Hero Header */}
-      <section className="pt-32 pb-14 bg-warm-grey border-b border-warm-border">
+      <section className="pt-24 sm:pt-28 pb-8 sm:pb-10 bg-warm-grey border-b border-warm-border">
         <div className="max-w-7xl mx-auto px-6 sm:px-8">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-copper/10 border border-copper/20 text-copper text-[11px] font-mono tracking-wider uppercase mb-4">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-copper/10 border border-copper/20 text-copper text-[11px] font-mono tracking-wider uppercase mb-3 sm:mb-4">
             <ShieldCheck className="w-3.5 h-3.5 text-copper" />
             <span>COA Verified Architects &amp; Studios</span>
           </div>
 
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-normal font-serif tracking-tight text-charcoal mb-4">
+          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-normal font-serif tracking-tight text-charcoal mb-3 sm:mb-4">
             Meet the Minds Behind the Spaces.
           </h1>
-          <p className="text-[15px] sm:text-base leading-relaxed text-secondaryText max-w-2xl font-light font-sans mb-8">
+          <p className="text-[15px] sm:text-base leading-relaxed text-secondaryText max-w-2xl font-light font-sans mb-5 sm:mb-6">
             Every architectural creator on S-ARC is thoroughly vetted, licensed with the Council of Architecture (India), and has built a portfolio of climate-responsive residential spaces conforming to Kerala KMBR regulations.
           </p>
 
@@ -148,11 +148,11 @@ export default function ArchitectsPage() {
       </section>
 
       {/* Architects Grid */}
-      <section className="py-16 sm:py-24 bg-white border-b border-warm-border">
+      <section className="py-10 sm:py-14 bg-white border-b border-warm-border">
         <div className="max-w-7xl mx-auto px-6 sm:px-8">
           
           {/* Results count & reset */}
-          <div className="flex items-center justify-between pb-6 mb-8 border-b border-warm-border text-xs font-sans text-secondaryText">
+          <div className="flex items-center justify-between pb-4 mb-6 border-b border-warm-border text-xs font-sans text-secondaryText">
             <div>
               Showing <strong className="text-charcoal font-semibold">{filteredArchitects.length}</strong> verified architecture studios
             </div>
@@ -171,7 +171,7 @@ export default function ArchitectsPage() {
           </div>
 
           {isLoading ? (
-            <div className="py-24 text-center flex flex-col items-center justify-center">
+            <div className="py-12 text-center flex flex-col items-center justify-center">
               <Loader2 className="w-8 h-8 animate-spin text-copper mb-3" />
               <p className="text-xs text-secondaryText font-sans">
                 Loading verified Council of Architecture studios...
@@ -271,7 +271,7 @@ export default function ArchitectsPage() {
 
           {/* Empty State */}
           {!isLoading && filteredArchitects.length === 0 && (
-            <div className="text-center py-20 bg-warm-grey border border-warm-border p-8 rounded-2xl">
+            <div className="text-center py-12 bg-warm-grey border border-warm-border p-6 sm:p-8 rounded-2xl">
               <h3 className="text-2xl font-serif text-charcoal mb-2">No Architects Found</h3>
               <p className="text-sm text-mutedText font-sans max-w-md mx-auto mb-6">
                 Try selecting a different district hub or modifying your search query to see verified creators.

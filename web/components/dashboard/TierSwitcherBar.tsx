@@ -123,7 +123,7 @@ export default function TierSwitcherBar() {
                 className="px-4 py-2.5 rounded-2xl bg-copper hover:bg-copper-hover text-white text-xs font-sans font-medium flex items-center gap-2 transition-all shadow-md group shrink-0"
               >
                 <Compass className="w-4 h-4 text-white group-hover:rotate-45 transition-transform" />
-                <span>Plot Intelligence (GIS)</span>
+                <span>Plot Intelligence</span>
               </Link>
 
               <Link

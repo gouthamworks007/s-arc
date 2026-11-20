@@ -46,6 +46,7 @@ export default function ConsultArchitectModal({
 
   // Accessibility: Escape key listener and body scroll lock
   useEffect(() => {
+    if (!project) return;
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };
@@ -55,7 +56,7 @@ export default function ConsultArchitectModal({
       document.body.style.overflow = "";
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [onClose]);
+  }, [project, onClose]);
 
   if (!project) return null;
 

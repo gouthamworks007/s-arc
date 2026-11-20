@@ -73,7 +73,7 @@ const GUIDE_STEPS = [
           Click on any boundary side to define your <strong>primary access road</strong>.
         </p>
         <p className="text-mutedText">
-          The S-ARC GIS engine automatically calculates statutory Kerala Municipality Building Rules (KMBR 2019) setbacks: <strong className="text-charcoal">10 ft Front Setback</strong> and <strong className="text-charcoal">4 ft Side/Rear Setbacks</strong> to generate your exact buildable footprint envelope.
+          Calculates statutory Kerala Municipality Building Rules (KMBR 2019) setbacks (<strong className="text-charcoal">10 ft Front</strong>, <strong className="text-charcoal">4 ft Side/Rear</strong>) to determine your buildable envelope.
         </p>
       </div>
     ),

@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -20,6 +20,7 @@ import {
   Lock 
 } from "lucide-react";
 import { useAuth } from "@/lib/authContext";
+import GoogleAuthButton from "@/components/auth/GoogleAuthButton";
 
 const loginSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
@@ -30,11 +31,32 @@ const loginSchema = z.object({
 type LoginFormValues = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
+  return (
+    <React.Suspense fallback={<div className="min-h-screen bg-[#FDFBF7]" />}>
+      <LoginFormContent />
+    </React.Suspense>
+  );
+}
+
+function LoginFormContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectTarget = searchParams.get("redirect") || "/dashboard";
+  const urlError = searchParams.get("error");
+
   const { switchRole, login } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [loginSuccess, setLoginSuccess] = useState(false);
-  const [authError, setAuthError] = useState<string | null>(null);
+  const [authError, setAuthError] = useState<string | null>(() => {
+    if (urlError === "google_cancelled") return "Google authentication was cancelled.";
+    if (urlError === "google_auth_failed" || urlError === "google_token_exchange_failed") {
+      return "Google sign-in could not be completed. Please try again or sign in with your email.";
+    }
+    if (urlError === "account_suspended") {
+      return "This account is currently suspended. Please contact S-ARC administration support.";
+    }
+    return null;
+  });
   const [showDemoAccess, setShowDemoAccess] = useState(false);
 
   const {
@@ -80,7 +102,7 @@ export default function LoginPage() {
         login(result.user);
         setLoginSuccess(true);
         setTimeout(() => {
-          router.push("/dashboard");
+          router.push(redirectTarget);
         }, 500);
       } else {
         setAuthError(result.error || "Invalid email or password. Please verify your credentials.");
@@ -115,7 +137,7 @@ export default function LoginPage() {
       </header>
 
       {/* Main Split Layout */}
-      <main id="main-content" className="flex-1 grid grid-cols-1 lg:grid-cols-12 max-w-7xl mx-auto w-full px-6 sm:px-8 py-10 lg:py-16 gap-12 lg:gap-16 items-center">
+      <main id="main-content" className="flex-1 grid grid-cols-1 lg:grid-cols-12 max-w-7xl mx-auto w-full px-6 sm:px-8 py-6 sm:py-10 gap-8 lg:gap-12 items-center">
         
         {/* Left Column: Form (5 cols) */}
         <div className="lg:col-span-5 max-w-md w-full mx-auto space-y-7">
@@ -149,6 +171,9 @@ export default function LoginPage() {
               )}
 
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+                {/* Google Sign In */}
+                <GoogleAuthButton variant="signin" redirectUrl={redirectTarget} />
+
                 {/* Email */}
                 <div className="space-y-1.5">
                   <label className="block text-[11px] uppercase tracking-wider text-stone-500 font-sans font-medium">

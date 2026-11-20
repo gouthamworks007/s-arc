@@ -125,6 +125,18 @@ export async function PATCH(
       queryParams.push(body.bio.trim().slice(0, 2000));
     }
 
+    const subRole = body.sub_role ?? body.subRole;
+    if (typeof subRole === "string" && ["homeowner", "architect", "contractor"].includes(subRole)) {
+      updateClauses.push("sub_role = ?");
+      queryParams.push(subRole);
+    }
+
+    const reviewNotes = body.review_notes ?? body.reviewNotes;
+    if (typeof reviewNotes === "string") {
+      updateClauses.push("review_notes = ?");
+      queryParams.push(reviewNotes);
+    }
+
     // Admin-only fields
     if (isAdmin) {
       if (body.status && ["active", "suspended", "pending_verification"].includes(body.status)) {

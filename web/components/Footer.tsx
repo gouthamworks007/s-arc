@@ -12,21 +12,41 @@ interface FooterProps {
 export default function Footer({ onOpenSellerModal }: FooterProps) {
   const [email, setEmail] = useState("");
   const [subscribed, setSubscribed] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSubscribe = (e: React.FormEvent) => {
+  const handleSubscribe = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (email) {
+    if (!email.trim() || isSubmitting) return;
+
+    setIsSubmitting(true);
+    setError(null);
+
+    try {
+      const res = await fetch("/api/newsletter", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Subscription failed.");
+      }
       setSubscribed(true);
       setEmail("");
+    } catch (err: any) {
+      setError(err.message || "Failed to subscribe. Please try again.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   return (
-    <footer className="bg-charcoal text-white pt-20 pb-12 border-t border-charcoal-light">
-      <div className="max-w-7xl mx-auto px-6 sm:px-8">
+    <footer className="bg-charcoal text-white pt-12 sm:pt-14 pb-10 border-t border-charcoal-light">
+      <div className="max-w-7xl mx-auto px-4 sm:px-8">
         
         {/* Top Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-12 lg:gap-8 pb-16 border-b border-white/10">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-10 lg:gap-8 pb-10 sm:pb-12 border-b border-white/10">
           
           {/* Brand & Description (4 cols) */}
           <div className="lg:col-span-4">
@@ -90,9 +110,8 @@ export default function Footer({ onOpenSellerModal }: FooterProps) {
                 </Link>
               </li>
               <li>
-                <Link href="/plot-intelligence" className="hover:text-copper transition-colors flex items-center gap-1.5">
-                  <span>Plot Intelligence GIS</span>
-                  <span className="px-1.5 py-0.2 rounded text-[9px] bg-copper/20 text-copper-light font-mono font-bold">NEW</span>
+                <Link href="/plot-intelligence" className="hover:text-copper transition-colors">
+                  Plot Intelligence
                 </Link>
               </li>
               <li>
@@ -210,23 +229,30 @@ export default function Footer({ onOpenSellerModal }: FooterProps) {
                 <span>Thank you for subscribing!</span>
               </div>
             ) : (
-              <form onSubmit={handleSubscribe} className="flex">
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Enter your email"
-                  required
-                  className="bg-white/10 border border-white/20 text-white placeholder-white/40 text-[12px] px-3 py-2 w-full outline-none focus:border-copper"
-                />
-                <button
-                  type="submit"
-                  aria-label="Subscribe"
-                  className="bg-copper hover:bg-copper-hover px-3 flex items-center justify-center text-white transition-colors"
-                >
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </button>
-              </form>
+              <div className="space-y-2">
+                <form onSubmit={handleSubscribe} className="flex">
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="Enter your email"
+                    required
+                    disabled={isSubmitting}
+                    className="bg-white/10 border border-white/20 text-white placeholder-white/40 text-[12px] px-3 py-2 w-full outline-none focus:border-copper disabled:opacity-50"
+                  />
+                  <button
+                    type="submit"
+                    aria-label="Subscribe"
+                    disabled={isSubmitting}
+                    className="bg-copper hover:bg-copper-hover px-3 flex items-center justify-center text-white transition-colors disabled:opacity-50"
+                  >
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                </form>
+                {error && (
+                  <p className="text-[11px] text-red-300 font-sans">{error}</p>
+                )}
+              </div>
             )}
           </div>
 

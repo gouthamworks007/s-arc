@@ -8,7 +8,7 @@ import { ArchitectProfile } from "@/lib/types";
 interface ArchitectDetailModalProps {
   architect: ArchitectProfile | null;
   onClose: () => void;
-  onSelectProject: (id: string) => void;
+  onSelectProject: (id?: string) => void;
 }
 
 export default function ArchitectDetailModal({
@@ -111,11 +111,11 @@ export default function ArchitectDetailModal({
             <button
               onClick={() => {
                 onClose();
-                onSelectProject("ridge-house");
+                onSelectProject();
               }}
-              className="w-full py-3 bg-charcoal hover:bg-copper text-white text-xs font-medium tracking-wide flex items-center justify-center gap-2 transition-colors"
+              className="w-full py-3 bg-charcoal hover:bg-copper text-white text-xs font-medium tracking-wide flex items-center justify-center gap-2 transition-colors rounded-full shadow-sm"
             >
-              <span>Explore Featured Project by {architect.name}</span>
+              <span>Explore Architectural Plans by {architect.name}</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </div>

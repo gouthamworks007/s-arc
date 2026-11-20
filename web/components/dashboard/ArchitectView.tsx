@@ -8,6 +8,7 @@ import { ArchitecturalProject } from "@/lib/types";
 import ProjectEditModal from "@/components/dashboard/ProjectEditModal";
 import InquiriesTab from "@/components/dashboard/InquiriesTab";
 import StudioProfileTab from "@/components/dashboard/StudioProfileTab";
+import PackagesTab from "@/components/dashboard/PackagesTab";
 import { 
   Plus, 
   Layers, 
@@ -23,7 +24,8 @@ import {
   MessageSquare, 
   TrendingUp, 
   ShieldCheck, 
-  RotateCcw
+  RotateCcw,
+  Package
 } from "lucide-react";
 
 export default function ArchitectView() {
@@ -39,7 +41,7 @@ export default function ArchitectView() {
     inquiries 
   } = useProjects();
 
-  const [activeTab, setActiveTab] = useState<"projects" | "inquiries" | "profile">("projects");
+  const [activeTab, setActiveTab] = useState<"projects" | "packages" | "inquiries" | "profile">("projects");
   const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
 
   // Filter & Search states
@@ -222,6 +224,18 @@ export default function ArchitectView() {
         >
           <Layers className="w-4 h-4" />
           <span>My Architectural Plans ({projects.length})</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab("packages")}
+          className={`pb-3.5 px-4 text-sm font-medium font-sans border-b-2 transition-all flex items-center gap-2 whitespace-nowrap ${
+            activeTab === "packages"
+              ? "border-copper text-copper font-semibold"
+              : "border-transparent text-secondaryText hover:text-charcoal"
+          }`}
+        >
+          <Package className="w-4 h-4" />
+          <span>Drawing Packages</span>
         </button>
 
         <button
@@ -537,10 +551,13 @@ export default function ArchitectView() {
         </div>
       )}
 
-      {/* TAB 2: INQUIRIES */}
+      {/* TAB 2: PACKAGES */}
+      {activeTab === "packages" && <PackagesTab projects={projects} />}
+
+      {/* TAB 3: INQUIRIES */}
       {activeTab === "inquiries" && <InquiriesTab />}
 
-      {/* TAB 3: STUDIO PROFILE */}
+      {/* TAB 4: STUDIO PROFILE */}
       {activeTab === "profile" && <StudioProfileTab />}
 
       {/* Project Edit & Create Modal */}

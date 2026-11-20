@@ -12,7 +12,22 @@ import HomeownerView from "@/components/dashboard/HomeownerView";
 import { Lock, ShieldCheck, Key } from "lucide-react";
 
 export default function UnifiedDashboard() {
-  const { role, currentUser, isLoggedIn } = useAuth();
+  const { role, currentUser, isLoggedIn, isLoading } = useAuth();
+
+  if (isLoading) {
+    return (
+      <main id="main-content" className="min-h-screen bg-[#FBFBFA] flex flex-col justify-between">
+        <Navbar />
+        <div className="pt-32 pb-20 max-w-lg mx-auto px-6 w-full text-center flex flex-col items-center justify-center space-y-4">
+          <div className="w-10 h-10 rounded-full border-2 border-copper border-t-transparent animate-spin" />
+          <p className="text-xs font-mono uppercase tracking-widest text-mutedText">
+            Synchronizing S-ARC Workspace...
+          </p>
+        </div>
+        <Footer />
+      </main>
+    );
+  }
 
   // Route Guard: Dashboard is strictly accessible using authorized accounts
   if (!isLoggedIn || !currentUser) {
@@ -20,7 +35,7 @@ export default function UnifiedDashboard() {
       <main id="main-content" className="min-h-screen bg-[#FBFBFA] flex flex-col justify-between">
         <Navbar />
 
-        <div className="pt-36 pb-28 max-w-lg mx-auto px-6 w-full text-center">
+        <div className="pt-24 sm:pt-28 pb-14 max-w-lg mx-auto px-6 w-full text-center">
           <div className="bg-white border border-warm-border rounded-3xl p-8 sm:p-10 shadow-xl space-y-6">
             <div className="w-16 h-16 rounded-2xl bg-copper/15 border border-copper/30 text-copper flex items-center justify-center mx-auto shadow-sm">
               <Lock className="w-8 h-8 text-copper" />
@@ -79,7 +94,7 @@ export default function UnifiedDashboard() {
     <main id="main-content" className="min-h-screen bg-[#FBFBFA]">
       <Navbar />
 
-      <div className="pt-28 pb-24 max-w-7xl mx-auto px-6 sm:px-8">
+      <div className="pt-20 sm:pt-24 pb-12 sm:pb-14 max-w-7xl mx-auto px-6 sm:px-8">
         {/* Role Switcher Bar */}
         <TierSwitcherBar />
 

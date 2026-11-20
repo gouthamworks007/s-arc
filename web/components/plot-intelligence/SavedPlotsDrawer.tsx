@@ -117,14 +117,14 @@ export default function SavedPlotsDrawer({
               </Link>
             </div>
           ) : isLoading ? (
-            <div className="py-20 text-center space-y-3">
+            <div className="py-10 text-center space-y-2">
               <Loader2 className="w-6 h-6 text-copper animate-spin mx-auto" />
               <p className="text-xs font-sans text-charcoal/50">
                 Retrieving your measured properties...
               </p>
             </div>
           ) : plots.length === 0 ? (
-            <div className="py-16 text-center space-y-3">
+            <div className="py-10 text-center space-y-3">
               <div className="w-12 h-12 rounded-full bg-warm-grey text-charcoal/40 mx-auto flex items-center justify-center">
                 <FolderHeart className="w-6 h-6" />
               </div>

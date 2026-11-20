@@ -36,6 +36,10 @@ export async function POST(req: NextRequest) {
       studioName,
       phone,
       location,
+      practiceType,
+      portfolioUrl,
+      plotDetails,
+      contractorDetails,
     } = body;
 
     // 2. Input Validation
@@ -102,6 +106,33 @@ export async function POST(req: NextRequest) {
     // Architects must be verified by Admin before publishing blueprints
     const status = isArchitect ? "pending_verification" : "active";
 
+    // Build rich profile summary & review notes
+    let profileBio = "";
+    let reviewNotes = "";
+
+    if (safeSubRole === "homeowner" && plotDetails) {
+      profileBio = `${plotDetails.district || location || "Kerala"} • ${plotDetails.cents ? `${plotDetails.cents} Cents` : "Residential Plot"} • ${plotDetails.preferredStyle || "Regional Modern"}`.trim();
+      reviewNotes = `Homeowner Profile | Land: ${plotDetails.status || "Owns plot"} | Size: ${plotDetails.cents || "Standard"} Cents | Location: ${plotDetails.district || location || "Kerala"} | Budget: ${plotDetails.budgetRange || "Flexible"} | Timeline: ${plotDetails.timeline || "Exploring"}`;
+    } else if (safeSubRole === "architect") {
+      profileBio = `${studioName || "Architectural Practice"} (${coaNumber || "CoA Reg"}) • ${location || "South India"}`;
+      reviewNotes = `Architect Credentials: CoA ${coaNumber || "Pending"} submitted for ${practiceType || "practice"}. Studio: ${studioName || name}. Base: ${location || "Kerala"}.`;
+    } else if (safeSubRole === "contractor") {
+      profileBio = `${contractorDetails?.firmName || studioName || "Turnkey Contracting"} • ${(contractorDetails?.operatingDistricts || [location || "Kerala"]).join(", ")}`;
+      reviewNotes = `Contractor Firm: ${contractorDetails?.firmName || name} | Capacity: ${contractorDetails?.capacityPerYear || "Flexible"} proj/yr | Experience: ${contractorDetails?.yearsInPractice || "3+ yrs"}`;
+    }
+
+    const defaultAvatar = safeSubRole === "architect"
+      ? "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80"
+      : safeSubRole === "contractor"
+      ? "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&w=400&q=80"
+      : "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=400&q=80";
+
+    const resolvedLocation = (
+      plotDetails?.district ||
+      location ||
+      (safeSubRole === "homeowner" ? "Kerala, India" : "South India")
+    ).trim().slice(0, 100);
+
     const newUser = {
       id: `usr-${Date.now().toString().slice(-6)}`,
       name: name.trim().slice(0, 100),
@@ -110,18 +141,24 @@ export async function POST(req: NextRequest) {
       subRole: safeSubRole as "homeowner" | "architect" | "contractor",
       status,
       coaNumber: coaNumber ? String(coaNumber).trim().slice(0, 50) : null,
-      studioName: studioName ? String(studioName).trim().slice(0, 120) : null,
+      studioName: (studioName || contractorDetails?.firmName) ? String(studioName || contractorDetails?.firmName).trim().slice(0, 120) : null,
       phone: phone ? String(phone).trim().slice(0, 30) : null,
-      location: location ? String(location).trim().slice(0, 100) : "South India",
-      avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80",
+      location: resolvedLocation,
+      avatar: defaultAvatar,
+      bio: profileBio,
+      reviewNotes,
+      practiceType: practiceType || undefined,
+      portfolioUrl: portfolioUrl || undefined,
+      plotDetails: plotDetails || undefined,
+      contractorDetails: contractorDetails || undefined,
       joinedDate: "Just now",
     };
 
     // 6. Save to Database
     await d1.execute(
       `INSERT INTO users (
-        id, name, email, password_hash, role, sub_role, status, coa_number, studio_name, phone, location, avatar
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        id, name, email, password_hash, role, sub_role, status, coa_number, studio_name, phone, location, avatar, bio, permissions, review_notes
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         newUser.id,
         newUser.name,
@@ -135,6 +172,11 @@ export async function POST(req: NextRequest) {
         newUser.phone,
         newUser.location,
         newUser.avatar,
+        newUser.bio,
+        "[]",
+        newUser.reviewNotes,
+        newUser.plotDetails,
+        newUser.contractorDetails,
       ]
     );
 
@@ -152,7 +194,12 @@ export async function POST(req: NextRequest) {
           "USER_REGISTERED",
           newUser.id,
           "user",
-          JSON.stringify({ subRole: newUser.subRole, ip: clientIp }),
+          JSON.stringify({
+            subRole: newUser.subRole,
+            ip: clientIp,
+            location: newUser.location,
+            plotDetails: newUser.plotDetails,
+          }),
         ]
       );
     } catch (auditErr) {

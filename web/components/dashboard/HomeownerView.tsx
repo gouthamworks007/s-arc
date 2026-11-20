@@ -170,7 +170,54 @@ export default function HomeownerView() {
 
   return (
     <div className="space-y-10 animate-in fade-in-50 duration-200">
-      {/* 1. Saved Plots & GIS Land Measurements (Core Landowner Requirement) */}
+      {/* Registered Onboarding Project Profile Banner (Adaptive Signup Integration) */}
+      {currentUser?.plotDetails && (
+        <div className="p-6 bg-white border border-warm-border rounded-3xl shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-mono uppercase tracking-wider text-copper font-semibold bg-copper/10 px-2.5 py-0.5 rounded-full">
+                Your Registered Project Profile
+              </span>
+              <span className="text-xs text-stone-400 font-sans">
+                • {currentUser.plotDetails.district || currentUser.location || "Kerala"}
+              </span>
+            </div>
+            <h4 className="text-lg font-serif text-charcoal">
+              {currentUser.plotDetails.cents ? `${currentUser.plotDetails.cents} Cents` : "Residential Plot"} • {currentUser.plotDetails.preferredStyle || "Regional Modern Architecture"}
+            </h4>
+            <div className="flex flex-wrap items-center gap-3 text-xs text-secondaryText font-sans">
+              <span>
+                Budget: <strong className="text-charcoal font-medium">{currentUser.plotDetails.budgetRange || "Flexible"}</strong>
+              </span>
+              <span>•</span>
+              <span>
+                Timeline: <strong className="text-charcoal font-medium">{currentUser.plotDetails.timeline || "In Planning"}</strong>
+              </span>
+              <span>•</span>
+              <span>
+                Status: <strong className="text-charcoal font-medium">{currentUser.plotDetails.status === "owns_land" ? "Plot Ready" : "Land Planning"}</strong>
+              </span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2.5 shrink-0 w-full md:w-auto">
+            <Link
+              href="/designs"
+              className="flex-1 md:flex-initial px-5 py-2.5 rounded-full bg-charcoal hover:bg-copper text-white text-xs font-sans font-medium transition-all shadow-sm text-center"
+            >
+              Browse Feasible Plans
+            </Link>
+            <Link
+              href="/plot-intelligence"
+              className="flex-1 md:flex-initial px-4 py-2.5 rounded-full border border-warm-border hover:bg-warm-grey text-xs font-sans font-medium text-charcoal transition-all text-center"
+            >
+              Verify Setbacks on GIS
+            </Link>
+          </div>
+        </div>
+      )}
+
+      {/* Saved Plots & Land Measurements */}
       <div className="space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
@@ -183,7 +230,7 @@ export default function HomeownerView() {
               </span>
             </div>
             <p className="text-xs text-secondaryText font-sans mt-0.5">
-              Geospatial plot telemetry, boundary dimensions, and matched architectural plan recommendations.
+              Saved plot boundaries, dimensions, and matched plan recommendations.
             </p>
           </div>
 
@@ -192,7 +239,7 @@ export default function HomeownerView() {
             className="px-5 py-2.5 rounded-full bg-copper hover:bg-copper-hover text-white text-xs font-sans font-medium flex items-center gap-2 transition-all shadow-sm self-start sm:self-auto shrink-0"
           >
             <Compass className="w-3.5 h-3.5" />
-            <span>Measure New Plot (GIS)</span>
+            <span>Measure New Plot</span>
           </Link>
         </div>
 
@@ -200,7 +247,7 @@ export default function HomeownerView() {
           <div className="p-12 text-center bg-white border border-warm-border rounded-3xl flex flex-col items-center justify-center space-y-3">
             <Loader2 className="w-6 h-6 animate-spin text-copper" />
             <span className="text-xs text-secondaryText font-sans">
-              Loading your saved plot telemetry...
+              Loading your saved plots...
             </span>
           </div>
         ) : savedPlots.length === 0 ? (

@@ -187,7 +187,7 @@ type Model = ReturnType<typeof buildModel>;
 function ShapeGlyph({ id }: { id: string }) {
   const line = { fill: "none", stroke: "currentColor", strokeWidth: 1.5, strokeLinejoin: "round" as const };
   return (
-    <svg viewBox="0 0 24 24" className="w-5 h-5" aria-hidden="true">
+    <svg viewBox="0 0 24 24" className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" aria-hidden="true">
       {id === "Rectangular" && <rect x="4" y="7" width="16" height="10" rx="1" {...line} />}
       {id === "Square" && <rect x="6" y="6" width="12" height="12" rx="1" {...line} />}
       {id === "Corner Plot" && <path d="M4 5h11l5 5v9H4z" {...line} />}
@@ -427,11 +427,11 @@ export default function SmartSearch({ onSearch }: SmartSearchProps) {
 
   return (
     <MotionConfig reducedMotion="user">
-      <section id="search-section" className="py-14 sm:py-20 bg-warm-grey border-y border-warm-border">
+      <section id="search-section" className="py-10 sm:py-14 bg-warm-grey border-y border-warm-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-10 items-start">
             {/* Left: heading */}
-            <div className="lg:col-span-4 space-y-4">
+            <div className="lg:col-span-4 space-y-3 sm:space-y-4">
               <h2 className="text-3xl sm:text-4xl lg:text-[44px] font-normal font-serif tracking-[-0.01em] text-charcoal leading-[1.08]">
                 What are we building on?
               </h2>
@@ -448,11 +448,11 @@ export default function SmartSearch({ onSearch }: SmartSearchProps) {
             </div>
 
             {/* Right: controls + live diagram */}
-            <div className="lg:col-span-8 bg-white border border-warm-border shadow-subtle p-5 sm:p-7 md:p-8 rounded-2xl">
-              <form onSubmit={handleSearchSubmit} className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-8">
+            <div className="lg:col-span-8 bg-white border border-warm-border shadow-subtle p-4 sm:p-6 md:p-7 rounded-2xl">
+              <form onSubmit={handleSearchSubmit} className="grid grid-cols-1 md:grid-cols-12 gap-5 md:gap-6">
                 {/* Diagram (first on mobile so changes stay visible) */}
                 <div className="md:col-span-5 md:order-2 self-start md:sticky md:top-24">
-                  <div className="p-4 bg-warm-card border border-warm-border/70 rounded-2xl">
+                  <div className="p-3 sm:p-4 bg-warm-card border border-warm-border/70 rounded-xl sm:rounded-2xl">
                     <div className="relative w-full aspect-square max-w-[300px] mx-auto">
                       <PlotDiagram
                         model={model}
@@ -700,7 +700,7 @@ export default function SmartSearch({ onSearch }: SmartSearchProps) {
                             type="button"
                             aria-pressed={active}
                             onClick={() => setShapeId(s.id)}
-                            className="relative flex flex-col items-center gap-1 rounded-lg px-1 py-2 text-[11px] font-sans font-medium"
+                            className="relative flex flex-col items-center gap-1 rounded-lg px-0.5 sm:px-1 py-1.5 sm:py-2 text-[10px] sm:text-[11px] font-sans font-medium min-h-[46px] justify-center"
                           >
                             {active && (
                               <motion.span
@@ -785,7 +785,7 @@ export default function SmartSearch({ onSearch }: SmartSearchProps) {
                       className="inline-flex items-center gap-1.5 text-copper hover:text-copper-dark font-medium underline underline-offset-4 decoration-copper/60 transition-colors group"
                     >
                       <Compass className="w-3.5 h-3.5 text-copper shrink-0 group-hover:rotate-45 transition-transform" />
-                      <span>Use same plot in live location with Plot Guide</span>
+                      <span>Open in Plot Guide</span>
                       <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
                     </Link>
                   </div>

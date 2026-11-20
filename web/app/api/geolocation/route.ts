@@ -27,16 +27,43 @@ export async function GET(req: NextRequest) {
     ? forwardedFor.split(",")[0].trim()
     : req.headers.get("cf-connecting-ip") || "";
 
-  // 3. Fallback to free IP Geolocation service
+  // Helper: check if IP is private, local, loopback, or empty
+  const isPrivateOrLocalIp = (ip: string) => {
+    if (!ip) return true;
+    if (ip === "::1" || ip === "127.0.0.1" || ip === "localhost") return true;
+    if (ip.startsWith("10.") || ip.startsWith("192.168.")) return true;
+    if (
+      ip.startsWith("172.16.") ||
+      ip.startsWith("172.17.") ||
+      ip.startsWith("172.18.") ||
+      ip.startsWith("172.19.") ||
+      ip.startsWith("172.2") ||
+      ip.startsWith("172.30.") ||
+      ip.startsWith("172.31.")
+    ) {
+      return true;
+    }
+    if (ip.startsWith("fc00:") || ip.startsWith("fd00:") || ip.startsWith("fe80:")) return true;
+    return false;
+  };
+
+  // Immediate default for local development / internal requests (prevents 3s external hang)
+  if (isPrivateOrLocalIp(clientIp)) {
+    return NextResponse.json({
+      latitude: 9.9816,
+      longitude: 76.2999,
+      city: "Ernakulam",
+      region: "Kerala",
+      source: "local-kerala-default",
+    });
+  }
+
+  // 3. Fallback to free IP Geolocation service for public client IPs
   try {
-    const targetUrl = clientIp && !clientIp.startsWith("127.") && !clientIp.startsWith("192.168.")
-      ? `https://ipapi.co/${clientIp}/json/`
-      : "https://ipapi.co/json/";
-
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 3000);
+    const timeoutId = setTimeout(() => controller.abort(), 2000);
 
-    const res = await fetch(targetUrl, {
+    const res = await fetch(`https://ipapi.co/${clientIp}/json/`, {
       signal: controller.signal,
       headers: { "User-Agent": "S-ARC-GIS/1.0" },
     });
@@ -44,7 +71,7 @@ export async function GET(req: NextRequest) {
 
     if (res.ok) {
       const data = await res.json();
-      if (data && data.latitude && data.longitude) {
+      if (data && data.latitude && data.longitude && !data.error) {
         return NextResponse.json({
           latitude: data.latitude,
           longitude: data.longitude,
@@ -58,7 +85,7 @@ export async function GET(req: NextRequest) {
     // Ignore timeout
   }
 
-  // 4. Default to Ernakulam / Central Kerala fallback if completely offline or local development
+  // 4. Default to Ernakulam / Central Kerala fallback
   return NextResponse.json({
     latitude: 9.9816,
     longitude: 76.2999,
