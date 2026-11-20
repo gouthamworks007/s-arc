@@ -50,7 +50,7 @@ export default function Navbar({ onOpenSellerModal, onOpenSearch }: NavbarProps)
   // Public navigation: Dashboard is protected and accessible only with an account
   const navLinks = [
     { name: "Explore Designs", href: "/designs", active: pathname === "/designs" },
-    { name: "Plot Intelligence", href: "/plot-intelligence", active: pathname === "/plot-intelligence" },
+    { name: "Plot My Land", href: "/plot-my-land", active: pathname === "/plot-my-land" || pathname === "/plot-intelligence" },
     { name: "Styles", href: "/styles", active: pathname === "/styles" },
     { name: "Architects", href: "/architects", active: pathname === "/architects" },
   ];

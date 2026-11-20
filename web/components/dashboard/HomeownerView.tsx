@@ -264,11 +264,11 @@ export default function HomeownerView() {
               </p>
             </div>
             <Link
-              href="/plot-intelligence"
+              href="/plot-my-land"
               className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-charcoal hover:bg-copper text-white text-xs font-sans font-medium transition-all shadow-sm"
             >
               <Compass className="w-3.5 h-3.5 text-copper-light" />
-              <span>Launch Plot Intelligence Map</span>
+              <span>Launch Plot My Land Map</span>
             </Link>
           </div>
         ) : (
@@ -355,11 +355,11 @@ export default function HomeownerView() {
                 {/* Open in Map Action */}
                 <div className="pt-2 border-t border-warm-border/50">
                   <Link
-                    href={`/plot-intelligence?plotId=${plot.id}`}
+                    href={`/plot-my-land?plotId=${plot.id}`}
                     className="w-full py-2.5 rounded-xl bg-charcoal hover:bg-copper text-white text-xs font-sans font-medium flex items-center justify-center gap-2 transition-all shadow-sm"
                   >
                     <ExternalLink className="w-3.5 h-3.5 text-copper-light" />
-                    <span>Open in Plot Intelligence</span>
+                    <span>Open in Plot My Land</span>
                   </Link>
                 </div>
               </div>

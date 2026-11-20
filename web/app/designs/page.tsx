@@ -591,10 +591,10 @@ function DesignsCatalogContent() {
               </div>
 
               <Link
-                href="/plot-intelligence"
+                href="/plot-my-land"
                 className="inline-flex items-center gap-2 px-4 py-2.5 bg-copper hover:bg-copper-hover text-white text-xs font-medium font-sans rounded-full shrink-0 transition-colors shadow-sm self-start sm:self-auto"
               >
-                <span>Open Plot Intelligence</span>
+                <span>Open Plot My Land</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </Link>
             </div>

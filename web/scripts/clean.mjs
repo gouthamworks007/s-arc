@@ -7,7 +7,7 @@ const nextDir = path.resolve(__dirname, "..", ".next");
 
 if (fs.existsSync(nextDir)) {
   try {
-    fs.rmSync(nextDir, { recursive: true, force: true });
+    fs.rmSync(nextDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
   } catch (e) {
     // Ignore locked files if any
   }

@@ -160,11 +160,11 @@ export default function Hero({ onExploreClick, onProjectClick }: HeroProps) {
                 </button>
 
                 <Link
-                  href="/plot-intelligence"
+                  href="/plot-my-land"
                   className="inline-flex items-center justify-center gap-2 px-5 py-3.5 bg-warm-grey hover:bg-warm-border/50 text-charcoal border border-warm-border text-xs font-medium font-sans tracking-wide rounded-full transition-all group min-h-[44px] w-full sm:w-auto"
                 >
                   <Compass className="w-3.5 h-3.5 text-copper" />
-                  <span>Plot Intelligence</span>
+                  <span>Plot My Land</span>
                 </Link>
               </div>
             </div>

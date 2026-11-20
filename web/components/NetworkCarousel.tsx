@@ -38,9 +38,9 @@ const PORTALS: NetworkPortal[] = [
   {
     id: "plot-intelligence",
     badge: "SATELLITE SURVEY",
-    title: "Plot Intelligence",
+    title: "Plot My Land",
     desc: "Top-down satellite mapping, real-time Cent area calculation, and KMBR 2019 statutory setback projections.",
-    href: "/plot-intelligence",
+    href: "/plot-my-land",
     linkText: "Launch Satellite Map",
     image: "https://images.unsplash.com/photo-1524813686514-a57563d77d66?auto=format&fit=crop&w=800&q=80",
   },

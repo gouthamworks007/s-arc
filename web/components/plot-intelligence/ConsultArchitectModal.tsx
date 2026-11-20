@@ -28,7 +28,7 @@ export default function ConsultArchitectModal({
   const [budgetRange, setBudgetRange] = useState("₹50L - ₹80L");
   const [message, setMessage] = useState(
     analysis
-      ? `I measured my plot (${analysis.areaCents.toFixed(1)} Cents, approx ${analysis.frontageFeet.toFixed(0)}ft frontage) using S-ARC Plot Intelligence. I would like to consult with Ar. ${project?.architect.name} regarding adapting ${project?.name} to our site contour and local setback clearance.`
+      ? `I measured my plot (${analysis.areaCents.toFixed(1)} Cents, approx ${analysis.frontageFeet.toFixed(0)}ft frontage) using S-ARC Plot My Land. I would like to consult with Ar. ${project?.architect.name} regarding adapting ${project?.name} to our site contour and local setback clearance.`
       : `I am interested in consulting with Ar. ${project?.architect.name} regarding ${project?.name} for site contour adaptation and municipal clearances in ${locationName}.`
   );
   const [isSubmitting, setIsSubmitting] = useState(false);

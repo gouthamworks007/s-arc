@@ -55,7 +55,7 @@ export default function PlotReportModal({
         <div className="sticky top-0 bg-white/95 backdrop-blur-sm border-b border-warm-border z-30 px-6 py-4 flex items-center justify-between rounded-t-3xl print:hidden">
           <div className="flex items-center gap-2">
             <span className="text-[10px] tracking-widestExtra uppercase text-copper font-semibold">
-              S-ARC Plot Intelligence Dossier
+              S-ARC Plot My Land Dossier
             </span>
           </div>
 

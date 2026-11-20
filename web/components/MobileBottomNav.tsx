@@ -19,7 +19,7 @@ export default function MobileBottomNav() {
   // Jakob's Law: 5 primary thumb-zone destinations matching industry standards (Airbnb, Instagram, YouTube)
   const isHome = pathname === "/";
   const isDesigns = pathname.startsWith("/designs");
-  const isPlot = pathname.startsWith("/plot-intelligence");
+  const isPlot = pathname.startsWith("/plot-my-land") || pathname.startsWith("/plot-intelligence");
   const isAccount = pathname.startsWith("/dashboard") || pathname.startsWith("/login") || pathname.startsWith("/signup");
 
   const savedCount = savedProjects.length;
@@ -69,7 +69,7 @@ export default function MobileBottomNav() {
 
         {/* 3. My Plot (Center Hero Tab) */}
         <Link
-          href="/plot-intelligence"
+          href="/plot-my-land"
           className={`flex flex-col items-center justify-center min-w-[62px] py-1 transition-all duration-200 group ${
             isPlot ? "text-copper" : "text-charcoal/70 hover:text-charcoal"
           }`}

@@ -110,8 +110,8 @@ export default function Footer({ onOpenSellerModal }: FooterProps) {
                 </Link>
               </li>
               <li>
-                <Link href="/plot-intelligence" className="hover:text-copper transition-colors">
-                  Plot Intelligence
+                <Link href="/plot-my-land" className="hover:text-copper transition-colors">
+                  Plot My Land
                 </Link>
               </li>
               <li>
