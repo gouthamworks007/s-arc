@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Search, Menu, X, ArrowRight, Bookmark, Key, LogOut, User } from "lucide-react";
+import { Search, Menu, X, ArrowRight, Bookmark, LogOut, User } from "lucide-react";
 import { useSavedProjects } from "@/lib/savedProjectsContext";
 import { useAuth } from "@/lib/authContext";
 
@@ -154,13 +154,20 @@ export default function Navbar({ onOpenSellerModal, onOpenSearch }: NavbarProps)
               </button>
             </div>
           ) : (
-            <Link
-              href="/login"
-              className="px-4 py-2 rounded-full border border-warm-border text-xs font-sans font-medium text-charcoal hover:border-copper hover:text-copper transition-all flex items-center gap-1.5"
-            >
-              <Key className="w-3.5 h-3.5 text-copper" />
-              <span>Sign In</span>
-            </Link>
+            <div className="flex items-center gap-2">
+              <Link
+                href="/login"
+                className="px-4 py-2 rounded-full border border-warm-border text-xs font-sans font-medium text-charcoal hover:border-copper hover:text-copper transition-all flex items-center"
+              >
+                <span>Sign In</span>
+              </Link>
+              <Link
+                href="/signup"
+                className="px-4 py-2 rounded-full bg-charcoal hover:bg-copper text-white text-xs font-sans font-medium transition-all shadow-xs flex items-center"
+              >
+                <span>Sign Up</span>
+              </Link>
+            </div>
           )}
 
           <Link
@@ -250,9 +257,8 @@ export default function Navbar({ onOpenSellerModal, onOpenSearch }: NavbarProps)
                   <Link
                     href="/login"
                     onClick={() => setMobileMenuOpen(false)}
-                    className="text-charcoal font-medium hover:text-copper flex items-center gap-1"
+                    className="text-charcoal font-medium hover:text-copper flex items-center"
                   >
-                    <Key className="w-3.5 h-3.5 text-copper" />
                     <span>Sign In</span>
                   </Link>
                   <span className="text-warm-border">•</span>

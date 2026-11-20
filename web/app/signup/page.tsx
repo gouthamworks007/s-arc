@@ -367,11 +367,11 @@ function SignupContent() {
           </div>
         </Link>
 
-        <div className="text-xs font-sans text-stone-500 flex items-center gap-2">
-          <span>Already have an account?</span>
+        <div className="text-xs font-sans text-stone-500 flex items-center gap-2.5">
+          <span className="hidden sm:inline">Already have an account?</span>
           <Link
             href="/login"
-            className="text-copper hover:text-copper-hover underline font-medium transition-colors"
+            className="px-3.5 py-1.5 rounded-full border border-warm-border hover:border-copper text-charcoal hover:text-copper font-medium transition-all text-xs inline-flex items-center"
           >
             Sign In
           </Link>

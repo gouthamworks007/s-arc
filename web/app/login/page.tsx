@@ -128,9 +128,12 @@ function LoginFormContent() {
           </div>
         </Link>
 
-        <div className="text-xs font-sans text-stone-500">
-          New to S-ARC?{" "}
-          <Link href="/signup" className="text-copper hover:text-copper-hover underline font-medium transition-colors">
+        <div className="text-xs font-sans text-stone-500 flex items-center gap-2.5">
+          <span className="hidden sm:inline">New to S-ARC?</span>
+          <Link
+            href="/signup"
+            className="px-3.5 py-1.5 rounded-full border border-warm-border hover:border-copper text-charcoal hover:text-copper font-medium transition-all text-xs inline-flex items-center"
+          >
             Create an Account
           </Link>
         </div>

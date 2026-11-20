@@ -9,7 +9,7 @@ import TierSwitcherBar from "@/components/dashboard/TierSwitcherBar";
 import AdminView from "@/components/dashboard/AdminView";
 import ArchitectView from "@/components/dashboard/ArchitectView";
 import HomeownerView from "@/components/dashboard/HomeownerView";
-import { Lock, ShieldCheck, Key } from "lucide-react";
+import { Lock, ShieldCheck } from "lucide-react";
 
 export default function UnifiedDashboard() {
   const { role, currentUser, isLoggedIn, isLoading } = useAuth();
@@ -70,9 +70,8 @@ export default function UnifiedDashboard() {
             <div className="pt-2 flex flex-col sm:flex-row items-center gap-3 justify-center">
               <Link
                 href="/login"
-                className="w-full sm:w-auto px-7 py-3 rounded-full bg-charcoal hover:bg-copper text-white text-xs font-medium tracking-wide flex items-center justify-center gap-2 transition-all shadow-sm"
+                className="w-full sm:w-auto px-7 py-3 rounded-full bg-charcoal hover:bg-copper text-white text-xs font-medium tracking-wide flex items-center justify-center transition-all shadow-sm"
               >
-                <Key className="w-3.5 h-3.5 text-copper-light" />
                 <span>Sign In to Dashboard</span>
               </Link>
               <Link
