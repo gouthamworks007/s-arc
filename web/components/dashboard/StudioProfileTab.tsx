@@ -16,7 +16,10 @@ import {
   Plus,
   Trash2,
   AlertCircle,
-  Loader2
+  Loader2,
+  Upload,
+  Camera,
+  FileText
 } from "lucide-react";
 
 export default function StudioProfileTab() {
@@ -39,6 +42,37 @@ export default function StudioProfileTab() {
   const [isSaving, setIsSaving] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // Upload States
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const [isUploadingCover, setIsUploadingCover] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
+  const handleUpload = async (
+    file: File,
+    category: "avatars" | "imagery" | "documents",
+    onComplete: (url: string) => void,
+    setLoading: (l: boolean) => void
+  ) => {
+    setLoading(true);
+    setUploadError(null);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("category", category);
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Upload failed");
+      onComplete(data.url);
+    } catch (e: any) {
+      setUploadError(e.message || "Failed to upload file");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Sync state if currentUser loads or changes, or fetch fresh profile from D1
   useEffect(() => {
@@ -315,34 +349,122 @@ export default function StudioProfileTab() {
             </div>
 
             {/* Studio Imagery */}
-            <div className="p-6 bg-white border border-warm-border rounded-3xl space-y-4">
-              <h3 className="text-base font-serif font-normal text-charcoal">
-                Studio Imagery & Visual Identity
-              </h3>
+            <div className="p-6 bg-white border border-warm-border rounded-3xl space-y-6">
+              <div>
+                <h3 className="text-base font-serif font-normal text-charcoal">
+                  Studio Imagery & Visual Identity
+                </h3>
+                <p className="text-xs text-secondaryText font-sans mt-0.5">
+                  Upload your official portraits and showcase banners stored securely on Cloudflare R2.
+                </p>
+              </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-medium text-charcoal mb-1.5 font-sans">
-                    Principal Architect Portrait (URL)
+              {uploadError && (
+                <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700 flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>{uploadError}</span>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                {/* Principal Architect Portrait */}
+                <div className="space-y-3">
+                  <label className="block text-xs font-medium text-charcoal font-sans">
+                    Principal Architect Portrait / Studio Logo
                   </label>
-                  <input
-                    type="text"
-                    value={image}
-                    onChange={(e) => setImage(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-xl border border-warm-border text-xs text-charcoal focus:outline-none focus:border-copper font-mono"
-                  />
+                  <div className="flex items-center gap-4">
+                    <div className="relative w-16 h-16 rounded-full overflow-hidden bg-warm-grey border border-warm-border shrink-0">
+                      {image ? (
+                        <Image src={image} alt="Architect Portrait" fill className="object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-stone-400">
+                          <Camera className="w-6 h-6" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex-1 space-y-1.5">
+                      <label className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-warm-border hover:border-copper text-xs font-sans font-medium text-charcoal cursor-pointer transition-colors bg-warm-card hover:bg-white">
+                        {isUploadingAvatar ? (
+                          <>
+                            <Loader2 className="w-3.5 h-3.5 animate-spin text-copper" />
+                            <span>Uploading to R2...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Upload className="w-3.5 h-3.5 text-copper" />
+                            <span>Upload New Photo</span>
+                          </>
+                        )}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          disabled={isUploadingAvatar}
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) handleUpload(file, "avatars", (url) => setImage(url), setIsUploadingAvatar);
+                          }}
+                        />
+                      </label>
+                      <input
+                        type="text"
+                        value={image}
+                        onChange={(e) => setImage(e.target.value)}
+                        placeholder="Or paste image URL"
+                        className="w-full px-3 py-1.5 rounded-lg border border-warm-border text-[11px] text-charcoal font-mono outline-none focus:border-copper"
+                      />
+                    </div>
+                  </div>
                 </div>
 
-                <div>
-                  <label className="block text-xs font-medium text-charcoal mb-1.5 font-sans">
-                    Studio Header Cover Photo (URL)
+                {/* Studio Header Cover Photo */}
+                <div className="space-y-3">
+                  <label className="block text-xs font-medium text-charcoal font-sans">
+                    Studio Header Cover Photo
                   </label>
-                  <input
-                    type="text"
-                    value={coverImage}
-                    onChange={(e) => setCoverImage(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-xl border border-warm-border text-xs text-charcoal focus:outline-none focus:border-copper font-mono"
-                  />
+                  <div className="space-y-2">
+                    <div className="relative w-full h-16 rounded-xl overflow-hidden bg-warm-grey border border-warm-border">
+                      {coverImage ? (
+                        <Image src={coverImage} alt="Cover Banner" fill className="object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-stone-400 text-xs">
+                          No Banner Uploaded
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <label className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-warm-border hover:border-copper text-xs font-sans font-medium text-charcoal cursor-pointer transition-colors bg-warm-card hover:bg-white shrink-0">
+                        {isUploadingCover ? (
+                          <>
+                            <Loader2 className="w-3.5 h-3.5 animate-spin text-copper" />
+                            <span>Uploading...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Upload className="w-3.5 h-3.5 text-copper" />
+                            <span>Upload Banner</span>
+                          </>
+                        )}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          disabled={isUploadingCover}
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) handleUpload(file, "imagery", (url) => setCoverImage(url), setIsUploadingCover);
+                          }}
+                        />
+                      </label>
+                      <input
+                        type="text"
+                        value={coverImage}
+                        onChange={(e) => setCoverImage(e.target.value)}
+                        placeholder="Or paste banner URL"
+                        className="w-full px-3 py-1.5 rounded-lg border border-warm-border text-[11px] text-charcoal font-mono outline-none focus:border-copper"
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 
 export interface Env {
   DB: D1Database;
+  BUCKET?: R2Bucket;
   ASSETS: Fetcher;
   GOOGLE_CLIENT_ID?: string;
   GOOGLE_CLIENT_SECRET?: string;
@@ -117,6 +118,26 @@ function formatProjectRow(p: any) {
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
+
+    // Serve uploaded files directly from Cloudflare R2 bucket
+    if (url.pathname.startsWith("/uploads/")) {
+      const key = url.pathname.replace(/^\/uploads\//, "");
+      if (env.BUCKET) {
+        try {
+          const object = await env.BUCKET.get(key);
+          if (object) {
+            const headers = new Headers();
+            object.writeHttpMetadata(headers);
+            headers.set("etag", object.httpEtag);
+            headers.set("Cache-Control", "public, max-age=31536000, immutable");
+            return new Response(object.body, { headers });
+          }
+        } catch (e) {
+          console.warn("R2 fetch error:", e);
+        }
+      }
+      return env.ASSETS.fetch(request);
+    }
 
     // Only intercept /api/ requests; everything else is served by Cloudflare Static Assets
     if (!url.pathname.startsWith("/api/")) {
@@ -978,8 +999,165 @@ export default {
       }
     }
 
+    if (url.pathname.startsWith("/api/projects/") && request.method === "PUT") {
+      const user = await authenticateUser(request, env);
+      if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
+      const projId = decodeURIComponent(url.pathname.replace("/api/projects/", ""));
+      try {
+        const body: any = await request.json().catch(() => ({}));
+        const existing = await env.DB.prepare("SELECT * FROM projects WHERE id = ?").bind(projId).first<any>();
+        if (!existing) {
+          return Response.json({ error: "Project not found" }, { status: 404 });
+        }
+
+        const centsNum = body.cents !== undefined ? Number(body.cents) : existing.cents;
+        const priceFormatted = body.price !== undefined ? (String(body.price).startsWith("₹") ? String(body.price) : `₹${body.price}`) : existing.price;
+        const priceNum = parseFloat(String(priceFormatted).replace(/[₹,]/g, "")) || existing.price_numeric;
+
+        await env.DB.prepare(
+          `UPDATE projects SET
+            name = COALESCE(?, name),
+            style = COALESCE(?, style),
+            location = COALESCE(?, location),
+            plot_size = ?,
+            cents = ?,
+            built_up_area = COALESCE(?, built_up_area),
+            bedrooms = COALESCE(?, bedrooms),
+            floors = COALESCE(?, floors),
+            facing = COALESCE(?, facing),
+            vastu_score = COALESCE(?, vastu_score),
+            price = ?,
+            price_numeric = ?,
+            sheet_count = COALESCE(?, sheet_count),
+            status = COALESCE(?, status),
+            image = COALESCE(?, image),
+            gallery = COALESCE(?, gallery),
+            floor_plan_image = COALESCE(?, floor_plan_image),
+            cad_file_url = ?,
+            cad_file_name = ?,
+            cad_file_size = ?,
+            description = COALESCE(?, description),
+            highlights = COALESCE(?, highlights),
+            plot_width = COALESCE(?, plot_width),
+            plot_length = COALESCE(?, plot_length),
+            setbacks = COALESCE(?, setbacks),
+            dwg_available = COALESCE(?, dwg_available),
+            bim_available = COALESCE(?, bim_available),
+            boq_available = COALESCE(?, boq_available),
+            mep_available = COALESCE(?, mep_available),
+            updated_at = datetime('now')
+          WHERE id = ?`
+        ).bind(
+          body.name !== undefined ? body.name : null,
+          body.style !== undefined ? body.style : null,
+          body.location !== undefined ? body.location : null,
+          `${centsNum} Cents`,
+          centsNum,
+          body.builtUpArea !== undefined ? body.builtUpArea : null,
+          body.bedrooms !== undefined ? Number(body.bedrooms) : null,
+          body.floors !== undefined ? Number(body.floors) : null,
+          body.facing !== undefined ? body.facing : null,
+          body.vastuScore !== undefined ? Number(body.vastuScore) : null,
+          priceFormatted,
+          priceNum,
+          body.sheetCount !== undefined ? Number(body.sheetCount) : null,
+          body.status !== undefined ? body.status : null,
+          body.image !== undefined ? body.image : null,
+          body.gallery !== undefined ? JSON.stringify(body.gallery) : null,
+          body.floorPlanImage !== undefined ? body.floorPlanImage : null,
+          body.cadFileUrl !== undefined ? body.cadFileUrl : existing.cad_file_url,
+          body.cadFileName !== undefined ? body.cadFileName : existing.cad_file_name,
+          body.cadFileSize !== undefined ? body.cadFileSize : existing.cad_file_size,
+          body.description !== undefined ? body.description : null,
+          body.highlights !== undefined ? JSON.stringify(body.highlights) : null,
+          body.dimensions?.plotWidth !== undefined ? body.dimensions.plotWidth : null,
+          body.dimensions?.plotLength !== undefined ? body.dimensions.plotLength : null,
+          body.dimensions?.setbacks !== undefined ? body.dimensions.setbacks : null,
+          body.dwgAvailable !== undefined ? (body.dwgAvailable ? 1 : 0) : null,
+          body.bimAvailable !== undefined ? (body.bimAvailable ? 1 : 0) : null,
+          body.boqAvailable !== undefined ? (body.boqAvailable ? 1 : 0) : null,
+          body.mepAvailable !== undefined ? (body.mepAvailable ? 1 : 0) : null,
+          projId
+        ).run();
+
+        return Response.json({ success: true, message: "Project updated successfully" }, { status: 200 });
+      } catch (err: any) {
+        return Response.json({ error: "Failed to update project: " + err.message }, { status: 500 });
+      }
+    }
+
     // -------------------------------------------------------------
-    // 14. /api/inquiries - Client Inquiries (GET, POST)
+    // 14. /api/upload - Cloudflare R2 Multi-part File Upload
+    // -------------------------------------------------------------
+    if (url.pathname === "/api/upload" && request.method === "POST") {
+      try {
+        const contentType = request.headers.get("content-type") || "";
+        if (!contentType.includes("multipart/form-data")) {
+          return Response.json({ error: "Content-Type must be multipart/form-data" }, { status: 400 });
+        }
+
+        const formData = await request.formData();
+        const file = formData.get("file") as File | null;
+        const rawCategory = (formData.get("category") as string) || "plans";
+        const category = ["plans", "imagery", "cad", "avatars", "documents"].includes(rawCategory)
+          ? rawCategory
+          : "plans";
+
+        if (!file || typeof file === "string") {
+          return Response.json({ error: "No file provided." }, { status: 400 });
+        }
+
+        const originalName = file.name || "unnamed";
+        const dotIdx = originalName.lastIndexOf(".");
+        const extension = dotIdx !== -1 ? originalName.slice(dotIdx).toLowerCase() : "";
+
+        // Check size
+        const isCad = category === "cad" || [".dwg", ".dxf", ".zip", ".rar", ".bim", ".rvt"].includes(extension);
+        const maxSize = isCad ? 100 * 1024 * 1024 : 20 * 1024 * 1024;
+        if (file.size > maxSize) {
+          return Response.json({ error: `File too large. Maximum size is ${isCad ? "100MB" : "20MB"}` }, { status: 400 });
+        }
+
+        const sanitizedBase = (dotIdx !== -1 ? originalName.slice(0, dotIdx) : originalName)
+          .toLowerCase()
+          .replace(/[^a-z0-9_-]/g, "-")
+          .slice(0, 50);
+
+        const uniqueKey = `${category}/${Date.now()}-${sanitizedBase}${extension}`;
+
+        if (env.BUCKET) {
+          await env.BUCKET.put(uniqueKey, file.stream(), {
+            httpMetadata: {
+              contentType: file.type || "application/octet-stream",
+            },
+            customMetadata: {
+              originalName,
+              uploadedAt: new Date().toISOString(),
+            },
+          });
+        }
+
+        const publicUrl = `/uploads/${uniqueKey}`;
+        const formattedSize = file.size > 1024 * 1024
+          ? `${(file.size / (1024 * 1024)).toFixed(1)} MB`
+          : `${Math.round(file.size / 1024)} KB`;
+
+        return Response.json({
+          success: true,
+          url: publicUrl,
+          fileName: originalName,
+          originalName,
+          formattedSize,
+          fileSize: formattedSize,
+          category,
+        }, { status: 200 });
+      } catch (err: any) {
+        return Response.json({ error: "Upload failed: " + err.message }, { status: 500 });
+      }
+    }
+
+    // -------------------------------------------------------------
+    // 15. /api/inquiries - Client Inquiries (GET, POST)
     // -------------------------------------------------------------
     if (url.pathname === "/api/inquiries") {
       if (request.method === "GET") {
@@ -1027,6 +1205,147 @@ export default {
         } catch (err: any) {
           return Response.json({ error: "Failed to create inquiry: " + err.message }, { status: 500 });
         }
+      }
+    }
+
+    // -------------------------------------------------------------
+    // 15b. /api/inquiries/:id - Manage Single Inquiry (PATCH, DELETE)
+    // -------------------------------------------------------------
+    if (url.pathname.startsWith("/api/inquiries/") && request.method === "PATCH") {
+      const user = await authenticateUser(request, env);
+      if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
+      const inqId = decodeURIComponent(url.pathname.replace("/api/inquiries/", ""));
+      try {
+        const body: any = await request.json().catch(() => ({}));
+        const { status, reply_text, replyText } = body;
+        const text = reply_text || replyText;
+        let sql = "UPDATE inquiries SET status = COALESCE(?, status)";
+        const params: any[] = [status || null];
+        if (text !== undefined) {
+          sql += ", reply_text = ?";
+          params.push(text);
+        }
+        sql += ", updated_at = datetime('now') WHERE id = ?";
+        params.push(inqId);
+        await env.DB.prepare(sql).bind(...params).run();
+        return Response.json({ success: true }, { status: 200 });
+      } catch (err: any) {
+        return Response.json({ error: "Failed to update inquiry: " + err.message }, { status: 500 });
+      }
+    }
+
+    if (url.pathname.startsWith("/api/inquiries/") && request.method === "DELETE") {
+      const user = await authenticateUser(request, env);
+      if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
+      const inqId = decodeURIComponent(url.pathname.replace("/api/inquiries/", ""));
+      try {
+        await env.DB.prepare("DELETE FROM inquiries WHERE id = ?").bind(inqId).run();
+        return Response.json({ success: true }, { status: 200 });
+      } catch (err: any) {
+        return Response.json({ error: "Failed to delete inquiry: " + err.message }, { status: 500 });
+      }
+    }
+
+    // -------------------------------------------------------------
+    // 16. /api/packages - Project Packages (GET, POST, PATCH, DELETE)
+    // -------------------------------------------------------------
+    if (url.pathname === "/api/packages" && request.method === "GET") {
+      try {
+        const projectId = url.searchParams.get("projectId");
+        let sql = "SELECT * FROM project_packages WHERE 1=1";
+        const params: any[] = [];
+        if (projectId) {
+          sql += " AND project_id = ?";
+          params.push(projectId);
+        }
+        sql += " ORDER BY price_paise ASC";
+        const stmt = params.length > 0 ? env.DB.prepare(sql).bind(...params) : env.DB.prepare(sql);
+        const { results } = await stmt.all();
+        const packages = (results || []).map((pkg: any) => ({
+          id: pkg.id,
+          projectId: pkg.project_id,
+          architectId: pkg.architect_id,
+          name: pkg.name,
+          description: pkg.description,
+          pricePaise: pkg.price_paise,
+          priceFormatted: `₹${(Number(pkg.price_paise) / 100).toLocaleString("en-IN")}`,
+          currency: pkg.currency || "INR",
+          deliverables: typeof pkg.deliverables === "string" ? JSON.parse(pkg.deliverables || "[]") : (pkg.deliverables || []),
+          status: pkg.status,
+          createdAt: pkg.created_at,
+          updatedAt: pkg.updated_at,
+        }));
+        return Response.json({ packages }, { status: 200 });
+      } catch (err: any) {
+        return Response.json({ packages: [], error: err.message }, { status: 200 });
+      }
+    }
+
+    if (url.pathname === "/api/packages" && request.method === "POST") {
+      const user = await authenticateUser(request, env);
+      if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
+      try {
+        const body: any = await request.json().catch(() => ({}));
+        const newId = `pkg-${Date.now().toString(36)}`;
+        const pricePaise = Number(body.pricePaise) || (Number(body.priceRupees || 35000) * 100);
+        await env.DB.prepare(
+          `INSERT INTO project_packages (id, project_id, architect_id, name, description, price_paise, currency, deliverables, status, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, 'INR', ?, ?, datetime('now'), datetime('now'))`
+        ).bind(
+          newId,
+          body.projectId || "proj-001",
+          user.id,
+          (body.name || "Standard Deliverable Tier").trim().slice(0, 100),
+          body.description || "",
+          pricePaise,
+          JSON.stringify(Array.isArray(body.deliverables) ? body.deliverables : []),
+          body.status || "published"
+        ).run();
+        return Response.json({ success: true, id: newId }, { status: 201 });
+      } catch (err: any) {
+        return Response.json({ error: "Failed to create package: " + err.message }, { status: 500 });
+      }
+    }
+
+    if (url.pathname.startsWith("/api/packages/") && request.method === "PATCH") {
+      const user = await authenticateUser(request, env);
+      if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
+      const pkgId = decodeURIComponent(url.pathname.replace("/api/packages/", ""));
+      try {
+        const body: any = await request.json().catch(() => ({}));
+        const pricePaise = body.pricePaise !== undefined ? Number(body.pricePaise) : (body.priceRupees !== undefined ? Number(body.priceRupees) * 100 : undefined);
+        await env.DB.prepare(
+          `UPDATE project_packages SET
+            name = COALESCE(?, name),
+            description = COALESCE(?, description),
+            price_paise = COALESCE(?, price_paise),
+            deliverables = COALESCE(?, deliverables),
+            status = COALESCE(?, status),
+            updated_at = datetime('now')
+           WHERE id = ?`
+        ).bind(
+          body.name !== undefined ? body.name : null,
+          body.description !== undefined ? body.description : null,
+          pricePaise !== undefined ? pricePaise : null,
+          body.deliverables !== undefined ? JSON.stringify(body.deliverables) : null,
+          body.status !== undefined ? body.status : null,
+          pkgId
+        ).run();
+        return Response.json({ success: true }, { status: 200 });
+      } catch (err: any) {
+        return Response.json({ error: "Failed to update package: " + err.message }, { status: 500 });
+      }
+    }
+
+    if (url.pathname.startsWith("/api/packages/") && request.method === "DELETE") {
+      const user = await authenticateUser(request, env);
+      if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
+      const pkgId = decodeURIComponent(url.pathname.replace("/api/packages/", ""));
+      try {
+        await env.DB.prepare("DELETE FROM project_packages WHERE id = ?").bind(pkgId).run();
+        return Response.json({ success: true }, { status: 200 });
+      } catch (err: any) {
+        return Response.json({ error: "Failed to delete package: " + err.message }, { status: 500 });
       }
     }
 

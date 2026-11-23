@@ -18,5 +18,9 @@ binding = "DB"
 database_name = "s-arc-db"
 database_id = "496764fb-0e0f-408d-b5c5-8e8f998526d6"
 
+[[r2_buckets]]
+binding = "BUCKET"
+bucket_name = "s-arc-uploads"
+
 [vars]
 NEXT_PUBLIC_APP_URL = "https://southernarchitecture.in"
