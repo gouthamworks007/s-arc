@@ -126,29 +126,41 @@ export default function Navbar({ onOpenSellerModal, onOpenSearch }: NavbarProps)
             <div className="flex items-center gap-2">
               <Link
                 href="/dashboard"
-                className={`px-3.5 py-1.5 rounded-full text-xs font-mono font-medium flex items-center gap-2 transition-all shadow-sm ${
-                  role === "admin"
-                    ? "bg-amber-100 text-amber-900 border border-amber-300 hover:bg-amber-200"
-                    : "bg-warm-grey text-charcoal border border-warm-border hover:border-copper"
-                }`}
+                className="group pl-2 pr-3.5 py-1 rounded-full bg-white hover:bg-stone-50/90 text-charcoal border border-[#DDD6CA] hover:border-copper/70 flex items-center gap-2 transition-all duration-200 shadow-2xs hover:shadow-xs"
                 title="Open Private Dashboard"
               >
-                <span className={`w-2 h-2 rounded-full ${
-                  role === "admin" ? "bg-amber-500" : "bg-copper"
-                }`} />
-                <span>
-                  {role === "admin"
-                    ? "Admin"
-                    : currentUser.subRole === "homeowner"
-                    ? "Client"
-                    : "Architect"}
-                </span>
+                {currentUser.avatar ? (
+                  <div className="relative w-6 h-6 rounded-full overflow-hidden border border-warm-border/80 shrink-0">
+                    <img
+                      src={currentUser.avatar}
+                      alt={currentUser.name || "User"}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                ) : (
+                  <div className="w-6 h-6 rounded-full bg-copper/10 text-copper flex items-center justify-center shrink-0">
+                    <User className="w-3.5 h-3.5" />
+                  </div>
+                )}
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs font-sans font-medium text-charcoal group-hover:text-copper transition-colors">
+                    {currentUser.name ? currentUser.name.split(" ")[0] : "Account"}
+                  </span>
+                  <span className="text-[10px] font-sans font-semibold tracking-wide uppercase px-2 py-0.5 rounded-full bg-[#FAF9F6] text-stone-600 border border-[#EAE5DC] group-hover:border-copper/30 group-hover:text-copper transition-colors">
+                    {role === "admin"
+                      ? "Admin"
+                      : currentUser.subRole === "architect"
+                      ? "Architect"
+                      : "Client"}
+                  </span>
+                </div>
               </Link>
 
               <button
                 onClick={logout}
                 className="p-1.5 rounded-full text-secondaryText hover:text-red-600 hover:bg-red-50 transition-colors"
                 title="Sign Out"
+                aria-label="Sign Out"
               >
                 <LogOut className="w-4 h-4" />
               </button>
@@ -232,13 +244,32 @@ export default function Navbar({ onOpenSellerModal, onOpenSearch }: NavbarProps)
                   <Link
                     href="/dashboard"
                     onClick={() => setMobileMenuOpen(false)}
-                    className="py-2.5 px-3 bg-warm-grey rounded-xl text-charcoal font-medium text-xs flex items-center justify-between"
+                    className="p-3 bg-white border border-[#EAE5DC] rounded-2xl text-charcoal font-medium text-xs flex items-center justify-between shadow-2xs hover:border-copper/60 transition-all"
                   >
-                    <div className="flex items-center gap-2">
-                      <span className={`w-2 h-2 rounded-full ${role === "admin" ? "bg-copper" : "bg-charcoal"}`} />
-                      <span>{currentUser.name} ({role === "admin" ? "Admin" : "User"})</span>
+                    <div className="flex items-center gap-2.5">
+                      {currentUser.avatar ? (
+                        <div className="w-7 h-7 rounded-full overflow-hidden border border-warm-border/80 shrink-0">
+                          <img
+                            src={currentUser.avatar}
+                            alt={currentUser.name || "User"}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      ) : (
+                        <div className="w-7 h-7 rounded-full bg-copper/10 text-copper flex items-center justify-center shrink-0">
+                          <User className="w-4 h-4" />
+                        </div>
+                      )}
+                      <div>
+                        <span className="font-sans font-medium text-charcoal block">{currentUser.name}</span>
+                        <span className="text-[10px] font-sans text-stone-500 uppercase tracking-wide block">
+                          {role === "admin" ? "Admin" : currentUser.subRole === "architect" ? "Architect" : "Client"}
+                        </span>
+                      </div>
                     </div>
-                    <span className="font-mono text-copper text-[11px]">Dashboard →</span>
+                    <span className="text-copper text-xs font-sans font-medium flex items-center gap-1">
+                      Dashboard →
+                    </span>
                   </Link>
 
                   <button
