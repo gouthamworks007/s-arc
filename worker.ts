@@ -29,6 +29,23 @@ function parseCookies(cookieHeader: string | null): Record<string, string> {
   return cookies;
 }
 
+async function authenticateUser(request: Request, env: Env): Promise<any | null> {
+  const cookies = parseCookies(request.headers.get("Cookie"));
+  const authHeader = request.headers.get("Authorization");
+  const token = authHeader?.startsWith("Bearer ") ? authHeader.split(" ")[1] : cookies["sarc_session_token"];
+  if (!token) return null;
+  try {
+    const jwtKey = getJwtKey(env);
+    const { payload } = await jwtVerify(token, jwtKey, {
+      issuer: "s-arc-platform",
+      audience: "s-arc-users",
+    });
+    return payload;
+  } catch {
+    return null;
+  }
+}
+
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
@@ -444,6 +461,410 @@ export default {
         return Response.json({ architects: results || [] }, { status: 200 });
       } catch (err: any) {
         return Response.json({ architects: [], error: err.message }, { status: 200 });
+      }
+    }
+
+    // -------------------------------------------------------------
+    // 9. POST /api/auth/register - Email/Password Account Registration
+    // -------------------------------------------------------------
+    if (url.pathname === "/api/auth/register" && request.method === "POST") {
+      try {
+        const body: any = await request.json().catch(() => ({}));
+        const { name, email, password, subRole = "homeowner", coaNumber, studioName, phone, location, plotDetails, contractorDetails } = body;
+        if (!name || typeof name !== "string" || !name.trim()) {
+          return Response.json({ error: "Full name is required." }, { status: 400 });
+        }
+        if (!email || typeof email !== "string" || !email.includes("@")) {
+          return Response.json({ error: "Valid email is required." }, { status: 400 });
+        }
+        if (!password || typeof password !== "string" || password.length < 6) {
+          return Response.json({ error: "Password must be at least 6 characters." }, { status: 400 });
+        }
+        const cleanEmail = email.trim().toLowerCase();
+        const existing = await env.DB.prepare("SELECT id FROM users WHERE lower(email) = lower(?) LIMIT 1").bind(cleanEmail).first<any>();
+        if (existing) {
+          return Response.json({ error: "An account with this email address already exists. Please sign in." }, { status: 409 });
+        }
+
+        const salt = await bcrypt.genSalt(10);
+        const passwordHash = await bcrypt.hash(password, salt);
+        const safeSubRole = ["homeowner", "architect", "contractor"].includes(subRole) ? subRole : "homeowner";
+        const isArchitect = safeSubRole === "architect";
+        const status = isArchitect ? "pending_verification" : "active";
+
+        let profileBio = "";
+        let reviewNotes = "";
+        if (safeSubRole === "homeowner" && plotDetails) {
+          profileBio = `${plotDetails.district || location || "Kerala"} • ${plotDetails.cents ? `${plotDetails.cents} Cents` : "Residential Plot"}`;
+          reviewNotes = `Homeowner Profile | Land: ${plotDetails.status || "Owns plot"}`;
+        } else if (safeSubRole === "architect") {
+          profileBio = `${studioName || "Architectural Practice"} (${coaNumber || "CoA Reg"})`;
+          reviewNotes = `Architect Credentials: CoA ${coaNumber || "Pending"} submitted for ${studioName || name}.`;
+        } else if (safeSubRole === "contractor") {
+          profileBio = `${contractorDetails?.firmName || studioName || "Turnkey Contracting"}`;
+          reviewNotes = `Contractor Firm: ${contractorDetails?.firmName || name}`;
+        }
+
+        const newId = `usr-${Date.now().toString().slice(-6)}`;
+        await env.DB.prepare(
+          `INSERT INTO users (id, name, email, password_hash, role, sub_role, status, coa_number, studio_name, phone, location, bio, review_notes, created_at, updated_at)
+           VALUES (?, ?, ?, ?, 'user', ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))`
+        ).bind(
+          newId,
+          name.trim().slice(0, 100),
+          cleanEmail,
+          passwordHash,
+          safeSubRole,
+          status,
+          coaNumber ? String(coaNumber).trim().toUpperCase() : null,
+          studioName ? String(studioName).trim() : null,
+          phone ? String(phone).trim() : null,
+          (location || "South India").trim().slice(0, 100),
+          profileBio,
+          reviewNotes
+        ).run();
+
+        const jwtKey = getJwtKey(env);
+        const token = await new SignJWT({
+          id: newId,
+          name: name.trim(),
+          email: cleanEmail,
+          role: "user",
+          subRole: safeSubRole,
+          status,
+        })
+          .setProtectedHeader({ alg: "HS256" })
+          .setIssuedAt()
+          .setExpirationTime("7d")
+          .setIssuer("s-arc-platform")
+          .setAudience("s-arc-users")
+          .sign(jwtKey);
+
+        const headers = new Headers({ "Content-Type": "application/json" });
+        headers.append(
+          "Set-Cookie",
+          `sarc_session_token=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=604800; Secure`
+        );
+
+        return new Response(JSON.stringify({
+          success: true,
+          user: {
+            id: newId,
+            name: name.trim(),
+            email: cleanEmail,
+            role: "user",
+            subRole: safeSubRole,
+            status,
+          }
+        }), { status: 201, headers });
+      } catch (err: any) {
+        return Response.json({ error: "Registration failed: " + err.message }, { status: 500 });
+      }
+    }
+
+    // -------------------------------------------------------------
+    // 10. GET /api/users - Admin User Directory
+    // -------------------------------------------------------------
+    if (url.pathname === "/api/users" && request.method === "GET") {
+      const user = await authenticateUser(request, env);
+      if (!user || user.role !== "admin") {
+        return Response.json({ error: "Forbidden: Admin access required" }, { status: 403 });
+      }
+      try {
+        const roleFilter = url.searchParams.get("role");
+        const search = url.searchParams.get("q")?.toLowerCase();
+        let sql = "SELECT id, name, email, role, sub_role AS subRole, status, coa_number AS coaNumber, studio_name AS studioName, phone, location, avatar, bio, permissions, review_notes AS reviewNotes, created_at AS joinedDate FROM users WHERE 1=1";
+        const params: any[] = [];
+        if (roleFilter && roleFilter !== "all") {
+          sql += " AND role = ?";
+          params.push(roleFilter);
+        }
+        if (search) {
+          sql += " AND (lower(name) LIKE ? OR lower(email) LIKE ?)";
+          params.push(`%${search}%`, `%${search}%`);
+        }
+        sql += " ORDER BY created_at DESC";
+        const stmt = params.length > 0 ? env.DB.prepare(sql).bind(...params) : env.DB.prepare(sql);
+        const { results } = await stmt.all();
+        const users = (results || []).map((u: any) => ({
+          ...u,
+          role: u.role === "super_admin" ? "admin" : u.role,
+          permissions: typeof u.permissions === "string" ? JSON.parse(u.permissions || "[]") : (u.permissions || []),
+        }));
+        return Response.json({ total: users.length, users }, { status: 200 });
+      } catch (err: any) {
+        return Response.json({ error: "Failed to fetch users: " + err.message }, { status: 500 });
+      }
+    }
+
+    // -------------------------------------------------------------
+    // 11. POST /api/users/upgrade-request - Become Architect Application
+    // -------------------------------------------------------------
+    if (url.pathname === "/api/users/upgrade-request" && request.method === "POST") {
+      const user = await authenticateUser(request, env);
+      if (!user) {
+        return Response.json({ error: "Unauthorized" }, { status: 401 });
+      }
+      try {
+        const body: any = await request.json().catch(() => ({}));
+        const { practiceType = "freelance", studioName, coaNumber, phone, location, bio } = body;
+        if (!coaNumber || !studioName) {
+          return Response.json({ error: "CoA number and Studio name are required." }, { status: 400 });
+        }
+        const cleanCoa = coaNumber.trim().toUpperCase();
+        const reviewNote = `Application for ${practiceType}. CoA: ${cleanCoa}. Studio: ${studioName}. Awaiting Admin verification.`;
+        await env.DB.prepare(
+          `UPDATE users SET sub_role = 'architect', status = 'pending_verification', coa_number = ?, studio_name = ?, phone = COALESCE(?, phone), location = COALESCE(?, location), bio = COALESCE(?, bio), review_notes = ?, updated_at = datetime('now') WHERE id = ?`
+        ).bind(cleanCoa, studioName.trim(), phone || null, location || null, bio || null, reviewNote, user.id).run();
+
+        try {
+          await env.DB.prepare(
+            `INSERT INTO audit_logs (id, actor_id, actor_name, actor_email, actor_role, action, target_id, target_type, details) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+          ).bind(`aud-${Date.now()}`, user.id, user.name, user.email, "user", "APPLY_ARCHITECT_UPGRADE", user.id, "user", JSON.stringify({ practiceType, studioName, coaNumber: cleanCoa })).run();
+        } catch (_) {}
+
+        return Response.json({ success: true, message: "Application submitted successfully." }, { status: 200 });
+      } catch (err: any) {
+        return Response.json({ error: "Upgrade request failed: " + err.message }, { status: 500 });
+      }
+    }
+
+    // -------------------------------------------------------------
+    // 12. /api/users/:id - Get, Update (PATCH), Delete User Profile
+    // -------------------------------------------------------------
+    if (url.pathname.startsWith("/api/users/") && url.pathname !== "/api/users/upgrade-request") {
+      const targetUserId = decodeURIComponent(url.pathname.replace("/api/users/", ""));
+
+      // GET /api/users/:id
+      if (request.method === "GET") {
+        try {
+          const user = await env.DB.prepare("SELECT * FROM users WHERE id = ? LIMIT 1").bind(targetUserId).first<any>();
+          if (!user) {
+            return Response.json({ error: "User not found" }, { status: 404 });
+          }
+          return Response.json({
+            user: {
+              id: user.id,
+              name: user.name,
+              email: user.email,
+              role: user.role === "super_admin" ? "admin" : user.role,
+              subRole: user.sub_role,
+              status: user.status,
+              coaNumber: user.coa_number,
+              studioName: user.studio_name,
+              phone: user.phone,
+              location: user.location,
+              avatar: user.avatar,
+              bio: user.bio,
+              reviewNotes: user.review_notes,
+              createdAt: user.created_at,
+              updatedAt: user.updated_at,
+            }
+          }, { status: 200 });
+        } catch (err: any) {
+          return Response.json({ error: "Failed to fetch user: " + err.message }, { status: 500 });
+        }
+      }
+
+      // PATCH /api/users/:id
+      if (request.method === "PATCH") {
+        const user = await authenticateUser(request, env);
+        if (!user) {
+          return Response.json({ error: "Authentication required" }, { status: 401 });
+        }
+        const isAdmin = user.role === "admin";
+        const isSelf = user.id === targetUserId;
+        if (!isAdmin && !isSelf) {
+          return Response.json({ error: "Forbidden: You are not authorized to edit another user's profile." }, { status: 403 });
+        }
+
+        try {
+          const body: any = await request.json().catch(() => ({}));
+          const updateClauses: string[] = [];
+          const queryParams: any[] = [];
+
+          if (typeof body.name === "string" && body.name.trim()) {
+            updateClauses.push("name = ?");
+            queryParams.push(body.name.trim().slice(0, 100));
+          }
+
+          const studioName = body.studio_name ?? body.studioName;
+          if (typeof studioName === "string") {
+            updateClauses.push("studio_name = ?");
+            queryParams.push(studioName.trim().slice(0, 120));
+          }
+
+          const coaNumber = body.coa_number ?? body.coaNumber;
+          if (typeof coaNumber === "string") {
+            updateClauses.push("coa_number = ?");
+            queryParams.push(coaNumber.trim().toUpperCase().slice(0, 50));
+          }
+
+          if (typeof body.phone === "string") {
+            updateClauses.push("phone = ?");
+            queryParams.push(body.phone.trim().slice(0, 30));
+          }
+
+          if (typeof body.location === "string") {
+            updateClauses.push("location = ?");
+            queryParams.push(body.location.trim().slice(0, 100));
+          }
+
+          const avatar = body.avatar ?? body.image;
+          if (typeof avatar === "string") {
+            updateClauses.push("avatar = ?");
+            queryParams.push(avatar.trim());
+          }
+
+          if (typeof body.bio === "string") {
+            updateClauses.push("bio = ?");
+            queryParams.push(body.bio.trim().slice(0, 2000));
+          }
+
+          const subRole = body.sub_role ?? body.subRole;
+          if (typeof subRole === "string" && ["homeowner", "architect", "contractor"].includes(subRole)) {
+            updateClauses.push("sub_role = ?");
+            queryParams.push(subRole);
+          }
+
+          const reviewNotes = body.review_notes ?? body.reviewNotes;
+          if (typeof reviewNotes === "string") {
+            updateClauses.push("review_notes = ?");
+            queryParams.push(reviewNotes);
+          }
+
+          if (isAdmin) {
+            if (body.status && ["active", "suspended", "pending_verification"].includes(body.status)) {
+              updateClauses.push("status = ?");
+              queryParams.push(body.status);
+            }
+            if (body.role && ["admin", "user"].includes(body.role)) {
+              updateClauses.push("role = ?");
+              queryParams.push(body.role);
+            }
+          }
+
+          if (updateClauses.length > 0) {
+            updateClauses.push("updated_at = datetime('now')");
+            queryParams.push(targetUserId);
+
+            await env.DB.prepare(
+              `UPDATE users SET ${updateClauses.join(", ")} WHERE id = ?`
+            ).bind(...queryParams).run();
+          }
+
+          // Fetch fresh user state
+          const updated = await env.DB.prepare("SELECT * FROM users WHERE id = ? LIMIT 1").bind(targetUserId).first<any>();
+          return Response.json({
+            success: true,
+            message: "Profile updated successfully.",
+            user: updated ? {
+              id: updated.id,
+              name: updated.name,
+              email: updated.email,
+              role: updated.role === "super_admin" ? "admin" : updated.role,
+              subRole: updated.sub_role,
+              status: updated.status,
+              coaNumber: updated.coa_number,
+              studioName: updated.studio_name,
+              phone: updated.phone,
+              location: updated.location,
+              avatar: updated.avatar,
+              bio: updated.bio,
+              reviewNotes: updated.review_notes,
+              updatedAt: updated.updated_at,
+            } : null,
+          }, { status: 200 });
+        } catch (err: any) {
+          return Response.json({ error: "Failed to update profile: " + err.message }, { status: 500 });
+        }
+      }
+
+      // DELETE /api/users/:id
+      if (request.method === "DELETE") {
+        const user = await authenticateUser(request, env);
+        if (!user || user.role !== "admin") {
+          return Response.json({ error: "Forbidden: Admin access required" }, { status: 403 });
+        }
+        if (targetUserId === user.id || targetUserId === "usr-admin-01") {
+          return Response.json({ error: "Cannot delete platform admin account" }, { status: 403 });
+        }
+        try {
+          await env.DB.prepare("DELETE FROM users WHERE id = ?").bind(targetUserId).run();
+          return Response.json({ success: true, message: `User ${targetUserId} deleted` }, { status: 200 });
+        } catch (err: any) {
+          return Response.json({ error: "Failed to delete user: " + err.message }, { status: 500 });
+        }
+      }
+    }
+
+    // -------------------------------------------------------------
+    // 13. GET /api/projects/:id - Single Project Details
+    // -------------------------------------------------------------
+    if (url.pathname.startsWith("/api/projects/") && request.method === "GET") {
+      const projId = decodeURIComponent(url.pathname.replace("/api/projects/", ""));
+      try {
+        const project = await env.DB.prepare(
+          "SELECT * FROM projects WHERE id = ? OR slug = ? LIMIT 1"
+        ).bind(projId, projId).first<any>();
+        if (!project) {
+          return Response.json({ error: "Project not found" }, { status: 404 });
+        }
+        return Response.json({ project }, { status: 200 });
+      } catch (err: any) {
+        return Response.json({ error: "Failed to fetch project: " + err.message }, { status: 500 });
+      }
+    }
+
+    // -------------------------------------------------------------
+    // 14. /api/inquiries - Client Inquiries (GET, POST)
+    // -------------------------------------------------------------
+    if (url.pathname === "/api/inquiries") {
+      if (request.method === "GET") {
+        const user = await authenticateUser(request, env);
+        if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
+        try {
+          let sql = "SELECT * FROM inquiries";
+          const params: any[] = [];
+          if (user.role !== "admin") {
+            sql += " WHERE architect_id = ? OR email = ?";
+            params.push(user.id, user.email);
+          }
+          sql += " ORDER BY created_at DESC";
+          const stmt = params.length > 0 ? env.DB.prepare(sql).bind(...params) : env.DB.prepare(sql);
+          const { results } = await stmt.all();
+          return Response.json({ inquiries: results || [] }, { status: 200 });
+        } catch (err: any) {
+          return Response.json({ inquiries: [], error: err.message }, { status: 200 });
+        }
+      }
+
+      if (request.method === "POST") {
+        try {
+          const body: any = await request.json().catch(() => ({}));
+          const { name, email, phone, location, message, projectId, architectId, metadata } = body;
+          if (!name || !email) {
+            return Response.json({ error: "Name and email are required" }, { status: 400 });
+          }
+          const inqId = `inq-${Date.now().toString(36)}`;
+          await env.DB.prepare(
+            `INSERT INTO inquiries (id, name, email, phone, location, message, project_id, architect_id, status, metadata, created_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'new', ?, datetime('now'))`
+          ).bind(
+            inqId,
+            name.trim().slice(0, 100),
+            email.trim().toLowerCase(),
+            phone ? String(phone).trim() : null,
+            location ? String(location).trim() : null,
+            message ? String(message).trim() : null,
+            projectId || null,
+            architectId || null,
+            metadata ? JSON.stringify(metadata) : "{}"
+          ).run();
+          return Response.json({ success: true, id: inqId, message: "Inquiry sent successfully" }, { status: 201 });
+        } catch (err: any) {
+          return Response.json({ error: "Failed to create inquiry: " + err.message }, { status: 500 });
+        }
       }
     }
 
