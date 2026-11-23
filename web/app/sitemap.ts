@@ -2,7 +2,7 @@ import { MetadataRoute } from 'next';
 import { FEATURED_PROJECTS } from '@/lib/data';
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://s-arc.pages.dev';
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://southernarchitecture.in';
   const currentDate = new Date().toISOString();
 
   const staticRoutes: MetadataRoute.Sitemap = [

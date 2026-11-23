@@ -80,7 +80,7 @@ const spaceGrotesk = localFont({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://s-arc.pages.dev"),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://southernarchitecture.in"),
   title: {
     default: "S-ARC — Southern Architecture | Turn Your Land Into A Home",
     template: "%s | S-ARC — Southern Architecture",

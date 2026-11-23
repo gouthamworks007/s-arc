@@ -1,6 +1,12 @@
 name = "s-arc"
 main = "worker.ts"
 compatibility_date = "2024-09-23"
+workers_dev = true
+
+routes = [
+  { pattern = "southernarchitecture.in", custom_domain = true },
+  { pattern = "www.southernarchitecture.in", custom_domain = true }
+]
 
 [assets]
 directory = "./web/out"
@@ -13,4 +19,4 @@ database_name = "s-arc-db"
 database_id = "496764fb-0e0f-408d-b5c5-8e8f998526d6"
 
 [vars]
-NEXT_PUBLIC_APP_URL = "https://s-arc.gouthamkrishnan991.workers.dev"
+NEXT_PUBLIC_APP_URL = "https://southernarchitecture.in"
