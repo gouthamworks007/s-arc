@@ -443,7 +443,7 @@ export default function PlanRecommendationsView({
                   <div className="flex items-center justify-between text-[11px] text-charcoal/50 font-sans pt-1">
                     <div className="flex items-center gap-1">
                       <ShieldCheck className="w-3.5 h-3.5 text-copper" />
-                      <span>{project.architect.studio}</span>
+                      <span>{project.architect?.studio || "Verified Studio"}</span>
                     </div>
                     <Link
                       href={`/designs/${project.id}`}

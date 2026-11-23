@@ -102,32 +102,32 @@ function DesignsCatalogContent() {
       const queryLower = searchQuery.toLowerCase();
       const matchesSearch =
         !searchQuery ||
-        project.name.toLowerCase().includes(queryLower) ||
-        project.location.toLowerCase().includes(queryLower) ||
-        project.architect.name.toLowerCase().includes(queryLower) ||
-        project.style.toLowerCase().includes(queryLower);
+        (project.name || "").toLowerCase().includes(queryLower) ||
+        (project.location || "").toLowerCase().includes(queryLower) ||
+        (project.architect?.name || "").toLowerCase().includes(queryLower) ||
+        (project.style || "").toLowerCase().includes(queryLower);
 
       // Style Filter
       const matchesStyle =
         selectedStyle === "All" ||
-        project.style.toLowerCase().includes(selectedStyle.toLowerCase()) ||
-        selectedStyle.toLowerCase().includes(project.style.toLowerCase());
+        (project.style || "").toLowerCase().includes(selectedStyle.toLowerCase()) ||
+        selectedStyle.toLowerCase().includes((project.style || "").toLowerCase());
 
       // Architect Filter
       const matchesArchitect =
         selectedArchitect === "All" ||
-        project.architect.name.toLowerCase() === selectedArchitect.toLowerCase();
+        (project.architect?.name || "").toLowerCase() === selectedArchitect.toLowerCase();
 
       // Plot Filter
       let matchesPlot = true;
-      if (selectedPlot === "< 10 Cents") matchesPlot = project.cents < 10;
-      else if (selectedPlot === "10 - 15 Cents") matchesPlot = project.cents >= 10 && project.cents <= 15;
-      else if (selectedPlot === "> 15 Cents") matchesPlot = project.cents > 15;
+      if (selectedPlot === "< 10 Cents") matchesPlot = (project.cents || 0) < 10;
+      else if (selectedPlot === "10 - 15 Cents") matchesPlot = (project.cents || 0) >= 10 && (project.cents || 0) <= 15;
+      else if (selectedPlot === "> 15 Cents") matchesPlot = (project.cents || 0) > 15;
 
       // Bedrooms Filter
       let matchesBhk = true;
       if (selectedBhk !== "All") {
-        matchesBhk = project.bedrooms === parseInt(selectedBhk);
+        matchesBhk = (project.bedrooms || 0) === parseInt(selectedBhk);
       }
 
       return matchesSearch && matchesStyle && matchesArchitect && matchesPlot && matchesBhk;
@@ -135,13 +135,13 @@ function DesignsCatalogContent() {
 
     // Sorting
     result.sort((a, b) => {
-      const priceA = parseInt(a.price.replace(/[^\d]/g, "")) || 0;
-      const priceB = parseInt(b.price.replace(/[^\d]/g, "")) || 0;
+      const priceA = parseInt((a.price || "").toString().replace(/[^\d]/g, "")) || 0;
+      const priceB = parseInt((b.price || "").toString().replace(/[^\d]/g, "")) || 0;
 
       if (sortBy === "price-asc") return priceA - priceB;
       if (sortBy === "price-desc") return priceB - priceA;
-      if (sortBy === "plot-asc") return a.cents - b.cents;
-      if (sortBy === "plot-desc") return b.cents - a.cents;
+      if (sortBy === "plot-asc") return (a.cents || 0) - (b.cents || 0);
+      if (sortBy === "plot-desc") return (b.cents || 0) - (a.cents || 0);
       return 0; // featured default order
     });
 
@@ -682,7 +682,7 @@ function DesignsCatalogContent() {
                       {project.name}
                     </h3>
                     <div className="text-xs text-mutedText font-sans mb-3">
-                      {project.location} • By {project.architect.name}
+                      {project.location} • By {project.architect?.name || "Verified Studio"}
                     </div>
 
                     <p className="text-[13px] text-secondaryText font-light font-sans line-clamp-2 mb-4 leading-relaxed">
@@ -694,15 +694,15 @@ function DesignsCatalogContent() {
                   <div className="pt-4 border-t border-warm-border/80 flex items-center justify-between text-[12px] font-sans text-charcoal/80 font-medium">
                     <span className="flex items-center gap-1" title="Minimum Plot Size">
                       <Maximize className="w-3.5 h-3.5 text-copper" />
-                      <span>{project.plotSize}</span>
+                      <span>{project.plotSize || `${project.cents || 10} Cents`}</span>
                     </span>
                     <span className="flex items-center gap-1" title="Built-up Area">
                       <Layers className="w-3.5 h-3.5 text-copper" />
-                      <span>{project.builtUpArea}</span>
+                      <span>{project.builtUpArea || "2,400 Sq.Ft"}</span>
                     </span>
                     <span className="flex items-center gap-1" title="Bedrooms">
                       <Bed className="w-3.5 h-3.5 text-copper" />
-                      <span>{project.bedrooms} BHK</span>
+                      <span>{project.bedrooms || 3} BHK</span>
                     </span>
                   </div>
                 </div>

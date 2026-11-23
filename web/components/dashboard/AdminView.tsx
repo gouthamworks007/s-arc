@@ -455,7 +455,7 @@ export default function AdminView() {
                       </div>
                       <div className="flex justify-between text-secondaryText">
                         <span>Architect Studio:</span>
-                        <span className="font-mono text-copper font-medium">{project.architect.name}</span>
+                        <span className="font-mono text-copper font-medium">{project.architect?.name || "Verified Studio"}</span>
                       </div>
                     </div>
                   </div>

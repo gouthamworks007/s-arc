@@ -249,7 +249,7 @@ export default function ProjectDetailClient() {
                   {project.location}
                 </span>
                 <span>•</span>
-                <span>By {project.architect.name} ({project.architect.studio})</span>
+                <span>By {project.architect?.name || "Verified Architect"} ({project.architect?.studio || "Studio"})</span>
                 <span>•</span>
                 <span className="flex items-center gap-1 text-copper font-medium">
                   <ShieldCheck className="w-3.5 h-3.5" />
@@ -616,7 +616,7 @@ export default function ProjectDetailClient() {
                     <div>
                       <p className="text-sm font-serif text-charcoal">Floor Plan Unavailable</p>
                       <p className="text-[11px] text-mutedText font-sans max-w-xs mt-1">
-                        Detailed layout schematics for {project.name} are provided directly by {project.architect.studio} upon client consultation.
+                        Detailed layout schematics for {project.name} are provided directly by {project.architect?.studio || "the studio"} upon client consultation.
                       </p>
                     </div>
                     <button
@@ -643,15 +643,15 @@ export default function ProjectDetailClient() {
                 
                 <div className="flex items-center gap-4">
                   <div className="relative w-16 h-16 rounded-full overflow-hidden bg-warm-grey shrink-0 border border-warm-border">
-                    <Image src={project.architect.image} alt={project.architect.name} fill className="object-cover" />
+                    <Image src={project.architect?.image || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80"} alt={project.architect?.name || "Architect"} fill className="object-cover" />
                   </div>
                   <div>
                     <div className="font-serif text-lg text-charcoal flex items-center gap-1.5">
-                      <span>{project.architect.name}</span>
+                      <span>{project.architect?.name || "Verified Architect"}</span>
                       <ShieldCheck className="w-4 h-4 text-copper" />
                     </div>
-                    <div className="text-xs text-mutedText font-sans">{project.architect.studio}</div>
-                    <div className="text-xs text-mutedText font-sans">{project.architect.location}</div>
+                    <div className="text-xs text-mutedText font-sans">{project.architect?.studio || "Architectural Studio"}</div>
+                    <div className="text-xs text-mutedText font-sans">{project.architect?.location || "South India"}</div>
                   </div>
                 </div>
 
@@ -917,7 +917,7 @@ export default function ProjectDetailClient() {
 
                   <div className="pt-2 border-t border-warm-border/60 flex items-center justify-between text-xs font-sans">
                     <span className="text-secondaryText">Architect Studio:</span>
-                    <span className="font-medium text-copper">{project.architect.name} ({project.architect.studio})</span>
+                    <span className="font-medium text-copper">{project.architect?.name || "Verified Architect"} ({project.architect?.studio || "Studio"})</span>
                   </div>
 
                   <div className="flex items-center justify-between text-xs font-sans">

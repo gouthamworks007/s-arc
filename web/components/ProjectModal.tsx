@@ -171,19 +171,19 @@ export default function ProjectModal({ project, onClose }: ProjectModalProps) {
                 <div className="flex items-center gap-3.5 mb-4">
                   <div className="relative w-12 h-12 rounded-full overflow-hidden bg-warm-grey">
                     <Image
-                      src={project.architect.image}
-                      alt={project.architect.name}
+                      src={project.architect?.image || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80"}
+                      alt={project.architect?.name || "Architect"}
                       fill
                       className="object-cover"
                     />
                   </div>
                   <div>
                     <div className="text-[14px] font-medium text-charcoal flex items-center gap-1.5">
-                      <span>{project.architect.name}</span>
+                      <span>{project.architect?.name || "Verified Architect"}</span>
                       <ShieldCheck className="w-3.5 h-3.5 text-copper" />
                     </div>
-                    <div className="text-xs text-mutedText">{project.architect.studio}</div>
-                    <div className="text-xs text-mutedText">{project.architect.location}</div>
+                    <div className="text-xs text-mutedText">{project.architect?.studio || "Studio"}</div>
+                    <div className="text-xs text-mutedText">{project.architect?.location || "Kerala"}</div>
                   </div>
                 </div>
 

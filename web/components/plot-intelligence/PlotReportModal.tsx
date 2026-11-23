@@ -253,7 +253,7 @@ export default function PlotReportModal({
                       <div>Style: {plan.project.style}</div>
                       <div>BHK: {plan.project.bedrooms} Bedrooms</div>
                       <div>Built Area: {plan.project.builtUpArea}</div>
-                      <div>Architect: {plan.project.architect.studio}</div>
+                      <div>Architect: {plan.project.architect?.studio || "Verified Studio"}</div>
                     </div>
                   </div>
                 ))}

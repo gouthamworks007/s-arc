@@ -46,6 +46,74 @@ async function authenticateUser(request: Request, env: Env): Promise<any | null>
   }
 }
 
+function formatProjectRow(p: any) {
+  if (!p) return null;
+  let gallery: string[] = [];
+  try {
+    gallery = typeof p.gallery === "string" ? JSON.parse(p.gallery || "[]") : (Array.isArray(p.gallery) ? p.gallery : []);
+  } catch {
+    gallery = [];
+  }
+  let highlights: string[] = [];
+  try {
+    highlights = typeof p.highlights === "string" ? JSON.parse(p.highlights || "[]") : (Array.isArray(p.highlights) ? p.highlights : []);
+  } catch {
+    highlights = [];
+  }
+
+  const centsNum = Number(p.cents) || 10;
+  const architect = (p.architect && typeof p.architect === "object") ? p.architect : {
+    id: p.architect_id || "usr-arch-01",
+    name: p.architect_name || "Ar. Nikhil Rajan",
+    studio: p.architect_studio || "Studio Vayu",
+    location: p.architect_location || "Kochi, Kerala",
+    verified: true,
+    image: p.architect_avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80",
+  };
+
+  return {
+    id: p.id,
+    slug: p.slug || p.id,
+    name: p.name || "Architectural Blueprint",
+    style: p.style || "CONTEMPORARY",
+    location: p.location || "Kerala, India",
+    plotSize: p.plot_size || `${centsNum} Cents`,
+    cents: centsNum,
+    builtUpArea: p.built_up_area || "2,400 Sq.Ft",
+    bedrooms: Number(p.bedrooms) || 3,
+    floors: Number(p.floors) || 2,
+    facing: p.facing || "East",
+    vastuScore: Number(p.vastu_score ?? p.vastuScore) || 95,
+    price: p.price || "₹35,000",
+    priceNumeric: Number(p.price_numeric ?? p.priceNumeric) || 35000,
+    sheetCount: Number(p.sheet_count ?? p.sheetCount) || 42,
+    status: p.status || "published",
+    featured: Boolean(p.featured),
+    image: p.image || "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1600&q=85",
+    gallery,
+    floorPlanImage: p.floor_plan_image || null,
+    cadFileUrl: p.cad_file_url || null,
+    cadFileName: p.cad_file_name || null,
+    cadFileSize: p.cad_file_size || null,
+    description: p.description || "",
+    highlights,
+    dimensions: p.dimensions || {
+      plotWidth: p.plot_width || "40 ft",
+      plotLength: p.plot_length || "60 ft",
+      setbacks: p.setbacks || "Front: 3.0m, Rear: 1.5m, Sides: 1.2m (KMBR)",
+    },
+    dwgAvailable: Boolean(p.dwg_available ?? 1),
+    bimAvailable: Boolean(p.bim_available ?? 1),
+    boqAvailable: Boolean(p.boq_available ?? 1),
+    mepAvailable: Boolean(p.mep_available ?? 1),
+    views: Number(p.views) || 0,
+    inquiries: Number(p.inquiries_count ?? p.inquiries) || 0,
+    architect,
+    createdAt: p.created_at || new Date().toISOString(),
+    updatedAt: p.updated_at || new Date().toISOString(),
+  };
+}
+
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
@@ -423,16 +491,98 @@ export default {
     }
 
     // -------------------------------------------------------------
-    // 6. GET /api/projects - Projects Feed from D1
+    // 6. GET & POST /api/projects - Projects Feed from D1
     // -------------------------------------------------------------
     if (url.pathname === "/api/projects" && request.method === "GET") {
       try {
-        const { results } = await env.DB.prepare(
-          "SELECT * FROM projects ORDER BY created_at DESC"
-        ).all();
-        return Response.json({ projects: results || [] }, { status: 200 });
+        const style = url.searchParams.get("style");
+        const status = url.searchParams.get("status");
+        let query = "SELECT * FROM projects WHERE 1=1";
+        const params: any[] = [];
+        if (status && status !== "all") {
+          query += " AND status = ?";
+          params.push(status);
+        }
+        if (style && style !== "All") {
+          query += " AND lower(style) LIKE ?";
+          params.push(`%${style.toLowerCase()}%`);
+        }
+        query += " ORDER BY featured DESC, created_at DESC";
+        const stmt = params.length > 0 ? env.DB.prepare(query).bind(...params) : env.DB.prepare(query);
+        const { results } = await stmt.all();
+        const formatted = (results || []).map(formatProjectRow);
+        return Response.json({ count: formatted.length, projects: formatted }, { status: 200 });
       } catch (err: any) {
         return Response.json({ projects: [], error: err.message }, { status: 200 });
+      }
+    }
+
+    if (url.pathname === "/api/projects" && request.method === "POST") {
+      const user = await authenticateUser(request, env);
+      if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
+      try {
+        const body: any = await request.json().catch(() => ({}));
+        const newId = `proj-${Date.now().toString().slice(-6)}`;
+        const cleanName = (body.name || "Untitled Blueprint").trim().slice(0, 150);
+        const slug = cleanName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+        const formattedPrice = String(body.price || "₹35,000").startsWith("₹") ? String(body.price) : `₹${body.price}`;
+        const priceNum = parseFloat(formattedPrice.replace(/[₹,]/g, "")) || 35000;
+        const centsNum = parseFloat(body.cents) || 10;
+        const status = user.role === "admin" ? (body.status || "published") : "published";
+
+        await env.DB.prepare(
+          `INSERT INTO projects (
+            id, slug, name, style, location, plot_size, cents, built_up_area,
+            bedrooms, floors, facing, vastu_score, price, price_numeric,
+            sheet_count, status, featured, image, gallery, floor_plan_image,
+            cad_file_url, cad_file_name, cad_file_size,
+            description, highlights, plot_width, plot_length, setbacks,
+            dwg_available, bim_available, boq_available, mep_available,
+            architect_name, architect_studio, architect_location, architect_avatar, architect_id
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        ).bind(
+          newId,
+          slug,
+          cleanName,
+          body.style || "CONTEMPORARY",
+          body.location || "Kerala, India",
+          `${centsNum} Cents`,
+          centsNum,
+          body.builtUpArea || "2,400 Sq.Ft",
+          parseInt(body.bedrooms) || 3,
+          parseInt(body.floors) || 2,
+          body.facing || "East",
+          parseInt(body.vastuScore) || 95,
+          formattedPrice,
+          priceNum,
+          parseInt(body.sheetCount) || 42,
+          status,
+          0,
+          body.image || "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1600&q=85",
+          JSON.stringify(Array.isArray(body.gallery) ? body.gallery : []),
+          body.floorPlanImage || null,
+          body.cadFileUrl || null,
+          body.cadFileName || null,
+          body.cadFileSize || null,
+          body.description || "Curated climate-responsive residential blueprint.",
+          JSON.stringify(Array.isArray(body.highlights) ? body.highlights : []),
+          body.dimensions?.plotWidth || "40 ft",
+          body.dimensions?.plotLength || "60 ft",
+          body.dimensions?.setbacks || "Front: 3.0m, Rear: 1.5m, Sides: 1.2m (KMBR)",
+          body.dwgAvailable !== false ? 1 : 0,
+          body.bimAvailable !== false ? 1 : 0,
+          body.boqAvailable !== false ? 1 : 0,
+          body.mepAvailable !== false ? 1 : 0,
+          user.name,
+          user.studioName || "Verified Studio",
+          user.location || "South India",
+          user.avatar || null,
+          user.id
+        ).run();
+
+        return Response.json({ success: true, id: newId, slug }, { status: 201 });
+      } catch (err: any) {
+        return Response.json({ error: "Failed to create project: " + err.message }, { status: 500 });
       }
     }
 
@@ -799,7 +949,7 @@ export default {
     }
 
     // -------------------------------------------------------------
-    // 13. GET /api/projects/:id - Single Project Details
+    // 13. GET & DELETE /api/projects/:id - Single Project Details
     // -------------------------------------------------------------
     if (url.pathname.startsWith("/api/projects/") && request.method === "GET") {
       const projId = decodeURIComponent(url.pathname.replace("/api/projects/", ""));
@@ -810,9 +960,21 @@ export default {
         if (!project) {
           return Response.json({ error: "Project not found" }, { status: 404 });
         }
-        return Response.json({ project }, { status: 200 });
+        return Response.json({ project: formatProjectRow(project) }, { status: 200 });
       } catch (err: any) {
         return Response.json({ error: "Failed to fetch project: " + err.message }, { status: 500 });
+      }
+    }
+
+    if (url.pathname.startsWith("/api/projects/") && request.method === "DELETE") {
+      const user = await authenticateUser(request, env);
+      if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
+      const projId = decodeURIComponent(url.pathname.replace("/api/projects/", ""));
+      try {
+        await env.DB.prepare("DELETE FROM projects WHERE id = ?").bind(projId).run();
+        return Response.json({ success: true }, { status: 200 });
+      } catch (err: any) {
+        return Response.json({ error: "Failed to delete project: " + err.message }, { status: 500 });
       }
     }
 

@@ -155,10 +155,10 @@ export default function CompareModal() {
                   {savedProjects.map((p) => (
                     <div key={p.id} className="col-span-1">
                       <div className="font-medium text-charcoal flex items-center gap-1">
-                        <span>{p.architect.name}</span>
+                        <span>{p.architect?.name || "Verified Architect"}</span>
                         <ShieldCheck className="w-3 h-3 text-copper" />
                       </div>
-                      <div className="text-[10px] text-mutedText">{p.architect.studio}</div>
+                      <div className="text-[10px] text-mutedText">{p.architect?.studio || "Studio"}</div>
                     </div>
                   ))}
                 </div>

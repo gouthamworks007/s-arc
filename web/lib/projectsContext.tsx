@@ -109,6 +109,62 @@ interface ProjectsContextType {
 
 const ProjectsContext = createContext<ProjectsContextType | undefined>(undefined);
 
+export function normalizeProject(p: any): ArchitecturalProject {
+  if (!p) return p;
+  const architect = (p.architect && typeof p.architect === "object") ? {
+    id: p.architect.id || p.architect_id || "usr-arch-01",
+    name: p.architect.name || p.architect_name || "Ar. Nikhil Rajan",
+    studio: p.architect.studio || p.architect_studio || "Studio Vayu",
+    location: p.architect.location || p.architect_location || "Kochi, Kerala",
+    verified: p.architect.verified ?? true,
+    image: p.architect.image || p.architect_avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80",
+  } : {
+    id: p.architect_id || "usr-arch-01",
+    name: p.architect_name || "Ar. Nikhil Rajan",
+    studio: p.architect_studio || "Studio Vayu",
+    location: p.architect_location || "Kochi, Kerala",
+    verified: true,
+    image: p.architect_avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80",
+  };
+
+  let gallery: string[] = [];
+  try {
+    gallery = Array.isArray(p.gallery) ? p.gallery : (typeof p.gallery === "string" ? JSON.parse(p.gallery || "[]") : []);
+  } catch {
+    gallery = [];
+  }
+
+  let highlights: string[] = [];
+  try {
+    highlights = Array.isArray(p.highlights) ? p.highlights : (typeof p.highlights === "string" ? JSON.parse(p.highlights || "[]") : []);
+  } catch {
+    highlights = [];
+  }
+
+  const centsNum = Number(p.cents) || 10;
+
+  return {
+    ...p,
+    plotSize: p.plotSize || p.plot_size || `${centsNum} Cents`,
+    cents: centsNum,
+    builtUpArea: p.builtUpArea || p.built_up_area || "2,400 Sq.Ft",
+    bedrooms: Number(p.bedrooms) || 3,
+    floors: Number(p.floors) || 2,
+    facing: p.facing || "East",
+    vastuScore: Number(p.vastuScore ?? p.vastu_score) || 95,
+    price: p.price || "₹35,000",
+    sheetCount: Number(p.sheetCount ?? p.sheet_count) || 42,
+    gallery,
+    highlights,
+    dimensions: p.dimensions || {
+      plotWidth: p.plot_width || "40 ft",
+      plotLength: p.plot_length || "60 ft",
+      setbacks: p.setbacks || "Front: 3.0m, Rear: 1.5m, Sides: 1.2m (KMBR)",
+    },
+    architect,
+  };
+}
+
 export function ProjectsProvider({ children }: { children: React.ReactNode }) {
   const [projects, setProjects] = useState<ArchitecturalProject[]>(INITIAL_ENRICHED_PROJECTS);
   const [profile, setProfile] = useState<StudioProfile>(DEFAULT_PROFILE);
@@ -123,9 +179,10 @@ export function ProjectsProvider({ children }: { children: React.ReactNode }) {
       if (res.ok) {
         const data = await res.json();
         if (data.projects && Array.isArray(data.projects) && data.projects.length > 0) {
-          setProjects(data.projects);
+          const normalized = data.projects.map(normalizeProject);
+          setProjects(normalized);
           try {
-            localStorage.setItem(STORAGE_KEY_PROJECTS, JSON.stringify(data.projects));
+            localStorage.setItem(STORAGE_KEY_PROJECTS, JSON.stringify(normalized));
           } catch (e) {}
         }
       }
@@ -141,7 +198,10 @@ export function ProjectsProvider({ children }: { children: React.ReactNode }) {
     try {
       const storedProjects = localStorage.getItem(STORAGE_KEY_PROJECTS);
       if (storedProjects) {
-        setProjects(JSON.parse(storedProjects));
+        const parsed = JSON.parse(storedProjects);
+        if (Array.isArray(parsed)) {
+          setProjects(parsed.map(normalizeProject));
+        }
       }
 
       const storedProfile = localStorage.getItem(STORAGE_KEY_PROFILE);

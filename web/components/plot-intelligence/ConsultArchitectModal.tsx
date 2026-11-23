@@ -28,8 +28,8 @@ export default function ConsultArchitectModal({
   const [budgetRange, setBudgetRange] = useState("₹50L - ₹80L");
   const [message, setMessage] = useState(
     analysis
-      ? `I measured my plot (${analysis.areaCents.toFixed(1)} Cents, approx ${analysis.frontageFeet.toFixed(0)}ft frontage) using S-ARC Plot My Land. I would like to consult with Ar. ${project?.architect.name} regarding adapting ${project?.name} to our site contour and local setback clearance.`
-      : `I am interested in consulting with Ar. ${project?.architect.name} regarding ${project?.name} for site contour adaptation and municipal clearances in ${locationName}.`
+      ? `I measured my plot (${analysis.areaCents.toFixed(1)} Cents, approx ${analysis.frontageFeet.toFixed(0)}ft frontage) using S-ARC Plot My Land. I would like to consult with Ar. ${project?.architect?.name || "Architect"} regarding adapting ${project?.name || "this plan"} to our site contour and local setback clearance.`
+      : `I am interested in consulting with Ar. ${project?.architect?.name || "Architect"} regarding ${project?.name || "this plan"} for site contour adaptation and municipal clearances in ${locationName}.`
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -134,7 +134,7 @@ export default function ConsultArchitectModal({
               <ShieldCheck className="w-6 h-6" />
             </div>
             <h3 id="consult-modal-title" className="text-xl font-serif text-charcoal">
-              Sign In to Consult With Ar. {project.architect.name}
+              Sign In to Consult With Ar. {project?.architect?.name || "Architect"}
             </h3>
             <p className="text-xs text-secondaryText font-sans max-w-sm mx-auto leading-relaxed">
               To protect site survey telemetry and facilitate direct communication with licensed studios, an authenticated account is required.
@@ -164,7 +164,7 @@ export default function ConsultArchitectModal({
               Consultation Dispatched
             </h3>
             <p className="text-xs text-charcoal/60 font-sans max-w-sm mx-auto leading-relaxed">
-              Your inquiry and requirements have been transmitted to <strong>{project.architect.name}</strong> ({project.architect.studio}). The studio will reach out to you at {currentUser.email}.
+              Your inquiry and requirements have been transmitted to <strong>{project?.architect?.name || "Architect"}</strong> ({project?.architect?.studio || "Studio"}). The studio will reach out to you at {currentUser?.email || "your registered email"}.
             </p>
             <button
               onClick={onClose}
@@ -179,8 +179,8 @@ export default function ConsultArchitectModal({
             <div className="flex items-center gap-3.5 pb-4 border-b border-warm-border">
               <div className="relative w-12 h-12 rounded-full overflow-hidden bg-warm-grey shrink-0 border border-warm-border">
                 <Image
-                  src={project.architect.image}
-                  alt={project.architect.name}
+                  src={project?.architect?.image || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80"}
+                  alt={project?.architect?.name || "Architect"}
                   fill
                   className="object-cover"
                 />
@@ -190,11 +190,11 @@ export default function ConsultArchitectModal({
                   Direct Architect Consultation
                 </span>
                 <h3 id="consult-modal-title" className="text-base font-serif text-charcoal flex items-center gap-1.5">
-                  <span>{project.architect.name}</span>
+                  <span>{project?.architect?.name || "Architect"}</span>
                   <ShieldCheck className="w-3.5 h-3.5 text-copper" />
                 </h3>
                 <p className="text-[11px] text-charcoal/50 font-sans">
-                  {project.architect.studio} • For {project.name}
+                  {project?.architect?.studio || "Studio"} • For {project?.name || "Plan"}
                 </p>
               </div>
             </div>
