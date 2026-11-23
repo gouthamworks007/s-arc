@@ -1,5 +1,6 @@
 export interface ArchitecturalProject {
   id: string;
+  slug?: string;
   name: string;
   style: string;
   location: string;
@@ -9,14 +10,18 @@ export interface ArchitecturalProject {
   bedrooms: number;
   floors: number;
   price: string;
+  priceNumeric?: number;
   architect: {
+    id?: string;
     name: string;
     studio: string;
     location: string;
     verified: boolean;
     image: string;
+  avatar?: string;
   };
   image: string;
+  avatar?: string;
   gallery: string[];
   description: string;
   highlights: string[];
@@ -96,6 +101,7 @@ export interface StudioProfile {
   email: string;
   phone: string;
   image: string;
+  avatar?: string;
   coverImage: string;
   specialization: string;
   awards: string[];
@@ -106,6 +112,7 @@ export interface ArchitecturalStyle {
   name: string;
   tagline: string;
   image: string;
+  avatar?: string;
   projectCount: number;
 }
 
@@ -117,6 +124,7 @@ export interface ArchitectProfile {
   projectsCount: number;
   verified: boolean;
   image: string;
+  avatar?: string;
   bio: string;
   specialty: string;
 }
@@ -188,6 +196,7 @@ export interface JournalArticle {
   date: string;
   readTime: string;
   image: string;
+  avatar?: string;
   summary: string;
 }
 

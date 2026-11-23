@@ -23,7 +23,8 @@ import {
   Upload,
   FileArchive,
   Loader2,
-  Paperclip
+  Paperclip,
+  Package
 } from "lucide-react";
 
 interface ProjectEditModalProps {
@@ -636,9 +637,20 @@ export default function ProjectEditModal({
               </div>
 
               <div className="p-4 bg-white border border-warm-border rounded-2xl space-y-3">
-                <span className="text-xs font-semibold text-charcoal uppercase tracking-wider font-sans block">
-                  Plot Dimensions & Municipal Setbacks
-                </span>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-charcoal uppercase tracking-wider font-sans block">
+                    Plot Dimensions & Municipal Setbacks
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setSetbacks("Front: 3.0m, Rear: 1.5m, Sides: 1.2m & 1.0m (KMBR 2019 Table 4)")}
+                    className="text-[11px] font-mono text-copper hover:underline flex items-center gap-1"
+                    title="Automatically fill Kerala Municipal Building Rules (KMBR 2019 Table 4) minimum setbacks"
+                  >
+                    <Sparkles className="w-3 h-3" />
+                    <span>Auto-apply KMBR Table 4</span>
+                  </button>
+                </div>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div>
                     <span className="text-[11px] text-secondaryText block mb-1">Plot Width</span>
@@ -671,6 +683,57 @@ export default function ProjectEditModal({
                     />
                   </div>
                 </div>
+              </div>
+
+              {/* Tesler's Law: Automated Statutory & Spatial Calculations */}
+              <div className="p-4 bg-copper/5 border border-copper/20 rounded-2xl space-y-3">
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className="w-4 h-4 text-copper" />
+                  <span className="text-xs font-semibold text-charcoal font-sans">
+                    Automated KMBR 2019 & Spatial Intelligence
+                  </span>
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-copper/15 text-copper font-medium ml-auto">
+                    Tesler's Law Engine
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                  <div className="p-2.5 rounded-xl bg-white border border-warm-border/80">
+                    <span className="text-[10px] font-mono text-secondaryText block">Total Plot Area</span>
+                    <span className="font-serif text-sm font-semibold text-charcoal">
+                      {(cents * 435.6).toLocaleString()} Sq.Ft
+                    </span>
+                    <span className="text-[9px] text-mutedText block mt-0.5">@ 1 Cent = 435.6 sq.ft</span>
+                  </div>
+
+                  <div className="p-2.5 rounded-xl bg-white border border-warm-border/80">
+                    <span className="text-[10px] font-mono text-secondaryText block">Max Ground Coverage</span>
+                    <span className="font-serif text-sm font-semibold text-charcoal">
+                      {(cents * 435.6 * 0.6).toFixed(0)} Sq.Ft
+                    </span>
+                    <span className="text-[9px] text-mutedText block mt-0.5">60% Plinth (Rule 27)</span>
+                  </div>
+
+                  <div className="p-2.5 rounded-xl bg-white border border-warm-border/80">
+                    <span className="text-[10px] font-mono text-secondaryText block">Max Permissible FAR</span>
+                    <span className="font-serif text-sm font-semibold text-charcoal">
+                      {(cents * 435.6 * 2.75).toFixed(0)} Sq.Ft
+                    </span>
+                    <span className="text-[9px] text-mutedText block mt-0.5">FAR 2.75 Residential</span>
+                  </div>
+
+                  <div className="p-2.5 rounded-xl bg-white border border-warm-border/80">
+                    <span className="text-[10px] font-mono text-secondaryText block">Rainwater Sump Min</span>
+                    <span className="font-serif text-sm font-semibold text-charcoal">
+                      {Math.round(cents * 435.6 * 0.6 * 0.0929 * 25).toLocaleString()} Liters
+                    </span>
+                    <span className="text-[9px] text-mutedText block mt-0.5">25L / sq.m plinth</span>
+                  </div>
+                </div>
+
+                <p className="text-[11px] text-secondaryText leading-relaxed">
+                  <strong>KMBR 2019 Rule 27 Note:</strong> Plots with access road width under 12m require minimum 3.00m front setback. Side setback requires minimum 1.20m on one side and 1.00m on the other for structures up to 10m height.
+                </p>
               </div>
 
               {/* Key Highlights Tags Editor */}
@@ -763,6 +826,61 @@ export default function ProjectEditModal({
                   <p className="text-[11px] text-secondaryText mt-2 font-sans">
                     Typical comprehensive sets include 40–55 detailed A1 sheets for site execution.
                   </p>
+                </div>
+              </div>
+
+              {/* S-ARC 3 Deliverable Tiers Checklist */}
+              <div className="p-5 bg-stone-50 border border-warm-border rounded-2xl space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-semibold uppercase tracking-wider font-mono text-charcoal flex items-center gap-2">
+                    <Package className="w-4 h-4 text-copper" />
+                    <span>3 S-ARC Deliverable Tiers Checklist</span>
+                  </h4>
+                  <span className="text-[10px] font-mono text-secondaryText">Standardized Licensing Tiers</span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                  <div className={`p-3 rounded-xl border transition-all ${
+                    dwgAvailable ? "bg-white border-emerald-300 shadow-2xs" : "bg-warm-grey/40 border-warm-border/60 opacity-60"
+                  }`}>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="font-semibold text-xs text-charcoal">Tier 1: Permit Set</span>
+                      {dwgAvailable ? (
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                      ) : (
+                        <span className="text-[10px] text-mutedText">Missing</span>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-secondaryText">AutoCAD DWG, site layout & municipal permit drawings for local body sanction.</p>
+                  </div>
+
+                  <div className={`p-3 rounded-xl border transition-all ${
+                    dwgAvailable && boqAvailable ? "bg-white border-emerald-300 shadow-2xs" : "bg-warm-grey/40 border-warm-border/60 opacity-60"
+                  }`}>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="font-semibold text-xs text-charcoal">Tier 2: Builder Set</span>
+                      {dwgAvailable && boqAvailable ? (
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                      ) : (
+                        <span className="text-[10px] text-mutedText">Needs DWG+BOQ</span>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-secondaryText">Full structural drawings, rebar schedules, BOQ spreadsheet & MEP schematics.</p>
+                  </div>
+
+                  <div className={`p-3 rounded-xl border transition-all ${
+                    bimAvailable ? "bg-white border-copper shadow-2xs" : "bg-warm-grey/40 border-warm-border/60 opacity-60"
+                  }`}>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="font-semibold text-xs text-copper">Tier 3: 3D BIM + BOQ</span>
+                      {bimAvailable ? (
+                        <CheckCircle2 className="w-3.5 h-3.5 text-copper" />
+                      ) : (
+                        <span className="text-[10px] text-mutedText">Needs BIM</span>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-secondaryText">Parametric Revit / SketchUp model, interactive walkthroughs & comprehensive BOQ.</p>
+                  </div>
                 </div>
               </div>
 
