@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import { useProjects } from "@/lib/projectsContext";
 import { useAuth } from "@/lib/authContext";
+import VerificationBadge from "@/components/VerificationBadge";
 import { 
   ShieldCheck, 
   Award, 
@@ -261,9 +262,10 @@ export default function StudioProfileTab() {
                 <div>
                   <label className="block text-xs font-medium text-charcoal mb-1.5 font-sans flex items-center justify-between">
                     <span>COA Registration Number</span>
-                    <span className="text-[10px] font-mono text-emerald-700 font-semibold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                      ✓ Verified COA
-                    </span>
+                    <VerificationBadge
+                      badge={currentUser?.verificationBadge || (coaNumber ? "blue" : "grey")}
+                      size="xs"
+                    />
                   </label>
                   <input
                     type="text"

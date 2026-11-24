@@ -181,12 +181,18 @@ function formatProjectRow(p: any) {
   }
 
   const centsNum = Number(p.cents) || 10;
-  const architect = (p.architect && typeof p.architect === "object") ? p.architect : {
+  const badge = p.architect_verification_badge || "none";
+  const architect = (p.architect && typeof p.architect === "object") ? {
+    ...p.architect,
+    verificationBadge: p.architect.verificationBadge || badge,
+    verified: (badge === "blue" || badge === "grey") || Boolean(p.architect.verified),
+  } : {
     id: p.architect_id || "usr-arch-01",
     name: p.architect_name || "Ar. Nikhil Rajan",
     studio: p.architect_studio || "Studio Vayu",
     location: p.architect_location || "Kochi, Kerala",
-    verified: true,
+    verified: badge === "blue" || badge === "grey",
+    verificationBadge: badge,
     image: p.architect_avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80",
   };
 
@@ -208,6 +214,7 @@ function formatProjectRow(p: any) {
     sheetCount: Number(p.sheet_count ?? p.sheetCount) || 42,
     status: p.status || "published",
     featured: Boolean(p.featured),
+    architectVerificationBadge: badge,
     image: p.image || "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1600&q=85",
     gallery,
     floorPlanImage: p.floor_plan_image || null,
@@ -239,6 +246,79 @@ async function handleRequest(request: Request, env: Env, ctx: ExecutionContext):
   // 1. CORS Preflight: Handle OPTIONS requests immediately for all /api/ endpoints
   if (request.method === "OPTIONS" && url.pathname.startsWith("/api/")) {
     return new Response(null, { status: 204, headers: getCorsHeaders(request) });
+  }
+
+  // 1b. Dynamic High-Performance SEO: robots.txt
+  if (url.pathname === "/robots.txt" && (request.method === "GET" || request.method === "HEAD")) {
+    const robots = `User-agent: *
+Allow: /
+Disallow: /dashboard
+Disallow: /dashboard/
+Disallow: /api/auth/
+
+User-agent: Googlebot
+Allow: /
+Disallow: /dashboard
+Disallow: /dashboard/
+Disallow: /api/auth/
+
+Sitemap: https://southernarchitecture.in/sitemap.xml
+Host: https://southernarchitecture.in
+`;
+    return new Response(robots, {
+      status: 200,
+      headers: {
+        "Content-Type": "text/plain; charset=utf-8",
+        "Cache-Control": "public, max-age=86400, s-maxage=86400",
+      },
+    });
+  }
+
+  // 1c. Dynamic Real-Time Google Sitemap with live D1 published projects
+  if (url.pathname === "/sitemap.xml" && (request.method === "GET" || request.method === "HEAD")) {
+    try {
+      const { results: dbProjects } = await env.DB.prepare(
+        "SELECT id, slug, updated_at, created_at FROM projects WHERE status = 'published' ORDER BY created_at DESC"
+      ).all<any>();
+
+      const now = new Date().toISOString();
+      const urls: Array<{ loc: string; priority: string; freq: string; lastmod: string }> = [
+        { loc: "https://southernarchitecture.in/", priority: "1.0", freq: "daily", lastmod: now },
+        { loc: "https://southernarchitecture.in/designs", priority: "0.95", freq: "daily", lastmod: now },
+        { loc: "https://southernarchitecture.in/plot-intelligence", priority: "0.90", freq: "weekly", lastmod: now },
+        { loc: "https://southernarchitecture.in/architects", priority: "0.90", freq: "weekly", lastmod: now },
+        { loc: "https://southernarchitecture.in/styles", priority: "0.80", freq: "weekly", lastmod: now },
+      ];
+
+      (dbProjects || []).forEach((p: any) => {
+        urls.push({
+          loc: `https://southernarchitecture.in/designs/${encodeURIComponent(p.id)}`,
+          priority: "0.85",
+          freq: "weekly",
+          lastmod: p.updated_at || p.created_at || now,
+        });
+      });
+
+      const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${urls.map((u) => `  <url>
+    <loc>${u.loc}</loc>
+    <lastmod>${u.lastmod}</lastmod>
+    <changefreq>${u.freq}</changefreq>
+    <priority>${u.priority}</priority>
+  </url>`).join("\n")}
+</urlset>`;
+
+      return new Response(xml, {
+        status: 200,
+        headers: {
+          "Content-Type": "application/xml; charset=utf-8",
+          "Cache-Control": "public, max-age=3600, s-maxage=86400",
+        },
+      });
+    } catch (_) {
+      // Fallback to static asset fetch if DB is unreachable
+    }
   }
 
   // 2. Serve uploaded files directly from Cloudflare R2 bucket with hardened security
@@ -563,6 +643,7 @@ async function handleRequest(request: Request, env: Env, ctx: ExecutionContext):
               studioName: dbUser.studio_name,
               coaNumber: dbUser.coa_number,
               bio: dbUser.bio,
+              verificationBadge: dbUser.verification_badge || "none",
             },
           });
         }
@@ -639,6 +720,7 @@ async function handleRequest(request: Request, env: Env, ctx: ExecutionContext):
               subRole: user.sub_role,
               status: user.status,
               avatar: user.avatar,
+              verificationBadge: user.verification_badge || "none",
             },
           }),
           { status: 200, headers }
@@ -687,6 +769,21 @@ async function handleRequest(request: Request, env: Env, ctx: ExecutionContext):
     if (url.pathname === "/api/projects" && request.method === "POST") {
       const user = await authenticateUser(request, env);
       if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
+
+      // STRICT PERMISSION: Admins CANNOT upload blueprints; only architects can.
+      if (user.role === "admin") {
+        return Response.json(
+          { error: "Forbidden: Platform administrators are not permitted to publish designs or blueprints. Blueprint submissions are strictly reserved for architects." },
+          { status: 403 }
+        );
+      }
+      if (user.subRole !== "architect" && user.role !== "architect") {
+        return Response.json(
+          { error: "Forbidden: Only architect accounts (COA Qualified or Platform-Vetted Freelancers) are authorized to publish blueprints." },
+          { status: 403 }
+        );
+      }
+
       try {
         const body: any = await request.json().catch(() => ({}));
         const newId = `proj-${Date.now().toString().slice(-6)}`;
@@ -695,7 +792,13 @@ async function handleRequest(request: Request, env: Env, ctx: ExecutionContext):
         const formattedPrice = String(body.price || "₹35,000").startsWith("₹") ? String(body.price) : `₹${body.price}`;
         const priceNum = parseFloat(formattedPrice.replace(/[₹,]/g, "")) || 35000;
         const centsNum = parseFloat(body.cents) || 10;
-        const status = user.role === "admin" ? (body.status || "published") : "published";
+        const status = "published";
+
+        // Fetch architect's verification badge from database
+        const dbUser = await env.DB.prepare(
+          "SELECT verification_badge FROM users WHERE id = ? LIMIT 1"
+        ).bind(user.id).first<any>();
+        const badge = dbUser?.verification_badge || user.verificationBadge || "none";
 
         await env.DB.prepare(
           `INSERT INTO projects (
@@ -705,8 +808,9 @@ async function handleRequest(request: Request, env: Env, ctx: ExecutionContext):
             cad_file_url, cad_file_name, cad_file_size,
             description, highlights, plot_width, plot_length, setbacks,
             dwg_available, bim_available, boq_available, mep_available,
-            architect_name, architect_studio, architect_location, architect_avatar, architect_id
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+            architect_name, architect_studio, architect_location, architect_avatar, architect_id,
+            architect_verification_badge
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
         ).bind(
           newId,
           slug,
@@ -744,7 +848,8 @@ async function handleRequest(request: Request, env: Env, ctx: ExecutionContext):
           user.studioName || "Verified Studio",
           user.location || "South India",
           user.avatar || null,
-          user.id
+          user.id,
+          badge
         ).run();
 
         return Response.json({ success: true, id: newId, slug }, { status: 201 });
@@ -899,7 +1004,7 @@ async function handleRequest(request: Request, env: Env, ctx: ExecutionContext):
       try {
         const roleFilter = url.searchParams.get("role");
         const search = url.searchParams.get("q")?.toLowerCase();
-        let sql = "SELECT id, name, email, role, sub_role AS subRole, status, coa_number AS coaNumber, studio_name AS studioName, phone, location, avatar, bio, permissions, review_notes AS reviewNotes, created_at AS joinedDate FROM users WHERE 1=1";
+        let sql = "SELECT id, name, email, role, sub_role AS subRole, status, coa_number AS coaNumber, studio_name AS studioName, phone, location, avatar, bio, permissions, review_notes AS reviewNotes, verification_badge AS verificationBadge, created_at AS joinedDate FROM users WHERE 1=1";
         const params: any[] = [];
         if (roleFilter && roleFilter !== "all") {
           sql += " AND role = ?";
@@ -991,6 +1096,7 @@ async function handleRequest(request: Request, env: Env, ctx: ExecutionContext):
               location: user.location,
               avatar: user.avatar,
               bio: user.bio,
+              verificationBadge: user.verification_badge || "none",
               reviewNotes: user.review_notes,
               createdAt: user.created_at,
               updatedAt: user.updated_at,
@@ -1077,6 +1183,11 @@ async function handleRequest(request: Request, env: Env, ctx: ExecutionContext):
               updateClauses.push("role = ?");
               queryParams.push(body.role);
             }
+            const verificationBadge = body.verification_badge ?? body.verificationBadge;
+            if (typeof verificationBadge === "string" && ["blue", "grey", "none"].includes(verificationBadge)) {
+              updateClauses.push("verification_badge = ?");
+              queryParams.push(verificationBadge);
+            }
           }
 
           if (updateClauses.length > 0) {
@@ -1086,6 +1197,16 @@ async function handleRequest(request: Request, env: Env, ctx: ExecutionContext):
             await env.DB.prepare(
               `UPDATE users SET ${updateClauses.join(", ")} WHERE id = ?`
             ).bind(...queryParams).run();
+
+            // Synchronize updated badge to all projects published by this architect
+            const verificationBadge = body.verification_badge ?? body.verificationBadge;
+            if (isAdmin && typeof verificationBadge === "string" && ["blue", "grey", "none"].includes(verificationBadge)) {
+              try {
+                await env.DB.prepare(
+                  "UPDATE projects SET architect_verification_badge = ? WHERE architect_id = ?"
+                ).bind(verificationBadge, targetUserId).run();
+              } catch (_) {}
+            }
           }
 
           // Fetch fresh user state
@@ -1106,6 +1227,7 @@ async function handleRequest(request: Request, env: Env, ctx: ExecutionContext):
               location: updated.location,
               avatar: updated.avatar,
               bio: updated.bio,
+              verificationBadge: updated.verification_badge || "none",
               reviewNotes: updated.review_notes,
               updatedAt: updated.updated_at,
             } : null,
@@ -1264,10 +1386,25 @@ async function handleRequest(request: Request, env: Env, ctx: ExecutionContext):
         );
       }
 
-      // 2. Authentication Requirement: Protect storage from anonymous abuse
+      // 2. Authentication Requirement & Role Enforcement: ONLY architects can upload; admins cannot
       const user = await authenticateUser(request, env);
       if (!user) {
         return Response.json({ error: "Unauthorized: You must be signed in to upload files." }, { status: 401 });
+      }
+
+      // STRICT PERMISSION: Admins CANNOT upload blueprints or design files.
+      if (user.role === "admin") {
+        return Response.json(
+          { error: "Forbidden: Platform administrators are not permitted to upload design files or blueprints. File uploads are strictly restricted to architects." },
+          { status: 403 }
+        );
+      }
+
+      if (user.subRole !== "architect" && user.role !== "architect") {
+        return Response.json(
+          { error: "Forbidden: Only registered architects have permission to upload design files or blueprints to the platform." },
+          { status: 403 }
+        );
       }
 
       try {

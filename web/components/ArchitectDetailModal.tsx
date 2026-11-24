@@ -4,6 +4,7 @@ import React from "react";
 import Image from "next/image";
 import { X, BadgeCheck, MapPin, Building, Mail, Award, ArrowRight } from "lucide-react";
 import { ArchitectProfile } from "@/lib/types";
+import VerificationBadge from "@/components/VerificationBadge";
 
 interface ArchitectDetailModalProps {
   architect: ArchitectProfile | null;
@@ -49,9 +50,12 @@ export default function ArchitectDetailModal({
             <span className="text-[10px] tracking-widestExtra uppercase text-copper font-semibold">
               Verified Architect
             </span>
-            <h2 id="architect-modal-title" className="text-xl font-normal text-charcoal flex items-center gap-1.5">
+            <h2 id="architect-modal-title" className="text-xl font-normal text-charcoal flex items-center gap-2 flex-wrap">
               <span>{architect.name}</span>
-              <BadgeCheck className="w-4 h-4 fill-copper text-white" />
+              <VerificationBadge
+                badge={architect.verificationBadge || (architect.name?.startsWith("Ar.") ? "blue" : "grey")}
+                size="sm"
+              />
             </h2>
           </div>
 

@@ -4,6 +4,7 @@ import React from "react";
 import Image from "next/image";
 import { ArrowRight, BadgeCheck } from "lucide-react";
 import { ArchitectProfile } from "@/lib/types";
+import VerificationBadge from "@/components/VerificationBadge";
 
 interface FeaturedArchitectsProps {
   architects: ArchitectProfile[];
@@ -58,17 +59,27 @@ export default function FeaturedArchitects({
                   sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 20vw"
                 />
                 {architect.verified && (
-                  <div className="absolute top-2.5 right-2.5 bg-white/95 backdrop-blur-sm p-1 rounded-full text-copper shadow-sm">
-                    <BadgeCheck className="w-3.5 h-3.5 fill-copper text-white" />
+                  <div className="absolute top-2.5 right-2.5 shadow-sm rounded-full">
+                    <VerificationBadge
+                      badge={architect.verificationBadge || (architect.name?.startsWith("Ar.") ? "blue" : "grey")}
+                      size="xs"
+                      showText={false}
+                    />
                   </div>
                 )}
               </div>
 
               {/* Architect Information */}
               <div>
-                <h4 className="text-[15px] font-medium font-serif text-charcoal group-hover:text-copper transition-colors">
-                  {architect.name}
-                </h4>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <h4 className="text-[15px] font-medium font-serif text-charcoal group-hover:text-copper transition-colors">
+                    {architect.name}
+                  </h4>
+                  <VerificationBadge
+                    badge={architect.verificationBadge || (architect.name?.startsWith("Ar.") ? "blue" : "grey")}
+                    size="xs"
+                  />
+                </div>
                 <div className="text-[12px] text-mutedText mt-0.5 font-light font-sans">
                   {architect.location}
                 </div>

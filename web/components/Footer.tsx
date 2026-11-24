@@ -110,8 +110,8 @@ export default function Footer({ onOpenSellerModal }: FooterProps) {
                 </Link>
               </li>
               <li>
-                <Link href="/plot-my-land" className="hover:text-copper transition-colors">
-                  Plot My Land
+                <Link href="/plot-intelligence" className="hover:text-copper transition-colors">
+                  Plot Intelligence & KMBR
                 </Link>
               </li>
               <li>
@@ -258,19 +258,20 @@ export default function Footer({ onOpenSellerModal }: FooterProps) {
 
         </div>
 
-        {/* Bottom Bar matching design.png */}
-        <div className="pt-8 flex flex-col sm:flex-row items-center justify-between text-[11px] text-white/40 gap-4">
+        {/* Bottom Bar with Geo Authority & Sitemap */}
+        <div className="pt-8 flex flex-col md:flex-row items-center justify-between text-[11px] text-white/50 gap-4 border-t border-white/10 mt-2">
           <div>
-            © 2026 S-ARC. All rights reserved.
+            © 2026 S-ARC — Southern Architecture. Curated for Kerala (KMBR 2019), Tamil Nadu, and Karnataka.
           </div>
 
           <div className="flex items-center space-x-6">
-            <a href="#sitemap" className="hover:text-white transition-colors">
+            <span className="text-white/40 hidden sm:inline">Kochi • Trivandrum • Calicut • Thrissur • Bangalore</span>
+            <Link href="/sitemap.xml" className="hover:text-white transition-colors">
               Sitemap
-            </a>
-            <a href="#licensing" className="hover:text-white transition-colors">
-              Licensing Information
-            </a>
+            </Link>
+            <Link href="/designs" className="hover:text-white transition-colors">
+              Catalog
+            </Link>
           </div>
         </div>
 

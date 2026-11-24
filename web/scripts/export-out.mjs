@@ -97,9 +97,15 @@ if (!robotsStat || robotsStat.isDirectory()) {
   const robotsTxt = `User-agent: *
 Allow: /
 Disallow: /dashboard/
-Disallow: /api/
+Disallow: /api/auth/
 
-Sitemap: https://s-arc.pages.dev/sitemap.xml
+User-agent: Googlebot
+Allow: /
+Disallow: /dashboard/
+Disallow: /api/auth/
+
+Sitemap: https://southernarchitecture.in/sitemap.xml
+Host: https://southernarchitecture.in
 `;
   fs.writeFileSync(outRobots, robotsTxt, "utf8");
   console.log("  ✓ Generated fallback robots.txt in web/out");
@@ -116,28 +122,34 @@ if (!sitemapStat || sitemapStat.isDirectory()) {
   const sitemapXml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://s-arc.pages.dev/</loc>
+    <loc>https://southernarchitecture.in/</loc>
     <lastmod>${now}</lastmod>
-    <changefreq>weekly</changefreq>
+    <changefreq>daily</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://s-arc.pages.dev/designs</loc>
+    <loc>https://southernarchitecture.in/designs</loc>
     <lastmod>${now}</lastmod>
     <changefreq>daily</changefreq>
+    <priority>0.95</priority>
+  </url>
+  <url>
+    <loc>https://southernarchitecture.in/plot-intelligence</loc>
+    <lastmod>${now}</lastmod>
+    <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://s-arc.pages.dev/architects</loc>
+    <loc>https://southernarchitecture.in/architects</loc>
+    <lastmod>${now}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://southernarchitecture.in/styles</loc>
     <lastmod>${now}</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://s-arc.pages.dev/styles</loc>
-    <lastmod>${now}</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
   </url>
 </urlset>`;
   fs.writeFileSync(outSitemap, sitemapXml, "utf8");

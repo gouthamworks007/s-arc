@@ -1,3 +1,5 @@
+export type VerificationBadge = "blue" | "grey" | "none";
+
 export interface ArchitecturalProject {
   id: string;
   slug?: string;
@@ -17,9 +19,11 @@ export interface ArchitecturalProject {
     studio: string;
     location: string;
     verified: boolean;
+    verificationBadge?: VerificationBadge;
     image: string;
-  avatar?: string;
+    avatar?: string;
   };
+  architectVerificationBadge?: VerificationBadge;
   image: string;
   avatar?: string;
   gallery: string[];
@@ -97,6 +101,7 @@ export interface StudioProfile {
   coaNumber: string;
   location: string;
   verified: boolean;
+  verificationBadge?: VerificationBadge;
   bio: string;
   email: string;
   phone: string;
@@ -123,6 +128,7 @@ export interface ArchitectProfile {
   title: string;
   projectsCount: number;
   verified: boolean;
+  verificationBadge?: VerificationBadge;
   image: string;
   avatar?: string;
   bio: string;
@@ -157,6 +163,7 @@ export interface UserAccount {
   subRole?: UserSubRole;
   practiceType?: "freelance" | "agency";
   portfolioUrl?: string;
+  verificationBadge?: VerificationBadge;
   status: "active" | "suspended" | "pending_verification";
   avatar: string;
   phone?: string;

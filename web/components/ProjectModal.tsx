@@ -6,6 +6,7 @@ import Link from "next/link";
 import { X, Check, Bed, Layers, Maximize, MapPin, Download, MessageSquare, ShieldCheck, FileCheck, ArrowRight } from "lucide-react";
 import { ArchitecturalProject } from "@/lib/types";
 import ConsultArchitectModal from "@/components/plot-intelligence/ConsultArchitectModal";
+import VerificationBadge from "@/components/VerificationBadge";
 
 interface ProjectModalProps {
   project: ArchitecturalProject | null;
@@ -178,9 +179,12 @@ export default function ProjectModal({ project, onClose }: ProjectModalProps) {
                     />
                   </div>
                   <div>
-                    <div className="text-[14px] font-medium text-charcoal flex items-center gap-1.5">
+                    <div className="text-[14px] font-medium text-charcoal flex items-center gap-1.5 flex-wrap">
                       <span>{project.architect?.name || "Verified Architect"}</span>
-                      <ShieldCheck className="w-3.5 h-3.5 text-copper" />
+                      <VerificationBadge
+                        badge={project.architect?.verificationBadge || project.architectVerificationBadge || (project.architect?.verified ? "blue" : "none")}
+                        size="xs"
+                      />
                     </div>
                     <div className="text-xs text-mutedText">{project.architect?.studio || "Studio"}</div>
                     <div className="text-xs text-mutedText">{project.architect?.location || "Kerala"}</div>

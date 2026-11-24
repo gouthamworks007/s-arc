@@ -8,6 +8,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import SellerModal from "@/components/SellerModal";
 import ConsultArchitectModal from "@/components/plot-intelligence/ConsultArchitectModal";
+import VerificationBadge from "@/components/VerificationBadge";
 import { FEATURED_PROJECTS } from "@/lib/data";
 import { useSavedProjects } from "@/lib/savedProjectsContext";
 import { useProjects } from "@/lib/projectsContext";
@@ -243,17 +244,18 @@ export default function ProjectDetailClient() {
               <h1 className="text-4xl sm:text-5xl lg:text-6xl font-normal font-serif tracking-tight text-charcoal mt-1 mb-3">
                 {project.name}
               </h1>
-              <div className="flex flex-wrap items-center gap-4 text-xs font-sans text-secondaryText">
+              <div className="flex flex-wrap items-center gap-3 text-xs font-sans text-secondaryText">
                 <span className="flex items-center gap-1.5">
                   <MapPin className="w-3.5 h-3.5 text-copper" />
                   {project.location}
                 </span>
                 <span>•</span>
-                <span>By {project.architect?.name || "Verified Architect"} ({project.architect?.studio || "Studio"})</span>
-                <span>•</span>
-                <span className="flex items-center gap-1 text-copper font-medium">
-                  <ShieldCheck className="w-3.5 h-3.5" />
-                  COA Certified Plan
+                <span className="flex items-center gap-2 flex-wrap">
+                  <span>By {project.architect?.name || "Verified Architect"} ({project.architect?.studio || "Studio"})</span>
+                  <VerificationBadge
+                    badge={project.architect?.verificationBadge || project.architectVerificationBadge || (project.architect?.verified ? "blue" : "none")}
+                    size="xs"
+                  />
                 </span>
               </div>
             </div>

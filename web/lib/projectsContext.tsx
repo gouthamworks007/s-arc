@@ -111,19 +111,22 @@ const ProjectsContext = createContext<ProjectsContextType | undefined>(undefined
 
 export function normalizeProject(p: any): ArchitecturalProject {
   if (!p) return p;
+  const badge = p.architectVerificationBadge || p.architect_verification_badge || p.architect?.verificationBadge || (p.architect?.verified ? "blue" : "none");
   const architect = (p.architect && typeof p.architect === "object") ? {
     id: p.architect.id || p.architect_id || "usr-arch-01",
     name: p.architect.name || p.architect_name || "Ar. Nikhil Rajan",
     studio: p.architect.studio || p.architect_studio || "Studio Vayu",
     location: p.architect.location || p.architect_location || "Kochi, Kerala",
-    verified: p.architect.verified ?? true,
+    verified: badge === "blue" || badge === "grey" || p.architect.verified,
+    verificationBadge: badge,
     image: p.architect.image || p.architect_avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80",
   } : {
     id: p.architect_id || "usr-arch-01",
     name: p.architect_name || "Ar. Nikhil Rajan",
     studio: p.architect_studio || "Studio Vayu",
     location: p.architect_location || "Kochi, Kerala",
-    verified: true,
+    verified: badge === "blue" || badge === "grey",
+    verificationBadge: badge,
     image: p.architect_avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80",
   };
 
@@ -162,6 +165,7 @@ export function normalizeProject(p: any): ArchitecturalProject {
       setbacks: p.setbacks || "Front: 3.0m, Rear: 1.5m, Sides: 1.2m (KMBR)",
     },
     architect,
+    architectVerificationBadge: badge,
   };
 }
 

@@ -11,6 +11,7 @@ import InquiriesTab from "@/components/dashboard/InquiriesTab";
 import StudioProfileTab from "@/components/dashboard/StudioProfileTab";
 import PackagesTab from "@/components/dashboard/PackagesTab";
 import EarningsTab from "@/components/dashboard/EarningsTab";
+import VerificationBadge from "@/components/VerificationBadge";
 import { 
   LayoutDashboard, 
   Compass, 
@@ -233,12 +234,20 @@ export default function ArchitectView() {
             />
           </div>
           <div className="min-w-0 flex-1">
-            <h3 className="font-serif text-sm text-charcoal font-medium truncate">
-              {profile.studio || "Studio Vayu"}
-            </h3>
-            <div className="flex items-center gap-1.5 text-[11px] font-mono text-copper">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <h3 className="font-serif text-sm text-charcoal font-medium truncate">
+                {profile.studio || "Studio Vayu"}
+              </h3>
+              <VerificationBadge
+                badge={currentUser?.verificationBadge || profile.verificationBadge || (currentUser?.coaNumber ? "blue" : "grey")}
+                size="xs"
+              />
+            </div>
+            <div className="flex items-center gap-1.5 text-[11px] font-mono text-copper mt-0.5">
               <ShieldCheck className="w-3.5 h-3.5 text-copper shrink-0" />
-              <span className="truncate">COA: CA/2018/94821</span>
+              <span className="truncate">
+                {currentUser?.coaNumber ? `COA: ${currentUser.coaNumber}` : "Vetted Freelance Studio"}
+              </span>
             </div>
           </div>
         </div>

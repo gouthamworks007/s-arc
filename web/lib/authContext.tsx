@@ -28,6 +28,7 @@ const DEFAULT_USERS: UserAccount[] = [
     email: "nikhil@studiovayu.arch",
     role: "user",
     subRole: "architect",
+    verificationBadge: "blue",
     status: "active",
     avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80",
     phone: "+91 98471 28910",
@@ -42,6 +43,7 @@ const DEFAULT_USERS: UserAccount[] = [
     email: "sneha.design@gmail.com",
     role: "user",
     subRole: "architect",
+    verificationBadge: "none",
     status: "pending_verification",
     avatar: "https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=400&q=80",
     phone: "+91 94460 77889",
@@ -50,6 +52,24 @@ const DEFAULT_USERS: UserAccount[] = [
     coaNumber: "CA/2023/94102",
     joinedDate: "Yesterday",
     reviewNotes: "COA license CA/2023/94102 submitted. Awaiting Admin verification."
+  },
+  {
+    id: "usr-arch-03",
+    name: "Kiran Dev (Freelance)",
+    email: "kiran.spaces@gmail.com",
+    role: "user",
+    subRole: "architect",
+    practiceType: "freelance",
+    verificationBadge: "none",
+    status: "pending_verification",
+    avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=400&q=80",
+    phone: "+91 97455 33211",
+    location: "Kottayam, Kerala",
+    studioName: "Kiran Spatial Lab",
+    coaNumber: "",
+    portfolioUrl: "https://behance.net/kiranspaces",
+    joinedDate: "2 days ago",
+    reviewNotes: "Freelance residential designer with 4 completed Kerala projects. Applying without COA number for platform freelancer review."
   },
   {
     id: "usr-client-01",
@@ -116,6 +136,7 @@ interface AuthContextType {
   switchUser: (userId: string) => void;
   updateUserRole: (userId: string, newRole: UserRole) => void;
   updateUserStatus: (userId: string, newStatus: UserAccount["status"], notes?: string) => void;
+  updateUserBadge: (userId: string, badge: "blue" | "grey" | "none", notes?: string) => Promise<void>;
   forwardForApproval: (userId: string, notes: string) => void;
   createUser: (userData: Omit<UserAccount, "id" | "joinedDate">) => void;
   deleteUser: (userId: string) => void;
@@ -399,6 +420,48 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
   };
 
+  // Admin can grant Blue Tick (COA Qualified) or Grey Tick (Platform-Vetted Freelancer)
+  const updateUserBadge = async (userId: string, badge: "blue" | "grey" | "none", notes?: string) => {
+    if (!currentUser || currentUser.role !== "admin") {
+      alert("Permission Denied: Only Administrator has authority to grant or revoke verification badges.");
+      return;
+    }
+    const targetUser = users.find((u) => u.id === userId);
+    const updated = users.map((u) => (u.id === userId ? {
+      ...u,
+      verificationBadge: badge,
+      status: "active" as const,
+      ...(notes ? { reviewNotes: notes } : {})
+    } : u));
+    saveUsers(updated);
+    if (currentUser && currentUser.id === userId) {
+      saveCurrentUser({ ...currentUser, verificationBadge: badge, status: "active" });
+    }
+    const actionLabel = badge === "blue"
+      ? "Granted COA Qualified Architect Badge (Blue Tick)"
+      : badge === "grey"
+      ? "Granted Platform-Vetted Freelancer Badge (Grey Tick)"
+      : "Revoked Verification Badge";
+    logAction(
+      actionLabel,
+      targetUser ? `${targetUser.name} (${targetUser.email})` : userId
+    );
+
+    try {
+      await fetch(`/api/users/${encodeURIComponent(userId)}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          verificationBadge: badge,
+          status: "active",
+          ...(notes ? { reviewNotes: notes } : {})
+        })
+      });
+    } catch (err) {
+      console.warn("Async user badge update failed:", err);
+    }
+  };
+
   // Forward recommendations / notes
   const forwardForApproval = (userId: string, notes: string) => {
     const targetUser = users.find((u) => u.id === userId);
@@ -542,6 +605,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         switchUser,
         updateUserRole,
         updateUserStatus,
+        updateUserBadge,
         forwardForApproval,
         createUser,
         deleteUser,
