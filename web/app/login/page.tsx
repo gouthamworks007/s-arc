@@ -13,11 +13,7 @@ import {
   ArrowRight, 
   ShieldCheck, 
   CheckCircle2, 
-  User, 
-  Home, 
-  ChevronDown, 
-  Loader2, 
-  Lock 
+  Loader2 
 } from "lucide-react";
 import { useAuth } from "@/lib/authContext";
 import GoogleAuthButton from "@/components/auth/GoogleAuthButton";
@@ -57,8 +53,6 @@ function LoginFormContent() {
     }
     return null;
   });
-  const [showDemoAccess, setShowDemoAccess] = useState(false);
-
   const {
     register,
     handleSubmit,
@@ -72,17 +66,6 @@ function LoginFormContent() {
       rememberMe: true,
     },
   });
-
-  const handleAutofill = (email: string, pass: string) => {
-    setValue("email", email);
-    setValue("password", pass);
-  };
-
-  const handleQuickLogin = (email: string, pass: string) => {
-    setValue("email", email);
-    setValue("password", pass);
-    onSubmit({ email, password: pass, rememberMe: true });
-  };
 
   const onSubmit = async (data: LoginFormValues) => {
     setAuthError(null);
@@ -257,69 +240,6 @@ function LoginFormContent() {
                   )}
                 </button>
               </form>
-
-              {/* Discreet Demo Credentials Drawer */}
-              <div className="pt-2 border-t border-[#EAE5DC]">
-                <button
-                  type="button"
-                  onClick={() => setShowDemoAccess(!showDemoAccess)}
-                  className="w-full py-2 px-3 flex items-center justify-between text-[11px] font-mono text-stone-500 hover:text-stone-800 transition-colors bg-stone-100/60 rounded-xl hover:bg-stone-100"
-                >
-                  <div className="flex items-center gap-1.5">
-                    <Lock className="w-3.5 h-3.5 text-copper" />
-                    <span>Demo & Verification Credentials</span>
-                  </div>
-                  <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${showDemoAccess ? "rotate-180" : ""}`} />
-                </button>
-
-                {showDemoAccess && (
-                  <div className="mt-2.5 p-3.5 bg-white border border-[#EAE5DC] rounded-xl space-y-2.5 animate-fadeIn">
-                    <span className="text-[10px] uppercase font-mono tracking-wider text-stone-400 block font-semibold">
-                      Click below to fill test credentials:
-                    </span>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                      {/* Admin */}
-                      <button
-                        type="button"
-                        onClick={() => handleAutofill("admin@s-arc.in", "admin123")}
-                        className="p-2 border border-stone-300 bg-stone-100 hover:bg-stone-200/70 rounded-lg text-left transition-colors sm:col-span-2"
-                      >
-                        <div className="flex items-center gap-1.5 font-serif font-medium text-charcoal text-xs">
-                          <ShieldCheck className="w-3.5 h-3.5 text-copper" />
-                          <span>Admin Access</span>
-                        </div>
-                        <div className="text-[10px] font-mono text-stone-600">admin@s-arc.in / admin123</div>
-                      </button>
-
-                      {/* Architect */}
-                      <button
-                        type="button"
-                        onClick={() => handleAutofill("nikhil@studiovayu.arch", "password123")}
-                        className="p-2 border border-stone-200 bg-stone-50/60 hover:bg-stone-100 rounded-lg text-left transition-colors"
-                      >
-                        <div className="flex items-center gap-1.5 font-serif font-medium text-charcoal text-xs">
-                          <User className="w-3.5 h-3.5 text-copper" />
-                          <span>Architect User</span>
-                        </div>
-                        <div className="text-[10px] font-mono text-stone-500">nikhil@studiovayu.arch</div>
-                      </button>
-
-                      {/* Homeowner */}
-                      <button
-                        type="button"
-                        onClick={() => handleAutofill("ramesh.client@gmail.com", "password123")}
-                        className="p-2 border border-stone-200 bg-stone-50/60 hover:bg-stone-100 rounded-lg text-left transition-colors"
-                      >
-                        <div className="flex items-center gap-1.5 font-serif font-medium text-charcoal text-xs">
-                          <Home className="w-3.5 h-3.5 text-stone-500" />
-                          <span>Homeowner User</span>
-                        </div>
-                        <div className="text-[10px] font-mono text-stone-500">ramesh.client@gmail.com</div>
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
             </div>
           )}
 

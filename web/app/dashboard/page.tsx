@@ -53,20 +53,6 @@ export default function UnifiedDashboard() {
               </p>
             </div>
 
-            {/* Admin Access Box */}
-            <div className="p-4 rounded-2xl bg-stone-100/80 border border-stone-300 text-left space-y-2">
-              <div className="flex items-center gap-2">
-                <ShieldCheck className="w-4 h-4 text-copper" />
-                <span className="font-serif text-xs font-semibold text-charcoal">
-                  Admin Credentials:
-                </span>
-              </div>
-              <div className="text-xs font-mono text-charcoal space-y-1">
-                <div>Email: <strong className="text-copper">admin@s-arc.in</strong></div>
-                <div>Password: <strong className="text-copper">admin123</strong></div>
-              </div>
-            </div>
-
             <div className="pt-2 flex flex-col sm:flex-row items-center gap-3 justify-center">
               <Link
                 href="/login"
