@@ -7,7 +7,6 @@ import { useProjects } from "@/lib/projectsContext";
 import { ArchitecturalProject, UserAccount } from "@/lib/types";
 import VerificationBadge from "@/components/VerificationBadge";
 import { 
-  Shield, 
   CheckCircle2, 
   Layers, 
   MessageSquare, 
@@ -22,23 +21,19 @@ import {
   Sliders,
   Users,
   Percent,
-  AlertTriangle,
-  TrendingUp,
-  FileCheck2
+  AlertTriangle
 } from "lucide-react";
 
 export default function AdminView() {
   const { 
-    currentUser, 
     users, 
     settings, 
     updateSettings, 
     auditLogs, 
-    updateUserRole, 
     updateUserStatus, 
     updateUserBadge,
-    deleteUser, 
-    logAction 
+    deleteUser,
+    logAction
   } = useAuth();
   const { projects, updateProject, inquiries } = useProjects();
 
@@ -195,11 +190,10 @@ export default function AdminView() {
       <div className="flex items-center border-b border-warm-border overflow-x-auto scrollbar-none gap-2">
         <button
           onClick={() => setActiveTab("approvals")}
-          className={`pb-3.5 px-4 text-xs font-medium font-sans border-b-2 transition-all flex items-center gap-2 whitespace-nowrap ${
-            activeTab === "approvals"
-              ? "border-copper text-charcoal font-semibold"
-              : "border-transparent text-secondaryText hover:text-charcoal"
-          }`}
+          className={`pb-3.5 px-4 text-xs font-medium font-sans border-b-2 transition-all flex items-center gap-2 whitespace-nowrap ${activeTab === "approvals"
+            ? "border-copper text-charcoal font-semibold"
+            : "border-transparent text-secondaryText hover:text-charcoal"
+            }`}
         >
           <Building2 className="w-4 h-4 text-copper" />
           <span>Practice Approvals ({pendingArchitects.length})</span>
@@ -212,11 +206,10 @@ export default function AdminView() {
 
         <button
           onClick={() => setActiveTab("moderation")}
-          className={`pb-3.5 px-4 text-xs font-medium font-sans border-b-2 transition-all flex items-center gap-2 whitespace-nowrap ${
-            activeTab === "moderation"
-              ? "border-charcoal text-charcoal font-semibold"
-              : "border-transparent text-secondaryText hover:text-charcoal"
-          }`}
+          className={`pb-3.5 px-4 text-xs font-medium font-sans border-b-2 transition-all flex items-center gap-2 whitespace-nowrap ${activeTab === "moderation"
+            ? "border-charcoal text-charcoal font-semibold"
+            : "border-transparent text-secondaryText hover:text-charcoal"
+            }`}
         >
           <Layers className="w-4 h-4 text-stone-600" />
           <span>Marketplace Curation ({projects.length})</span>
@@ -224,11 +217,10 @@ export default function AdminView() {
 
         <button
           onClick={() => setActiveTab("inquiries")}
-          className={`pb-3.5 px-4 text-xs font-medium font-sans border-b-2 transition-all flex items-center gap-2 whitespace-nowrap ${
-            activeTab === "inquiries"
-              ? "border-charcoal text-charcoal font-semibold"
-              : "border-transparent text-secondaryText hover:text-charcoal"
-          }`}
+          className={`pb-3.5 px-4 text-xs font-medium font-sans border-b-2 transition-all flex items-center gap-2 whitespace-nowrap ${activeTab === "inquiries"
+            ? "border-charcoal text-charcoal font-semibold"
+            : "border-transparent text-secondaryText hover:text-charcoal"
+            }`}
         >
           <MessageSquare className="w-4 h-4 text-secondaryText" />
           <span>Client Consultations ({inquiries.length})</span>
@@ -236,11 +228,10 @@ export default function AdminView() {
 
         <button
           onClick={() => setActiveTab("finances")}
-          className={`pb-3.5 px-4 text-xs font-medium font-sans border-b-2 transition-all flex items-center gap-2 whitespace-nowrap ${
-            activeTab === "finances"
-              ? "border-charcoal text-charcoal font-semibold"
-              : "border-transparent text-secondaryText hover:text-charcoal"
-          }`}
+          className={`pb-3.5 px-4 text-xs font-medium font-sans border-b-2 transition-all flex items-center gap-2 whitespace-nowrap ${activeTab === "finances"
+            ? "border-charcoal text-charcoal font-semibold"
+            : "border-transparent text-secondaryText hover:text-charcoal"
+            }`}
         >
           <Sliders className="w-4 h-4 text-copper" />
           <span>Platform Settings & Escrow</span>
@@ -248,11 +239,10 @@ export default function AdminView() {
 
         <button
           onClick={() => setActiveTab("users")}
-          className={`pb-3.5 px-4 text-xs font-medium font-sans border-b-2 transition-all flex items-center gap-2 whitespace-nowrap ${
-            activeTab === "users"
-              ? "border-charcoal text-charcoal font-semibold"
-              : "border-transparent text-secondaryText hover:text-charcoal"
-          }`}
+          className={`pb-3.5 px-4 text-xs font-medium font-sans border-b-2 transition-all flex items-center gap-2 whitespace-nowrap ${activeTab === "users"
+            ? "border-charcoal text-charcoal font-semibold"
+            : "border-transparent text-secondaryText hover:text-charcoal"
+            }`}
         >
           <Users className="w-4 h-4 text-stone-600" />
           <span>User Directory ({users.length})</span>
@@ -260,11 +250,10 @@ export default function AdminView() {
 
         <button
           onClick={() => setActiveTab("audit")}
-          className={`pb-3.5 px-4 text-xs font-medium font-sans border-b-2 transition-all flex items-center gap-2 whitespace-nowrap ${
-            activeTab === "audit"
-              ? "border-charcoal text-charcoal font-semibold"
-              : "border-transparent text-secondaryText hover:text-charcoal"
-          }`}
+          className={`pb-3.5 px-4 text-xs font-medium font-sans border-b-2 transition-all flex items-center gap-2 whitespace-nowrap ${activeTab === "audit"
+            ? "border-charcoal text-charcoal font-semibold"
+            : "border-transparent text-secondaryText hover:text-charcoal"
+            }`}
         >
           <Clock className="w-4 h-4 text-secondaryText" />
           <span>Audit Trail ({auditLogs.length})</span>
@@ -326,11 +315,10 @@ export default function AdminView() {
                             <span className="text-xs text-secondaryText">{arch.studioName || "Design Practice"} • {arch.location}</span>
                           </div>
                         </div>
-                        <span className={`px-2.5 py-0.5 rounded-full font-mono text-[10px] font-semibold ${
-                          hasCoa
-                            ? "bg-blue-50 text-blue-800 border border-blue-200"
-                            : "bg-stone-100 text-stone-700 border border-stone-300"
-                        }`}>
+                        <span className={`px-2.5 py-0.5 rounded-full font-mono text-[10px] font-semibold ${hasCoa
+                          ? "bg-blue-50 text-blue-800 border border-blue-200"
+                          : "bg-stone-100 text-stone-700 border border-stone-300"
+                          }`}>
                           {hasCoa ? "COA Applicant" : "Freelancer (No Cert)"}
                         </span>
                       </div>
@@ -341,7 +329,7 @@ export default function AdminView() {
                           <span className="font-mono uppercase text-[10px] tracking-wider text-stone-500 font-semibold">
                             Activity & Track Record Analysis
                           </span>
-                          <span className="text-[10px] font-mono text-emerald-700 bg-emerald-50 px-2 py-0.2 rounded-full border border-emerald-200">
+                          <span className="text-[10px] font-mono text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
                             Active Lead
                           </span>
                         </div>
@@ -454,11 +442,10 @@ export default function AdminView() {
                 <button
                   key={style}
                   onClick={() => setFilterStyle(style)}
-                  className={`px-3 py-1 rounded-full text-xs font-mono capitalize transition-all ${
-                    filterStyle === style
-                      ? "bg-charcoal text-white"
-                      : "bg-white border border-warm-border text-secondaryText hover:text-charcoal"
-                  }`}
+                  className={`px-3 py-1 rounded-full text-xs font-mono capitalize transition-all ${filterStyle === style
+                    ? "bg-charcoal text-white"
+                    : "bg-white border border-warm-border text-secondaryText hover:text-charcoal"
+                    }`}
                 >
                   {style === "all" ? "All Styles" : style}
                 </button>
@@ -519,11 +506,10 @@ export default function AdminView() {
                 <div className="p-4 bg-warm-grey/30 border-t border-warm-border flex items-center justify-between gap-2">
                   <button
                     onClick={() => handleToggleFeatured(project)}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-sans font-medium flex items-center gap-1.5 transition-all ${
-                      project.featured
-                        ? "bg-amber-100 text-amber-900 border border-amber-300"
-                        : "bg-white border border-warm-border text-charcoal hover:bg-warm-grey"
-                    }`}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-sans font-medium flex items-center gap-1.5 transition-all ${project.featured
+                      ? "bg-amber-100 text-amber-900 border border-amber-300"
+                      : "bg-white border border-warm-border text-charcoal hover:bg-warm-grey"
+                      }`}
                   >
                     <Star className={`w-3.5 h-3.5 ${project.featured ? "fill-amber-500 text-amber-500" : ""}`} />
                     <span>{project.featured ? "Featured" : "Feature on Home"}</span>
@@ -567,11 +553,10 @@ export default function AdminView() {
                       <h4 className="font-serif text-base text-charcoal font-medium">
                         {inq.projectName}
                       </h4>
-                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-mono ${
-                        inq.status === "responded"
-                          ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
-                          : "bg-amber-50 text-amber-800 border border-amber-200"
-                      }`}>
+                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-mono ${inq.status === "responded"
+                        ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
+                        : "bg-amber-50 text-amber-800 border border-amber-200"
+                        }`}>
                         {inq.status === "responded" ? "✓ Responded by Studio" : "Pending Studio Reply"}
                       </span>
                     </div>
@@ -767,13 +752,12 @@ export default function AdminView() {
                         )}
                       </td>
                       <td className="py-4 px-4">
-                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-mono font-medium ${
-                          u.status === "active"
-                            ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                            : u.status === "pending_verification"
+                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-mono font-medium ${u.status === "active"
+                          ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                          : u.status === "pending_verification"
                             ? "bg-amber-50 text-amber-700 border border-amber-200"
                             : "bg-red-50 text-red-700 border border-red-200"
-                        }`}>
+                          }`}>
                           {u.status === "active" ? "Active" : u.status === "pending_verification" ? "Pending Verify" : "Suspended"}
                         </span>
                       </td>
@@ -791,7 +775,7 @@ export default function AdminView() {
                                   onClick={() => updateUserBadge(u.id, "blue", "Administrator awarded Blue Tick.")}
                                   className={`px-2 py-0.5 rounded text-[10px] font-semibold transition-all ${
                                     u.verificationBadge === "blue"
-                                      ? "bg-blue-600 text-white shadow-2xs"
+                                      ? "bg-blue-600 text-white shadow-xs"
                                       : "text-blue-700 hover:bg-blue-100"
                                   }`}
                                   title="Award Blue Tick (COA Licensed Architect)"
@@ -803,7 +787,7 @@ export default function AdminView() {
                                   onClick={() => updateUserBadge(u.id, "grey", "Administrator awarded Grey Tick after activity review.")}
                                   className={`px-2 py-0.5 rounded text-[10px] font-semibold transition-all ${
                                     u.verificationBadge === "grey"
-                                      ? "bg-stone-600 text-white shadow-2xs"
+                                      ? "bg-stone-600 text-white shadow-xs"
                                       : "text-stone-600 hover:bg-stone-200"
                                   }`}
                                   title="Award Grey Tick (Platform-Vetted Freelancer)"
