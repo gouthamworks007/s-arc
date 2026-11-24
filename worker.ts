@@ -13,6 +13,124 @@ export interface Env {
 
 const DEFAULT_JWT_SECRET = "s-arc-secure-production-jwt-key-2026-south-arch";
 
+// -------------------------------------------------------------
+// S-ARC LIVE SECURITY & SAFETY ENGINE
+// -------------------------------------------------------------
+
+// Whitelisted Origins for Strict CORS Enforcement
+const ALLOWED_ORIGINS = new Set([
+  "https://southernarchitecture.in",
+  "https://www.southernarchitecture.in",
+  "http://localhost:3000",
+  "http://127.0.0.1:3000",
+]);
+
+// Whitelisted File Upload Extensions for S-ARC
+const ALLOWED_UPLOAD_EXTENSIONS = new Set([
+  // Web-Safe Images (Thumbnails, Gallery, Avatars)
+  ".jpg", ".jpeg", ".png", ".webp", ".avif",
+  // Architectural CAD & BIM Packages
+  ".dwg", ".dxf", ".rvt", ".skp", ".bim", ".ifc", ".zip", ".rar", ".7z",
+  // Sanction & Deliverable Documents
+  ".pdf"
+]);
+
+// Sliding-Window Edge Rate Limiting Cache
+interface RateLimitEntry {
+  count: number;
+  resetTime: number;
+}
+const rateLimitCache = new Map<string, RateLimitEntry>();
+
+function checkRateLimit(ip: string, action: string, maxRequests: number, windowSeconds: number): { allowed: boolean; retryAfter?: number } {
+  const now = Date.now();
+  const key = `${ip}:${action}`;
+
+  // Periodic pruning of expired entries
+  if (rateLimitCache.size > 5000) {
+    for (const [k, v] of rateLimitCache.entries()) {
+      if (v.resetTime < now) rateLimitCache.delete(k);
+    }
+  }
+
+  const current = rateLimitCache.get(key);
+  if (!current || current.resetTime < now) {
+    rateLimitCache.set(key, { count: 1, resetTime: now + windowSeconds * 1000 });
+    return { allowed: true };
+  }
+
+  if (current.count >= maxRequests) {
+    const retryAfter = Math.ceil((current.resetTime - now) / 1000);
+    return { allowed: false, retryAfter };
+  }
+
+  current.count++;
+  return { allowed: true };
+}
+
+function getCorsHeaders(request: Request): Headers {
+  const headers = new Headers();
+  const origin = request.headers.get("Origin");
+  if (origin && ALLOWED_ORIGINS.has(origin)) {
+    headers.set("Access-Control-Allow-Origin", origin);
+    headers.set("Access-Control-Allow-Credentials", "true");
+    headers.set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS");
+    headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, Cookie");
+    headers.set("Access-Control-Max-Age", "86400");
+    headers.set("Vary", "Origin");
+  }
+  return headers;
+}
+
+function applySecurityHeaders(request: Request, response: Response): Response {
+  const headers = new Headers(response.headers);
+  const url = new URL(request.url);
+
+  // 1. Strict-Transport-Security (HSTS): Enforce HTTPS for 2 years with preloading
+  headers.set("Strict-Transport-Security", "max-age=63072000; includeSubDomains; preload");
+
+  // 2. Prevent MIME-Type Confusion & Drive-By Downloads
+  headers.set("X-Content-Type-Options", "nosniff");
+
+  // 3. Clickjacking Protection
+  headers.set("X-Frame-Options", "SAMEORIGIN");
+
+  // 4. Referrer Policy: Strip query parameters on cross-origin requests
+  headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+
+  // 5. Hardware & Privacy Permissions Lock-Down
+  headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=(self), payment=(), usb=(), display-capture=()");
+
+  // 6. Cross-Origin Isolation for OAuth Popups
+  headers.set("Cross-Origin-Opener-Policy", "same-origin-allow-popups");
+
+  // 7. Content-Security-Policy (CSP)
+  if (url.pathname.startsWith("/uploads/")) {
+    headers.set("Content-Security-Policy", "default-src 'none'; img-src 'self' data: blob:; style-src 'unsafe-inline'; sandbox");
+  } else if (!url.pathname.startsWith("/api/")) {
+    headers.set(
+      "Content-Security-Policy",
+      "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://accounts.google.com https://apis.google.com https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https://images.unsplash.com https://plus.unsplash.com https://lh3.googleusercontent.com https://*.googleusercontent.com https://southernarchitecture.in https://*.southernarchitecture.in https://*.tile.openstreetmap.org; media-src 'self' data: blob: https://southernarchitecture.in https://*.southernarchitecture.in; connect-src 'self' https://southernarchitecture.in https://www.southernarchitecture.in https://accounts.google.com https://www.googleapis.com https://nominatim.openstreetmap.org https://*.tile.openstreetmap.org; frame-src 'self' https://accounts.google.com https://challenges.cloudflare.com; object-src 'none'; base-uri 'self'; form-action 'self' https://accounts.google.com; frame-ancestors 'self'; upgrade-insecure-requests;"
+    );
+  }
+
+  // 8. CORS Headers for API requests
+  if (url.pathname.startsWith("/api/")) {
+    const origin = request.headers.get("Origin");
+    if (origin && ALLOWED_ORIGINS.has(origin)) {
+      headers.set("Access-Control-Allow-Origin", origin);
+      headers.set("Access-Control-Allow-Credentials", "true");
+      headers.set("Vary", "Origin");
+    }
+  }
+
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
+}
+
 function getJwtKey(env: Env): Uint8Array {
   const secret = env.JWT_SECRET || DEFAULT_JWT_SECRET;
   return new TextEncoder().encode(secret);
@@ -115,34 +233,53 @@ function formatProjectRow(p: any) {
   };
 }
 
-export default {
-  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
-    const url = new URL(request.url);
+async function handleRequest(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+  const url = new URL(request.url);
 
-    // Serve uploaded files directly from Cloudflare R2 bucket
-    if (url.pathname.startsWith("/uploads/")) {
-      const key = url.pathname.replace(/^\/uploads\//, "");
-      if (env.BUCKET) {
-        try {
-          const object = await env.BUCKET.get(key);
-          if (object) {
-            const headers = new Headers();
-            object.writeHttpMetadata(headers);
-            headers.set("etag", object.httpEtag);
-            headers.set("Cache-Control", "public, max-age=31536000, immutable");
-            return new Response(object.body, { headers });
+  // 1. CORS Preflight: Handle OPTIONS requests immediately for all /api/ endpoints
+  if (request.method === "OPTIONS" && url.pathname.startsWith("/api/")) {
+    return new Response(null, { status: 204, headers: getCorsHeaders(request) });
+  }
+
+  // 2. Serve uploaded files directly from Cloudflare R2 bucket with hardened security
+  if (url.pathname.startsWith("/uploads/")) {
+    const rawKey = url.pathname.replace(/^\/uploads\//, "");
+    // Security Defense: Block directory traversal, null bytes, backslashes, and protocol escaping
+    if (rawKey.includes("..") || rawKey.startsWith("/") || rawKey.includes("\\") || rawKey.includes("\0")) {
+      return new Response("Forbidden: Invalid file path", { status: 403 });
+    }
+    const key = decodeURIComponent(rawKey);
+    if (env.BUCKET) {
+      try {
+        const object = await env.BUCKET.get(key);
+        if (object) {
+          const headers = new Headers();
+          object.writeHttpMetadata(headers);
+          headers.set("etag", object.httpEtag);
+          headers.set("Cache-Control", "public, max-age=31536000, immutable");
+          headers.set("X-Content-Type-Options", "nosniff");
+          headers.set("Content-Security-Policy", "default-src 'none'; img-src 'self' data: blob:; style-src 'unsafe-inline'; sandbox");
+
+          // For CAD/BIM archives, force secure attachment download
+          const ext = key.slice(key.lastIndexOf(".")).toLowerCase();
+          if ([".dwg", ".dxf", ".zip", ".rar", ".7z", ".rvt", ".skp", ".bim"].includes(ext)) {
+            const safeDownloadName = (object.customMetadata?.originalName || key.split("/").pop() || "download").replace(/[^\w.-]/g, "_");
+            headers.set("Content-Disposition", `attachment; filename="${safeDownloadName}"`);
           }
-        } catch (e) {
-          console.warn("R2 fetch error:", e);
-        }
-      }
-      return env.ASSETS.fetch(request);
-    }
 
-    // Only intercept /api/ requests; everything else is served by Cloudflare Static Assets
-    if (!url.pathname.startsWith("/api/")) {
-      return env.ASSETS.fetch(request);
+          return new Response(object.body, { headers });
+        }
+      } catch (e) {
+        console.warn("R2 fetch error:", e);
+      }
     }
+    return env.ASSETS.fetch(request);
+  }
+
+  // Only intercept /api/ requests; everything else is served by Cloudflare Static Assets
+  if (!url.pathname.startsWith("/api/")) {
+    return env.ASSETS.fetch(request);
+  }
 
     const host = request.headers.get("x-forwarded-host") || request.headers.get("host") || url.host;
     const protocol = request.headers.get("x-forwarded-proto") || (host.includes("localhost") ? "http" : "https");
@@ -387,7 +524,7 @@ export default {
     // -------------------------------------------------------------
     // 3. GET /api/auth/me - Validate Current Session
     // -------------------------------------------------------------
-    if (url.pathname === "/api/auth/me" && request.method === "GET") {
+    if (url.pathname === "/api/auth/me" && (request.method === "GET" || request.method === "HEAD")) {
       const cookies = parseCookies(request.headers.get("Cookie"));
       const authHeader = request.headers.get("Authorization");
       const token = authHeader?.startsWith("Bearer ") ? authHeader.split(" ")[1] : cookies["sarc_session_token"];
@@ -440,6 +577,15 @@ export default {
     // 4. POST /api/auth/login - Email/Password Login
     // -------------------------------------------------------------
     if (url.pathname === "/api/auth/login" && request.method === "POST") {
+      const clientIp = request.headers.get("cf-connecting-ip") || "anonymous";
+      const rate = checkRateLimit(clientIp, "login", 10, 60);
+      if (!rate.allowed) {
+        return Response.json(
+          { success: false, message: `Too many login attempts. Please wait ${rate.retryAfter} seconds before trying again.` },
+          { status: 429, headers: { "Retry-After": String(rate.retryAfter) } }
+        );
+      }
+
       try {
         const body: any = await request.json();
         const { email, password } = body;
@@ -514,7 +660,7 @@ export default {
     // -------------------------------------------------------------
     // 6. GET & POST /api/projects - Projects Feed from D1
     // -------------------------------------------------------------
-    if (url.pathname === "/api/projects" && request.method === "GET") {
+    if (url.pathname === "/api/projects" && (request.method === "GET" || request.method === "HEAD")) {
       try {
         const style = url.searchParams.get("style");
         const status = url.searchParams.get("status");
@@ -610,7 +756,7 @@ export default {
     // -------------------------------------------------------------
     // 7. GET /api/plots - Saved Plots from D1
     // -------------------------------------------------------------
-    if (url.pathname === "/api/plots" && request.method === "GET") {
+    if (url.pathname === "/api/plots" && (request.method === "GET" || request.method === "HEAD")) {
       try {
         const { results } = await env.DB.prepare(
           "SELECT * FROM saved_plots ORDER BY created_at DESC"
@@ -624,7 +770,7 @@ export default {
     // -------------------------------------------------------------
     // 8. GET /api/architects - Architects Directory from D1
     // -------------------------------------------------------------
-    if (url.pathname === "/api/architects" && request.method === "GET") {
+    if (url.pathname === "/api/architects" && (request.method === "GET" || request.method === "HEAD")) {
       try {
         const { results } = await env.DB.prepare(
           "SELECT * FROM architects ORDER BY rating DESC"
@@ -639,6 +785,15 @@ export default {
     // 9. POST /api/auth/register - Email/Password Account Registration
     // -------------------------------------------------------------
     if (url.pathname === "/api/auth/register" && request.method === "POST") {
+      const clientIp = request.headers.get("cf-connecting-ip") || "anonymous";
+      const rate = checkRateLimit(clientIp, "register", 10, 60);
+      if (!rate.allowed) {
+        return Response.json(
+          { error: `Too many registration attempts. Please wait ${rate.retryAfter} seconds.` },
+          { status: 429, headers: { "Retry-After": String(rate.retryAfter) } }
+        );
+      }
+
       try {
         const body: any = await request.json().catch(() => ({}));
         const { name, email, password, subRole = "homeowner", coaNumber, studioName, phone, location, plotDetails, contractorDetails } = body;
@@ -736,7 +891,7 @@ export default {
     // -------------------------------------------------------------
     // 10. GET /api/users - Admin User Directory
     // -------------------------------------------------------------
-    if (url.pathname === "/api/users" && request.method === "GET") {
+    if (url.pathname === "/api/users" && (request.method === "GET" || request.method === "HEAD")) {
       const user = await authenticateUser(request, env);
       if (!user || user.role !== "admin") {
         return Response.json({ error: "Forbidden: Admin access required" }, { status: 403 });
@@ -772,6 +927,15 @@ export default {
     // 11. POST /api/users/upgrade-request - Become Architect Application
     // -------------------------------------------------------------
     if (url.pathname === "/api/users/upgrade-request" && request.method === "POST") {
+      const clientIp = request.headers.get("cf-connecting-ip") || "anonymous";
+      const rate = checkRateLimit(clientIp, "upgrade", 5, 3600);
+      if (!rate.allowed) {
+        return Response.json(
+          { error: `Too many upgrade requests submitted. Please wait ${rate.retryAfter} seconds.` },
+          { status: 429, headers: { "Retry-After": String(rate.retryAfter) } }
+        );
+      }
+
       const user = await authenticateUser(request, env);
       if (!user) {
         return Response.json({ error: "Unauthorized" }, { status: 401 });
@@ -807,7 +971,7 @@ export default {
       const targetUserId = decodeURIComponent(url.pathname.replace("/api/users/", ""));
 
       // GET /api/users/:id
-      if (request.method === "GET") {
+      if (request.method === "GET" || request.method === "HEAD") {
         try {
           const user = await env.DB.prepare("SELECT * FROM users WHERE id = ? LIMIT 1").bind(targetUserId).first<any>();
           if (!user) {
@@ -972,7 +1136,7 @@ export default {
     // -------------------------------------------------------------
     // 13. GET & DELETE /api/projects/:id - Single Project Details
     // -------------------------------------------------------------
-    if (url.pathname.startsWith("/api/projects/") && request.method === "GET") {
+    if (url.pathname.startsWith("/api/projects/") && (request.method === "GET" || request.method === "HEAD")) {
       const projId = decodeURIComponent(url.pathname.replace("/api/projects/", ""));
       try {
         const project = await env.DB.prepare(
@@ -1090,6 +1254,22 @@ export default {
     // 14. /api/upload - Cloudflare R2 Multi-part File Upload
     // -------------------------------------------------------------
     if (url.pathname === "/api/upload" && request.method === "POST") {
+      // 1. Edge Rate Limiting: 30 uploads per 10 minutes per IP
+      const clientIp = request.headers.get("cf-connecting-ip") || "anonymous";
+      const rate = checkRateLimit(clientIp, "upload", 30, 600);
+      if (!rate.allowed) {
+        return Response.json(
+          { error: `Upload rate limit exceeded. Please wait ${rate.retryAfter} seconds before uploading again.` },
+          { status: 429, headers: { "Retry-After": String(rate.retryAfter) } }
+        );
+      }
+
+      // 2. Authentication Requirement: Protect storage from anonymous abuse
+      const user = await authenticateUser(request, env);
+      if (!user) {
+        return Response.json({ error: "Unauthorized: You must be signed in to upload files." }, { status: 401 });
+      }
+
       try {
         const contentType = request.headers.get("content-type") || "";
         if (!contentType.includes("multipart/form-data")) {
@@ -1111,19 +1291,31 @@ export default {
         const dotIdx = originalName.lastIndexOf(".");
         const extension = dotIdx !== -1 ? originalName.slice(dotIdx).toLowerCase() : "";
 
-        // Check size
-        const isCad = category === "cad" || [".dwg", ".dxf", ".zip", ".rar", ".bim", ".rvt"].includes(extension);
-        const maxSize = isCad ? 100 * 1024 * 1024 : 20 * 1024 * 1024;
-        if (file.size > maxSize) {
-          return Response.json({ error: `File too large. Maximum size is ${isCad ? "100MB" : "20MB"}` }, { status: 400 });
+        // 3. File Extension Whitelist Enforcement
+        if (!ALLOWED_UPLOAD_EXTENSIONS.has(extension)) {
+          return Response.json({
+            error: "Security rejection: Unauthorized file extension. Permitted types: CAD/BIM (.dwg, .dxf, .rvt, .skp, .bim), documents (.pdf), and web images (.jpg, .png, .webp, .avif)."
+          }, { status: 400 });
         }
 
+        // 4. File Size Caps by Category
+        const isCad = [".dwg", ".dxf", ".zip", ".rar", ".7z", ".bim", ".rvt", ".skp", ".ifc"].includes(extension);
+        const isPdf = extension === ".pdf";
+        const maxSize = isCad ? 100 * 1024 * 1024 : isPdf ? 25 * 1024 * 1024 : 10 * 1024 * 1024;
+        if (file.size > maxSize) {
+          return Response.json({
+            error: `File too large. Maximum size for this type is ${isCad ? "100MB" : isPdf ? "25MB" : "10MB"}`
+          }, { status: 400 });
+        }
+
+        // 5. Filename Sanitization & Collision-Resistant Random Key
         const sanitizedBase = (dotIdx !== -1 ? originalName.slice(0, dotIdx) : originalName)
           .toLowerCase()
           .replace(/[^a-z0-9_-]/g, "-")
           .slice(0, 50);
 
-        const uniqueKey = `${category}/${Date.now()}-${sanitizedBase}${extension}`;
+        const randomSuffix = crypto.randomUUID ? crypto.randomUUID().slice(0, 8) : Math.random().toString(36).slice(2, 8);
+        const uniqueKey = `${category}/${Date.now()}-${randomSuffix}-${sanitizedBase}${extension}`;
 
         if (env.BUCKET) {
           await env.BUCKET.put(uniqueKey, file.stream(), {
@@ -1131,7 +1323,8 @@ export default {
               contentType: file.type || "application/octet-stream",
             },
             customMetadata: {
-              originalName,
+              originalName: originalName.slice(0, 100),
+              uploadedBy: user.id || user.email || "unknown",
               uploadedAt: new Date().toISOString(),
             },
           });
@@ -1160,7 +1353,7 @@ export default {
     // 15. /api/inquiries - Client Inquiries (GET, POST)
     // -------------------------------------------------------------
     if (url.pathname === "/api/inquiries") {
-      if (request.method === "GET") {
+      if (request.method === "GET" || request.method === "HEAD") {
         const user = await authenticateUser(request, env);
         if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
         try {
@@ -1180,6 +1373,15 @@ export default {
       }
 
       if (request.method === "POST") {
+        const clientIp = request.headers.get("cf-connecting-ip") || "anonymous";
+        const rate = checkRateLimit(clientIp, "inquiry", 15, 300);
+        if (!rate.allowed) {
+          return Response.json(
+            { error: `Too many inquiries submitted. Please wait ${rate.retryAfter} seconds before trying again.` },
+            { status: 429, headers: { "Retry-After": String(rate.retryAfter) } }
+          );
+        }
+
         try {
           const body: any = await request.json().catch(() => ({}));
           const { name, email, phone, location, message, projectId, architectId, metadata } = body;
@@ -1249,7 +1451,7 @@ export default {
     // -------------------------------------------------------------
     // 16. /api/packages - Project Packages (GET, POST, PATCH, DELETE)
     // -------------------------------------------------------------
-    if (url.pathname === "/api/packages" && request.method === "GET") {
+    if (url.pathname === "/api/packages" && (request.method === "GET" || request.method === "HEAD")) {
       try {
         const projectId = url.searchParams.get("projectId");
         let sql = "SELECT * FROM project_packages WHERE 1=1";
@@ -1351,5 +1553,23 @@ export default {
 
     // Default fallback to Static Assets
     return env.ASSETS.fetch(request);
+}
+
+// -------------------------------------------------------------
+// SECURE WORKER ENTRYPOINT & RESPONSE GUARANTEE
+// -------------------------------------------------------------
+export default {
+  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+    try {
+      const response = await handleRequest(request, env, ctx);
+      return applySecurityHeaders(request, response);
+    } catch (err: any) {
+      console.error("Worker unhandled security boundary error:", err);
+      const errResponse = Response.json(
+        { error: "Internal Server Error" },
+        { status: 500 }
+      );
+      return applySecurityHeaders(request, errResponse);
+    }
   },
 };
