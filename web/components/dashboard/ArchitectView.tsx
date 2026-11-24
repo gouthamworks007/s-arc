@@ -253,35 +253,35 @@ export default function ArchitectView() {
         </div>
 
         {/* 6 Core Navigation Items (Miller's Law) */}
-        <nav className="space-y-1.5" aria-label="Studio Navigation">
+        <nav className="flex lg:flex-col gap-1.5 overflow-x-auto lg:overflow-visible scrollbar-none pb-1 lg:pb-0" aria-label="Studio Navigation">
           <button
             onClick={() => handleTabChange("overview")}
-            className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs font-medium transition-all ${
+            className={`shrink-0 lg:w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs font-medium transition-all whitespace-nowrap cursor-pointer ${
               activeTab === "overview"
                 ? "bg-charcoal text-white shadow-sm"
                 : "text-secondaryText hover:text-charcoal hover:bg-warm-grey/60"
             }`}
           >
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2.5">
               <LayoutDashboard className={`w-4 h-4 ${activeTab === "overview" ? "text-copper" : "text-secondaryText"}`} />
               <span>Overview</span>
             </div>
-            {activeTab === "overview" && <span className="w-1.5 h-1.5 rounded-full bg-copper" />}
+            {activeTab === "overview" && <span className="w-1.5 h-1.5 rounded-full bg-copper hidden lg:inline-block ml-2" />}
           </button>
 
           <button
             onClick={() => handleTabChange("designs")}
-            className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs font-medium transition-all ${
+            className={`shrink-0 lg:w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs font-medium transition-all whitespace-nowrap cursor-pointer ${
               activeTab === "designs"
                 ? "bg-charcoal text-white shadow-sm"
                 : "text-secondaryText hover:text-charcoal hover:bg-warm-grey/60"
             }`}
           >
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2.5">
               <Compass className={`w-4 h-4 ${activeTab === "designs" ? "text-copper" : "text-secondaryText"}`} />
               <span>My Designs (CAD/BIM)</span>
             </div>
-            <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono ${
+            <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono ml-2 ${
               activeTab === "designs" ? "bg-white/20 text-white" : "bg-warm-grey text-secondaryText"
             }`}>
               {projects.length}
@@ -290,66 +290,66 @@ export default function ArchitectView() {
 
           <button
             onClick={() => handleTabChange("inquiries")}
-            className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs font-medium transition-all ${
+            className={`shrink-0 lg:w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs font-medium transition-all whitespace-nowrap cursor-pointer ${
               activeTab === "inquiries"
                 ? "bg-charcoal text-white shadow-sm"
                 : "text-secondaryText hover:text-charcoal hover:bg-warm-grey/60"
             }`}
           >
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2.5">
               <MessageSquare className={`w-4 h-4 ${activeTab === "inquiries" ? "text-copper" : "text-secondaryText"}`} />
               <span>Plot Inquiries</span>
             </div>
-            <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-copper/15 text-copper font-semibold">
+            <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-copper/15 text-copper font-semibold ml-2">
               {activeInquiriesCount}
             </span>
           </button>
 
           <button
             onClick={() => handleTabChange("packages")}
-            className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs font-medium transition-all ${
+            className={`shrink-0 lg:w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs font-medium transition-all whitespace-nowrap cursor-pointer ${
               activeTab === "packages"
                 ? "bg-charcoal text-white shadow-sm"
                 : "text-secondaryText hover:text-charcoal hover:bg-warm-grey/60"
             }`}
           >
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2.5">
               <Package className={`w-4 h-4 ${activeTab === "packages" ? "text-copper" : "text-secondaryText"}`} />
-              <span>Deliverable Packages</span>
+              <span>Packages</span>
             </div>
-            <span className={`text-[10px] font-mono ${activeTab === "packages" ? "text-warm-border" : "text-secondaryText"}`}>
+            <span className={`text-[10px] font-mono ml-2 ${activeTab === "packages" ? "text-warm-border" : "text-secondaryText"}`}>
               3 Tiers
             </span>
           </button>
 
           <button
             onClick={() => handleTabChange("earnings")}
-            className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs font-medium transition-all ${
+            className={`shrink-0 lg:w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs font-medium transition-all whitespace-nowrap cursor-pointer ${
               activeTab === "earnings"
                 ? "bg-charcoal text-white shadow-sm"
                 : "text-secondaryText hover:text-charcoal hover:bg-warm-grey/60"
             }`}
           >
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2.5">
               <Wallet className={`w-4 h-4 ${activeTab === "earnings" ? "text-copper" : "text-secondaryText"}`} />
-              <span>Earnings & Payouts</span>
+              <span>Earnings</span>
             </div>
-            <span className="text-[10px] font-mono text-emerald-600 font-medium">₹ Escrow</span>
+            <span className="text-[10px] font-mono text-emerald-600 font-medium ml-2">₹ Escrow</span>
           </button>
 
           <button
             onClick={() => handleTabChange("profile")}
-            className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs font-medium transition-all ${
+            className={`shrink-0 lg:w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs font-medium transition-all whitespace-nowrap cursor-pointer ${
               activeTab === "profile"
                 ? "bg-charcoal text-white shadow-sm"
                 : "text-secondaryText hover:text-charcoal hover:bg-warm-grey/60"
             }`}
           >
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2.5">
               <UserCheck className={`w-4 h-4 ${activeTab === "profile" ? "text-copper" : "text-secondaryText"}`} />
               <span>Studio Profile</span>
             </div>
-            <span className="w-2 h-2 rounded-full bg-emerald-500" />
+            <span className="w-2 h-2 rounded-full bg-emerald-500 ml-2" />
           </button>
         </nav>
 
@@ -423,7 +423,7 @@ export default function ArchitectView() {
 
             {/* Muted Secondary Action */}
             <Link
-              href="/catalog"
+              href="/designs"
               target="_blank"
               className="hidden sm:inline-flex items-center gap-1.5 px-4 py-2.5 rounded-full border border-warm-border hover:bg-warm-grey/60 text-xs font-medium text-secondaryText hover:text-charcoal transition-colors"
             >
@@ -465,15 +465,19 @@ export default function ArchitectView() {
                 {/* ========================================================= */}
                 <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" aria-label="Key Performance Indicators">
                   {/* KPI 1: Active Listed Plans */}
-                  <div className="bg-white border border-warm-border rounded-3xl p-5 shadow-2xs hover:border-charcoal/20 transition-all flex flex-col justify-between">
-                    <div className="flex items-center justify-between text-secondaryText mb-2">
+                  <button
+                    type="button"
+                    onClick={() => handleTabChange("designs")}
+                    className="text-left bg-white border border-warm-border hover:border-copper/60 rounded-3xl p-5 shadow-xs transition-all flex flex-col justify-between group cursor-pointer"
+                  >
+                    <div className="flex items-center justify-between text-secondaryText mb-2 w-full">
                       <span className="text-xs font-medium uppercase tracking-wider font-mono">Active Listed Plans</span>
-                      <div className="p-2 rounded-xl bg-warm-grey/60 text-charcoal">
+                      <div className="p-2 rounded-xl bg-warm-grey/60 text-charcoal group-hover:bg-copper/10 group-hover:text-copper transition-colors">
                         <Layers className="w-4 h-4" />
                       </div>
                     </div>
                     <div>
-                      <div className="text-2xl sm:text-3xl font-serif text-charcoal font-normal">
+                      <div className="text-2xl sm:text-3xl font-serif text-charcoal font-normal group-hover:text-copper transition-colors">
                         {projects.length}
                       </div>
                       <div className="mt-2 flex items-center gap-1.5 text-xs text-emerald-600 font-medium">
@@ -481,18 +485,22 @@ export default function ArchitectView() {
                         <span>{publishedCount} Vetted Live • {draftCount} Pending</span>
                       </div>
                     </div>
-                  </div>
+                  </button>
 
                   {/* KPI 2: Total Revenue */}
-                  <div className="bg-white border border-warm-border rounded-3xl p-5 shadow-2xs hover:border-charcoal/20 transition-all flex flex-col justify-between">
-                    <div className="flex items-center justify-between text-secondaryText mb-2">
+                  <button
+                    type="button"
+                    onClick={() => handleTabChange("earnings")}
+                    className="text-left bg-white border border-warm-border hover:border-copper/60 rounded-3xl p-5 shadow-xs transition-all flex flex-col justify-between group cursor-pointer"
+                  >
+                    <div className="flex items-center justify-between text-secondaryText mb-2 w-full">
                       <span className="text-xs font-medium uppercase tracking-wider font-mono">Total Design Revenue</span>
-                      <div className="p-2 rounded-xl bg-copper/10 text-copper">
+                      <div className="p-2 rounded-xl bg-copper/10 text-copper group-hover:bg-copper group-hover:text-white transition-colors">
                         <TrendingUp className="w-4 h-4" />
                       </div>
                     </div>
                     <div>
-                      <div className="text-2xl sm:text-3xl font-serif text-charcoal font-normal">
+                      <div className="text-2xl sm:text-3xl font-serif text-charcoal font-normal group-hover:text-copper transition-colors">
                         ₹{(totalRevenue / 1000).toFixed(0)}k
                       </div>
                       <div className="mt-2 flex items-center gap-1.5 text-xs text-emerald-600 font-medium">
@@ -500,18 +508,22 @@ export default function ArchitectView() {
                         <span>+18.4% vs last month</span>
                       </div>
                     </div>
-                  </div>
+                  </button>
 
                   {/* KPI 3: Customisation Inquiries */}
-                  <div className="bg-white border border-warm-border rounded-3xl p-5 shadow-2xs hover:border-charcoal/20 transition-all flex flex-col justify-between">
-                    <div className="flex items-center justify-between text-secondaryText mb-2">
+                  <button
+                    type="button"
+                    onClick={() => handleTabChange("inquiries")}
+                    className="text-left bg-white border border-warm-border hover:border-copper/60 rounded-3xl p-5 shadow-xs transition-all flex flex-col justify-between group cursor-pointer"
+                  >
+                    <div className="flex items-center justify-between text-secondaryText mb-2 w-full">
                       <span className="text-xs font-medium uppercase tracking-wider font-mono">Plot Match Leads</span>
-                      <div className="p-2 rounded-xl bg-warm-grey/60 text-charcoal">
+                      <div className="p-2 rounded-xl bg-warm-grey/60 text-charcoal group-hover:bg-copper/10 group-hover:text-copper transition-colors">
                         <MessageSquare className="w-4 h-4" />
                       </div>
                     </div>
                     <div>
-                      <div className="text-2xl sm:text-3xl font-serif text-charcoal font-normal">
+                      <div className="text-2xl sm:text-3xl font-serif text-charcoal font-normal group-hover:text-copper transition-colors">
                         {activeInquiriesCount}
                       </div>
                       <div className="mt-2 flex items-center gap-1.5 text-xs text-copper font-medium">
@@ -519,10 +531,10 @@ export default function ArchitectView() {
                         <span>4 require architect response</span>
                       </div>
                     </div>
-                  </div>
+                  </button>
 
                   {/* KPI 4: Plan Views & Shortlists */}
-                  <div className="bg-white border border-warm-border rounded-3xl p-5 shadow-2xs hover:border-charcoal/20 transition-all flex flex-col justify-between">
+                  <div className="bg-white border border-warm-border rounded-3xl p-5 shadow-xs flex flex-col justify-between">
                     <div className="flex items-center justify-between text-secondaryText mb-2">
                       <span className="text-xs font-medium uppercase tracking-wider font-mono">Plan Views & Saves</span>
                       <div className="p-2 rounded-xl bg-warm-grey/60 text-charcoal">
@@ -950,28 +962,33 @@ export default function ArchitectView() {
 
                             {/* Quick Actions */}
                             <td className="py-3.5 pr-2 text-right">
-                              <div className="inline-flex items-center gap-2">
+                              <div className="inline-flex items-center gap-1.5">
                                 <button
+                                  type="button"
                                   onClick={() => handleOpenEdit(p)}
-                                  className="p-1.5 rounded-lg border border-warm-border hover:bg-white hover:text-copper transition-colors"
+                                  className="px-2.5 py-1 rounded-lg border border-warm-border hover:border-copper hover:text-copper text-charcoal text-[11px] font-medium inline-flex items-center gap-1 transition-all cursor-pointer"
                                   title="Edit Blueprint & CAD Deliverables"
                                 >
-                                  <Edit3 className="w-3.5 h-3.5" />
+                                  <Edit3 className="w-3 h-3" />
+                                  <span>Edit</span>
                                 </button>
                                 <button
+                                  type="button"
                                   onClick={() => duplicateProject(p.id)}
-                                  className="p-1.5 rounded-lg border border-warm-border hover:bg-white hover:text-charcoal transition-colors"
+                                  className="px-2 py-1 rounded-lg border border-warm-border hover:border-charcoal hover:text-charcoal text-secondaryText text-[11px] font-medium inline-flex items-center gap-1 transition-all cursor-pointer"
                                   title="Duplicate Blueprint"
                                 >
-                                  <Copy className="w-3.5 h-3.5" />
+                                  <Copy className="w-3 h-3" />
+                                  <span className="hidden sm:inline">Copy</span>
                                 </button>
                                 <Link
                                   href={`/designs/${p.id}`}
                                   target="_blank"
-                                  className="p-1.5 rounded-lg border border-warm-border hover:bg-white hover:text-charcoal transition-colors"
+                                  className="px-2 py-1 rounded-lg border border-warm-border hover:border-charcoal hover:text-charcoal text-secondaryText text-[11px] font-medium inline-flex items-center gap-1 transition-all"
                                   title="View Public Marketplace Page"
                                 >
-                                  <ExternalLink className="w-3.5 h-3.5" />
+                                  <ExternalLink className="w-3 h-3" />
+                                  <span className="hidden sm:inline">View</span>
                                 </Link>
                               </div>
                             </td>

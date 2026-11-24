@@ -93,97 +93,104 @@ export default function AdminView() {
   });
 
   return (
-    <div className="space-y-8 animate-in fade-in-50 duration-200">
-      {/* Admin Unified Header */}
-      <div className="p-6 sm:p-8 bg-gradient-to-r from-stone-900 via-stone-800 to-charcoal text-white rounded-3xl border border-stone-700 shadow-lg">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-          <div className="flex items-center gap-3.5">
-            <div className="w-12 h-12 rounded-2xl bg-copper text-white flex items-center justify-center font-bold shadow-md shrink-0">
-              <ShieldCheck className="w-6 h-6" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2 flex-wrap">
-                <h2 className="text-2xl sm:text-3xl font-serif text-white font-normal">
-                  Administrator Workspace
-                </h2>
-                <span className="px-2.5 py-0.5 rounded-full bg-copper/20 text-copper-light border border-copper/40 text-xs font-mono font-bold uppercase">
-                  Platform Authority
-                </span>
-              </div>
-              <p className="text-xs text-stone-300 font-sans mt-0.5">
-                Full authority over statutory Council of Architecture (CoA) approvals, marketplace curation, client inquiries, financial policies, and account controls.
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Global Key Metrics Grid */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <button
-            onClick={() => setActiveTab("approvals")}
-            className="p-4 text-left bg-white/10 hover:bg-white/15 backdrop-blur-sm border border-white/15 rounded-2xl transition-all group"
-          >
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-[11px] text-stone-300 font-sans">
-                Pending Practice Approvals
+    <div className="space-y-6 animate-in fade-in-50 duration-200">
+      {/* Top High-Signal KPI Summary Row */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <button
+          type="button"
+          onClick={() => setActiveTab("approvals")}
+          className={`p-5 text-left bg-white border rounded-2xl transition-all shadow-xs group ${
+            activeTab === "approvals" ? "border-copper ring-1 ring-copper/30" : "border-warm-border hover:border-copper/40"
+          }`}
+        >
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="text-[11px] font-mono text-secondaryText uppercase tracking-wider">
+              Practice Approvals
+            </span>
+            {pendingArchitects.length > 0 ? (
+              <span className="px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 text-[10px] font-mono font-bold">
+                {pendingArchitects.length} pending
               </span>
-              {pendingArchitects.length > 0 && (
-                <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
-              )}
-            </div>
-            <div className="text-xl sm:text-2xl font-serif text-white font-medium group-hover:text-copper-light transition-colors">
-              {pendingArchitects.length} Pending
-            </div>
-            <span className="text-[10px] text-stone-400 font-mono mt-1 block">
-              Architect & Agency queue
-            </span>
-          </button>
+            ) : (
+              <span className="w-2 h-2 rounded-full bg-emerald-500" />
+            )}
+          </div>
+          <div className="text-2xl font-serif text-charcoal font-medium group-hover:text-copper transition-colors">
+            {pendingArchitects.length}
+          </div>
+          <span className="text-[11px] text-secondaryText font-sans mt-0.5 block">
+            CoA & Freelancer verification queue
+          </span>
+        </button>
 
-          <button
-            onClick={() => setActiveTab("moderation")}
-            className="p-4 text-left bg-white/10 hover:bg-white/15 backdrop-blur-sm border border-white/15 rounded-2xl transition-all group"
-          >
-            <span className="text-[11px] text-stone-300 font-sans block mb-1">
-              Live Architectural Plans
+        <button
+          type="button"
+          onClick={() => setActiveTab("moderation")}
+          className={`p-5 text-left bg-white border rounded-2xl transition-all shadow-xs group ${
+            activeTab === "moderation" ? "border-copper ring-1 ring-copper/30" : "border-warm-border hover:border-copper/40"
+          }`}
+        >
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="text-[11px] font-mono text-secondaryText uppercase tracking-wider">
+              Marketplace Plans
             </span>
-            <div className="text-xl sm:text-2xl font-serif text-white font-medium group-hover:text-copper-light transition-colors">
-              {projects.filter((p) => p.status === "published").length} Plans
-            </div>
-            <span className="text-[10px] text-copper-light font-mono mt-1 block">
-              {projects.filter((p) => p.featured).length} Featured on Home
+            <span className="text-[10px] font-mono text-copper font-medium">
+              {projects.filter((p) => p.featured).length} featured
             </span>
-          </button>
+          </div>
+          <div className="text-2xl font-serif text-charcoal font-medium group-hover:text-copper transition-colors">
+            {projects.filter((p) => p.status === "published").length}
+          </div>
+          <span className="text-[11px] text-secondaryText font-sans mt-0.5 block">
+            Live technical blueprints
+          </span>
+        </button>
 
-          <button
-            onClick={() => setActiveTab("inquiries")}
-            className="p-4 text-left bg-white/10 hover:bg-white/15 backdrop-blur-sm border border-white/15 rounded-2xl transition-all group"
-          >
-            <span className="text-[11px] text-stone-300 font-sans block mb-1">
-              Client Consultations & Leads
+        <button
+          type="button"
+          onClick={() => setActiveTab("inquiries")}
+          className={`p-5 text-left bg-white border rounded-2xl transition-all shadow-xs group ${
+            activeTab === "inquiries" ? "border-copper ring-1 ring-copper/30" : "border-warm-border hover:border-copper/40"
+          }`}
+        >
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="text-[11px] font-mono text-secondaryText uppercase tracking-wider">
+              Consultations & Leads
             </span>
-            <div className="text-xl sm:text-2xl font-serif text-white font-medium group-hover:text-copper-light transition-colors">
-              {inquiries.length} Inquiries
-            </div>
-            <span className="text-[10px] text-stone-400 font-mono mt-1 block">
-              {inquiries.filter((i) => i.status === "new").length} New requests
+            <span className="text-[10px] font-mono text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+              {inquiries.filter((i) => i.status === "new").length} new
             </span>
-          </button>
+          </div>
+          <div className="text-2xl font-serif text-charcoal font-medium group-hover:text-copper transition-colors">
+            {inquiries.length}
+          </div>
+          <span className="text-[11px] text-secondaryText font-sans mt-0.5 block">
+            Homeowner project requests
+          </span>
+        </button>
 
-          <button
-            onClick={() => setActiveTab("users")}
-            className="p-4 text-left bg-white/10 hover:bg-white/15 backdrop-blur-sm border border-white/15 rounded-2xl transition-all group"
-          >
-            <span className="text-[11px] text-stone-300 font-sans block mb-1">
-              Registered User Accounts
+        <button
+          type="button"
+          onClick={() => setActiveTab("users")}
+          className={`p-5 text-left bg-white border rounded-2xl transition-all shadow-xs group ${
+            activeTab === "users" ? "border-copper ring-1 ring-copper/30" : "border-warm-border hover:border-copper/40"
+          }`}
+        >
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="text-[11px] font-mono text-secondaryText uppercase tracking-wider">
+              Registered Accounts
             </span>
-            <div className="text-xl sm:text-2xl font-serif text-white font-medium group-hover:text-copper-light transition-colors">
-              {users.length} Users
-            </div>
-            <span className="text-[10px] text-emerald-400 font-mono mt-1 block">
-              {users.filter((u) => u.status === "active").length} Active Accounts
+            <span className="text-[10px] font-mono text-stone-500">
+              {users.filter((u) => u.status === "active").length} active
             </span>
-          </button>
-        </div>
+          </div>
+          <div className="text-2xl font-serif text-charcoal font-medium group-hover:text-copper transition-colors">
+            {users.length}
+          </div>
+          <span className="text-[11px] text-secondaryText font-sans mt-0.5 block">
+            Architects & homeowners
+          </span>
+        </button>
       </div>
 
       {/* Tabs Switcher */}

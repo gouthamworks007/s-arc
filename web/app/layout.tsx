@@ -7,6 +7,7 @@ import { AuthProvider } from "@/lib/authContext";
 import CompareModal from "@/components/CompareModal";
 import ShortlistFloatingBar from "@/components/ShortlistFloatingBar";
 import MobileBottomNav from "@/components/MobileBottomNav";
+import MaintenanceGate from "@/components/MaintenanceGate";
 
 // Header Font: Cormorant Garamond
 const cormorantGaramond = localFont({
@@ -302,12 +303,14 @@ export default function RootLayout({
         <AuthProvider>
           <ProjectsProvider>
             <SavedProjectsProvider>
-              <div className="pb-16 md:pb-0">
-                {children}
-              </div>
-              <CompareModal />
-              <ShortlistFloatingBar />
-              <MobileBottomNav />
+              <MaintenanceGate>
+                <div className="pb-16 md:pb-0">
+                  {children}
+                </div>
+                <CompareModal />
+                <ShortlistFloatingBar />
+                <MobileBottomNav />
+              </MaintenanceGate>
             </SavedProjectsProvider>
           </ProjectsProvider>
         </AuthProvider>

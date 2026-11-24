@@ -100,7 +100,7 @@ const DEFAULT_USERS: UserAccount[] = [
 const DEFAULT_SETTINGS: PlatformSettings = {
   platformCommissionPercent: 10,
   autoApproveVerifiedArchitects: false,
-  maintenanceMode: false,
+  maintenanceMode: true,
   minListingPrice: 25000,
   payoutEscrowHoldDays: 7
 };
