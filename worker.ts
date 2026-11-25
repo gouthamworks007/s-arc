@@ -25,6 +25,7 @@ export interface Env {
 }
 
 const STUDIO_EMAIL = "contact@southernarchitecture.in";
+const STUDIO_INBOX = "southernarchitecture1@gmail.com";
 const STUDIO_SENDER = { email: STUDIO_EMAIL, name: "S-ARC | Southern Architecture" };
 
 function escapeHtml(value: string): string {
@@ -1119,7 +1120,7 @@ ${urls.map((u) => `  <url>
 
         ctx.waitUntil(
           sendPlatformEmail(env, {
-            to: STUDIO_EMAIL,
+            to: STUDIO_INBOX,
             replyTo: user.email,
             subject: `New Architect Verification Application: ${studioName.trim()} (${cleanCoa})`,
             text: `New Architect Upgrade Request\nName: ${user.name}\nEmail: ${user.email}\nPractice Type: ${practiceType}\nStudio: ${studioName.trim()}\nCoA Number: ${cleanCoa}\nLocation: ${location || "N/A"}\nPhone: ${phone || "N/A"}`,
@@ -1613,7 +1614,7 @@ ${urls.map((u) => `  <url>
           ctx.waitUntil(
             Promise.all([
               sendPlatformEmail(env, {
-                to: STUDIO_EMAIL,
+                to: STUDIO_INBOX,
                 replyTo: { email: cleanEmail, name: cleanName },
                 subject: `New Inquiry (${inqId}) from ${cleanName}`,
                 text: `New Inquiry on S-ARC\nID: ${inqId}\nName: ${cleanName}\nEmail: ${cleanEmail}\nPhone: ${cleanPhone || "N/A"}\nLocation: ${cleanLocation || "N/A"}\nProject: ${projectId || "General"}\n\nMessage:\n${cleanMessage || "(none)"}`,
@@ -1820,7 +1821,7 @@ ${urls.map((u) => `  <url>
         ctx.waitUntil(
           Promise.all([
             sendPlatformEmail(env, {
-              to: STUDIO_EMAIL,
+              to: STUDIO_INBOX,
               replyTo: email,
               subject: isMaintenance
                 ? `Launch Alert Signup: ${email}`
@@ -1878,7 +1879,7 @@ ${urls.map((u) => `  <url>
         }
 
         const studioSend = await sendPlatformEmail(env, {
-          to: STUDIO_EMAIL,
+          to: STUDIO_INBOX,
           replyTo: { email: cleanEmail, name: cleanName },
           subject: `[S-ARC Contact] ${cleanSubject} — ${cleanName}`,
           text: `Name: ${cleanName}\nEmail: ${cleanEmail}\nPhone: ${cleanPhone || "N/A"}\n\nMessage:\n${cleanMessage}`,
