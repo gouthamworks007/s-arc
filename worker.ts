@@ -22,6 +22,8 @@ export interface Env {
   GOOGLE_CLIENT_SECRET?: string;
   JWT_SECRET?: string;
   NEXT_PUBLIC_APP_URL?: string;
+  RESEND_API_KEY?: string;
+  BREVO_API_KEY?: string;
 }
 
 const STUDIO_EMAIL = "contact@southernarchitecture.in";
@@ -47,6 +49,73 @@ async function sendPlatformEmail(
     replyTo?: string | { email: string; name: string };
   }
 ): Promise<{ ok: boolean; error?: string }> {
+  const toAddr = typeof payload.to === "string" ? payload.to : payload.to.email;
+  const toObj = typeof payload.to === "string" ? { email: payload.to } : payload.to;
+  const replyObj = payload.replyTo
+    ? typeof payload.replyTo === "string"
+      ? { email: payload.replyTo }
+      : payload.replyTo
+    : undefined;
+
+  if (env.RESEND_API_KEY) {
+    try {
+      const res = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${env.RESEND_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          from: `${STUDIO_SENDER.name} <${STUDIO_SENDER.email}>`,
+          to: [toAddr],
+          subject: payload.subject,
+          html: payload.html,
+          text: payload.text,
+          ...(replyObj ? { reply_to: replyObj.email } : {}),
+        }),
+      });
+      if (!res.ok) {
+        const errText = await res.text();
+        console.error("Resend API error:", res.status, errText);
+        return { ok: false, error: errText };
+      }
+      return { ok: true };
+    } catch (err: any) {
+      console.error("Resend fetch error:", err?.message || err);
+      return { ok: false, error: err?.message || "Resend request failed" };
+    }
+  }
+
+  if (env.BREVO_API_KEY) {
+    try {
+      const res = await fetch("https://api.brevo.com/v3/smtp/email", {
+        method: "POST",
+        headers: {
+          "api-key": env.BREVO_API_KEY,
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          sender: STUDIO_SENDER,
+          to: [toObj],
+          subject: payload.subject,
+          htmlContent: payload.html,
+          textContent: payload.text,
+          ...(replyObj ? { replyTo: replyObj } : {}),
+        }),
+      });
+      if (!res.ok) {
+        const errText = await res.text();
+        console.error("Brevo API error:", res.status, errText);
+        return { ok: false, error: errText };
+      }
+      return { ok: true };
+    } catch (err: any) {
+      console.error("Brevo fetch error:", err?.message || err);
+      return { ok: false, error: err?.message || "Brevo request failed" };
+    }
+  }
+
   if (!env.EMAIL) {
     return { ok: false, error: "Email binding not configured" };
   }
