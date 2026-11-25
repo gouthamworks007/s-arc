@@ -29,6 +29,8 @@ export interface Env {
 const STUDIO_EMAIL = "contact@southernarchitecture.in";
 const STUDIO_INBOX = "southernarchitecture1@gmail.com";
 const STUDIO_SENDER = { email: STUDIO_EMAIL, name: "S-ARC | Southern Architecture" };
+const RESEND_SENDER_EMAIL = "contact@email.southernarchitecture.in";
+const RESEND_SENDER = `${STUDIO_SENDER.name} <${RESEND_SENDER_EMAIL}>`;
 
 function escapeHtml(value: string): string {
   return value
@@ -66,12 +68,12 @@ async function sendPlatformEmail(
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          from: `${STUDIO_SENDER.name} <${STUDIO_SENDER.email}>`,
+          from: RESEND_SENDER,
           to: [toAddr],
           subject: payload.subject,
           html: payload.html,
           text: payload.text,
-          ...(replyObj ? { reply_to: replyObj.email } : {}),
+          reply_to: replyObj ? replyObj.email : STUDIO_EMAIL,
         }),
       });
       if (!res.ok) {
