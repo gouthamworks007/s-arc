@@ -5,10 +5,64 @@ export interface Env {
   DB: D1Database;
   BUCKET?: R2Bucket;
   ASSETS: Fetcher;
+  EMAIL?: {
+    send(message: {
+      to?: string | { email: string; name: string } | Array<string | { email: string; name: string }>;
+      cc?: string | { email: string; name: string } | Array<string | { email: string; name: string }>;
+      bcc?: string | { email: string; name: string } | Array<string | { email: string; name: string }>;
+      from: string | { email: string; name: string };
+      subject: string;
+      html?: string;
+      text?: string;
+      replyTo?: string | { email: string; name: string };
+      headers?: Record<string, string>;
+    }): Promise<{ messageId?: string }>;
+  };
   GOOGLE_CLIENT_ID?: string;
   GOOGLE_CLIENT_SECRET?: string;
   JWT_SECRET?: string;
   NEXT_PUBLIC_APP_URL?: string;
+}
+
+const STUDIO_EMAIL = "contact@southernarchitecture.in";
+const STUDIO_SENDER = { email: STUDIO_EMAIL, name: "S-ARC | Southern Architecture" };
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+async function sendPlatformEmail(
+  env: Env,
+  payload: {
+    to: string | { email: string; name: string };
+    subject: string;
+    html: string;
+    text: string;
+    replyTo?: string | { email: string; name: string };
+  }
+): Promise<{ ok: boolean; error?: string }> {
+  if (!env.EMAIL) {
+    return { ok: false, error: "Email binding not configured" };
+  }
+  try {
+    await env.EMAIL.send({
+      from: STUDIO_SENDER,
+      to: payload.to,
+      subject: payload.subject,
+      html: payload.html,
+      text: payload.text,
+      ...(payload.replyTo ? { replyTo: payload.replyTo } : {}),
+    });
+    return { ok: true };
+  } catch (err: any) {
+    console.error("Email Sending failed:", err?.code || "ERR", err?.message || err);
+    return { ok: false, error: err?.message || "Failed to send email" };
+  }
 }
 
 const DEFAULT_JWT_SECRET = "s-arc-secure-production-jwt-key-2026-south-arch";
@@ -1063,6 +1117,16 @@ ${urls.map((u) => `  <url>
           ).bind(`aud-${Date.now()}`, user.id, user.name, user.email, "user", "APPLY_ARCHITECT_UPGRADE", user.id, "user", JSON.stringify({ practiceType, studioName, coaNumber: cleanCoa })).run();
         } catch (_) {}
 
+        ctx.waitUntil(
+          sendPlatformEmail(env, {
+            to: STUDIO_EMAIL,
+            replyTo: user.email,
+            subject: `New Architect Verification Application: ${studioName.trim()} (${cleanCoa})`,
+            text: `New Architect Upgrade Request\nName: ${user.name}\nEmail: ${user.email}\nPractice Type: ${practiceType}\nStudio: ${studioName.trim()}\nCoA Number: ${cleanCoa}\nLocation: ${location || "N/A"}\nPhone: ${phone || "N/A"}`,
+            html: `<p><strong>New Architect Verification Application</strong></p><ul><li><strong>Name:</strong> ${escapeHtml(String(user.name || ""))}</li><li><strong>Email:</strong> ${escapeHtml(String(user.email || ""))}</li><li><strong>Practice Type:</strong> ${escapeHtml(String(practiceType))}</li><li><strong>Studio:</strong> ${escapeHtml(studioName.trim())}</li><li><strong>CoA Number:</strong> ${escapeHtml(cleanCoa)}</li><li><strong>Location:</strong> ${escapeHtml(String(location || "N/A"))}</li><li><strong>Phone:</strong> ${escapeHtml(String(phone || "N/A"))}</li></ul>`,
+          })
+        );
+
         return Response.json({ success: true, message: "Application submitted successfully." }, { status: 200 });
       } catch (err: any) {
         return Response.json({ error: "Upgrade request failed: " + err.message }, { status: 500 });
@@ -1525,21 +1589,46 @@ ${urls.map((u) => `  <url>
           if (!name || !email) {
             return Response.json({ error: "Name and email are required" }, { status: 400 });
           }
+          const cleanName = name.trim().slice(0, 100);
+          const cleanEmail = email.trim().toLowerCase();
+          const cleanPhone = phone ? String(phone).trim() : null;
+          const cleanLocation = location ? String(location).trim() : null;
+          const cleanMessage = message ? String(message).trim() : null;
           const inqId = `inq-${Date.now().toString(36)}`;
           await env.DB.prepare(
             `INSERT INTO inquiries (id, name, email, phone, location, message, project_id, architect_id, status, metadata, created_at)
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'new', ?, datetime('now'))`
           ).bind(
             inqId,
-            name.trim().slice(0, 100),
-            email.trim().toLowerCase(),
-            phone ? String(phone).trim() : null,
-            location ? String(location).trim() : null,
-            message ? String(message).trim() : null,
+            cleanName,
+            cleanEmail,
+            cleanPhone,
+            cleanLocation,
+            cleanMessage,
             projectId || null,
             architectId || null,
             metadata ? JSON.stringify(metadata) : "{}"
           ).run();
+
+          ctx.waitUntil(
+            Promise.all([
+              sendPlatformEmail(env, {
+                to: STUDIO_EMAIL,
+                replyTo: { email: cleanEmail, name: cleanName },
+                subject: `New Inquiry (${inqId}) from ${cleanName}`,
+                text: `New Inquiry on S-ARC\nID: ${inqId}\nName: ${cleanName}\nEmail: ${cleanEmail}\nPhone: ${cleanPhone || "N/A"}\nLocation: ${cleanLocation || "N/A"}\nProject: ${projectId || "General"}\n\nMessage:\n${cleanMessage || "(none)"}`,
+                html: `<p><strong>New Project Inquiry (${escapeHtml(inqId)})</strong></p><ul><li><strong>Name:</strong> ${escapeHtml(cleanName)}</li><li><strong>Email:</strong> ${escapeHtml(cleanEmail)}</li><li><strong>Phone:</strong> ${escapeHtml(cleanPhone || "N/A")}</li><li><strong>Location:</strong> ${escapeHtml(cleanLocation || "N/A")}</li><li><strong>Project:</strong> ${escapeHtml(String(projectId || "General"))}</li></ul><p><strong>Message:</strong></p><p>${escapeHtml(cleanMessage || "(none)").replace(/\n/g, "<br/>")}</p>`,
+              }),
+              sendPlatformEmail(env, {
+                to: { email: cleanEmail, name: cleanName },
+                replyTo: STUDIO_SENDER,
+                subject: "We received your S-ARC inquiry",
+                text: `Hi ${cleanName},\n\nThank you for contacting S-ARC (Southern Architecture). We have received your inquiry (${inqId}) and our studio team will review it and reply shortly.\n\nWarm regards,\nS-ARC — Southern Architecture\nhttps://southernarchitecture.in`,
+                html: `<p>Hi ${escapeHtml(cleanName)},</p><p>Thank you for contacting <strong>S-ARC (Southern Architecture)</strong>. We have received your inquiry (<code>${escapeHtml(inqId)}</code>) and our studio team will reply shortly.</p><p>Warm regards,<br/>S-ARC — Southern Architecture<br/><a href="https://southernarchitecture.in">southernarchitecture.in</a></p>`,
+              }),
+            ])
+          );
+
           return Response.json({ success: true, id: inqId, message: "Inquiry sent successfully" }, { status: 201 });
         } catch (err: any) {
           return Response.json({ error: "Failed to create inquiry: " + err.message }, { status: 500 });
@@ -1685,6 +1774,134 @@ ${urls.map((u) => `  <url>
         return Response.json({ success: true }, { status: 200 });
       } catch (err: any) {
         return Response.json({ error: "Failed to delete package: " + err.message }, { status: 500 });
+      }
+    }
+
+    // -------------------------------------------------------------
+    // 17. POST /api/newsletter & POST /api/contact - Website Email Service
+    // -------------------------------------------------------------
+    if (url.pathname === "/api/newsletter" && request.method === "POST") {
+      const clientIp = request.headers.get("cf-connecting-ip") || "anonymous";
+      const rate = checkRateLimit(clientIp, "newsletter", 10, 300);
+      if (!rate.allowed) {
+        return Response.json(
+          { error: `Too many requests. Please wait ${rate.retryAfter} seconds.` },
+          { status: 429, headers: { "Retry-After": String(rate.retryAfter) } }
+        );
+      }
+
+      try {
+        const body: any = await request.json().catch(() => ({}));
+        const email = body?.email?.trim().toLowerCase();
+        const source = body?.source === "maintenance" ? "maintenance" : "newsletter";
+
+        if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+          return Response.json({ error: "Please provide a valid email address." }, { status: 400 });
+        }
+
+        try {
+          await env.DB.prepare(
+            `INSERT INTO audit_logs (id, actor_id, actor_name, actor_email, actor_role, action, target_id, target_type, details)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+          ).bind(
+            `sub-${Date.now().toString(36)}`,
+            email,
+            "Visitor",
+            email,
+            "visitor",
+            source === "maintenance" ? "MAINTENANCE_NOTIFY_SIGNUP" : "NEWSLETTER_SUBSCRIBE",
+            email,
+            "email",
+            JSON.stringify({ source })
+          ).run();
+        } catch (_) {}
+
+        const isMaintenance = source === "maintenance";
+        ctx.waitUntil(
+          Promise.all([
+            sendPlatformEmail(env, {
+              to: STUDIO_EMAIL,
+              replyTo: email,
+              subject: isMaintenance
+                ? `Launch Alert Signup: ${email}`
+                : `New S-ARC Dispatch Subscriber: ${email}`,
+              text: `A visitor signed up via ${source}.\nEmail: ${email}`,
+              html: `<p><strong>${isMaintenance ? "Maintenance Launch Alert" : "Newsletter Dispatch"} Signup</strong></p><p><strong>Email:</strong> ${escapeHtml(email)}</p><p><strong>Source:</strong> ${escapeHtml(source)}</p>`,
+            }),
+            sendPlatformEmail(env, {
+              to: email,
+              replyTo: STUDIO_SENDER,
+              subject: isMaintenance
+                ? "You are on the S-ARC launch notification list"
+                : "Welcome to S-ARC — Southern Architecture",
+              text: isMaintenance
+                ? `Thank you for signing up. We will email you at ${email} as soon as S-ARC reopens after our upgrades.\n\nFor urgent architectural inquiries, email contact@southernarchitecture.in.\n\n— S-ARC | Southern Architecture`
+                : `Thank you for subscribing to S-ARC Architectural Dispatch.\n\n— S-ARC | Southern Architecture\nhttps://southernarchitecture.in`,
+              html: isMaintenance
+                ? `<p>Thank you for signing up.</p><p>We will send a single note to <strong>${escapeHtml(email)}</strong> as soon as <strong>S-ARC</strong> finishes our structural upgrades and reopens.</p><p>For urgent permit or project questions, reply to this email or write to <a href="mailto:contact@southernarchitecture.in">contact@southernarchitecture.in</a>.</p><p>— S-ARC | Southern Architecture</p>`
+                : `<p>Thank you for subscribing to <strong>S-ARC Architectural Dispatch</strong>.</p><p>— S-ARC | Southern Architecture<br/><a href="https://southernarchitecture.in">southernarchitecture.in</a></p>`,
+            }),
+          ])
+        );
+
+        return Response.json({
+          success: true,
+          message: isMaintenance
+            ? "We will notify you when S-ARC reopens."
+            : "Thank you for subscribing to S-ARC Architectural Dispatch.",
+        }, { status: 200 });
+      } catch (err: any) {
+        return Response.json({ error: "Failed to process subscription." }, { status: 500 });
+      }
+    }
+
+    if (url.pathname === "/api/contact" && request.method === "POST") {
+      const clientIp = request.headers.get("cf-connecting-ip") || "anonymous";
+      const rate = checkRateLimit(clientIp, "contact", 10, 300);
+      if (!rate.allowed) {
+        return Response.json(
+          { error: `Too many messages sent. Please wait ${rate.retryAfter} seconds.` },
+          { status: 429, headers: { "Retry-After": String(rate.retryAfter) } }
+        );
+      }
+
+      try {
+        const body: any = await request.json().catch(() => ({}));
+        const cleanName = String(body?.name || "").trim().slice(0, 100);
+        const cleanEmail = String(body?.email || "").trim().toLowerCase();
+        const cleanPhone = body?.phone ? String(body.phone).trim().slice(0, 30) : "";
+        const cleanSubject = String(body?.subject || "Website Contact Message").trim().slice(0, 140);
+        const cleanMessage = String(body?.message || "").trim().slice(0, 4000);
+
+        if (!cleanName || !cleanEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail) || !cleanMessage) {
+          return Response.json({ error: "Name, valid email, and message are required." }, { status: 400 });
+        }
+
+        const studioSend = await sendPlatformEmail(env, {
+          to: STUDIO_EMAIL,
+          replyTo: { email: cleanEmail, name: cleanName },
+          subject: `[S-ARC Contact] ${cleanSubject} — ${cleanName}`,
+          text: `Name: ${cleanName}\nEmail: ${cleanEmail}\nPhone: ${cleanPhone || "N/A"}\n\nMessage:\n${cleanMessage}`,
+          html: `<p><strong>Website Contact Message</strong></p><ul><li><strong>Name:</strong> ${escapeHtml(cleanName)}</li><li><strong>Email:</strong> ${escapeHtml(cleanEmail)}</li><li><strong>Phone:</strong> ${escapeHtml(cleanPhone || "N/A")}</li></ul><p>${escapeHtml(cleanMessage).replace(/\n/g, "<br/>")}</p>`,
+        });
+
+        if (!studioSend.ok) {
+          return Response.json({ error: "Could not deliver message right now. Please try again shortly." }, { status: 502 });
+        }
+
+        ctx.waitUntil(
+          sendPlatformEmail(env, {
+            to: { email: cleanEmail, name: cleanName },
+            replyTo: STUDIO_SENDER,
+            subject: "We received your message — S-ARC",
+            text: `Hi ${cleanName},\n\nThank you for reaching out to S-ARC (Southern Architecture). We received your message and will reply shortly.\n\n— S-ARC`,
+            html: `<p>Hi ${escapeHtml(cleanName)},</p><p>Thank you for reaching out to <strong>S-ARC (Southern Architecture)</strong>. We received your message and will get back to you shortly.</p><p>— S-ARC</p>`,
+          })
+        );
+
+        return Response.json({ success: true, message: "Your message has been sent." }, { status: 200 });
+      } catch (err: any) {
+        return Response.json({ error: "Failed to send message: " + err.message }, { status: 500 });
       }
     }
 

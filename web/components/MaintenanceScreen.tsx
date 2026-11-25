@@ -55,7 +55,18 @@ export default function MaintenanceScreen({
     setError("");
     setSubmitting(true);
     try {
-      await onSubscribe?.(value);
+      if (onSubscribe) {
+        await onSubscribe(value);
+      } else {
+        const res = await fetch("/api/newsletter", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: value, source: "maintenance" }),
+        });
+        if (!res.ok) {
+          throw new Error("Subscription failed");
+        }
+      }
     } catch {
       setError("We couldn’t save your email. Check your connection and try again.");
       setSubmitting(false);
