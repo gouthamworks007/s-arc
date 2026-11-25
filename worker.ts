@@ -1630,16 +1630,41 @@ ${urls.map((u) => `  <url>
         const user = await authenticateUser(request, env);
         if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
         try {
-          let sql = "SELECT * FROM inquiries";
+          let sql = `
+            SELECT
+              i.id,
+              i.client_name AS clientName,
+              i.client_email AS clientEmail,
+              i.client_phone AS clientPhone,
+              i.project_name AS projectName,
+              i.project_id AS projectId,
+              i.plot_location AS plotLocation,
+              i.plot_dimensions AS plotDimensions,
+              i.budget_range AS budgetRange,
+              i.message,
+              i.status,
+              i.reply_text AS replyText,
+              i.created_at AS date,
+              i.updated_at AS updatedAt
+            FROM inquiries i
+          `;
           const params: any[] = [];
-          if (user.role !== "admin") {
-            sql += " WHERE architect_id = ? OR email = ?";
+          if (user.role === "admin") {
+            sql += " ORDER BY i.created_at DESC";
+          } else if (user.subRole === "architect") {
+            sql += `
+              LEFT JOIN projects p ON (i.project_id = p.id OR i.project_id = p.slug)
+              WHERE p.architect_id = ? OR lower(i.client_email) = lower(?)
+              ORDER BY i.created_at DESC
+            `;
             params.push(user.id, user.email);
+          } else {
+            sql += " WHERE lower(i.client_email) = lower(?) ORDER BY i.created_at DESC";
+            params.push(user.email);
           }
-          sql += " ORDER BY created_at DESC";
           const stmt = params.length > 0 ? env.DB.prepare(sql).bind(...params) : env.DB.prepare(sql);
           const { results } = await stmt.all();
-          return Response.json({ inquiries: results || [] }, { status: 200 });
+          return Response.json({ total: (results || []).length, inquiries: results || [] }, { status: 200 });
         } catch (err: any) {
           return Response.json({ inquiries: [], error: err.message }, { status: 200 });
         }
@@ -1657,29 +1682,46 @@ ${urls.map((u) => `  <url>
 
         try {
           const body: any = await request.json().catch(() => ({}));
-          const { name, email, phone, location, message, projectId, architectId, metadata } = body;
-          if (!name || !email) {
-            return Response.json({ error: "Name and email are required" }, { status: 400 });
+          const rawName = body.clientName ?? body.name;
+          const rawEmail = body.clientEmail ?? body.email;
+          const rawPhone = body.clientPhone ?? body.phone;
+          const rawLocation = body.plotLocation ?? body.location;
+          const rawDimensions = body.plotDimensions ?? "Standard Plot";
+          const rawBudget = body.budgetRange ?? "Flexible";
+          const rawProjectName = body.projectName ?? "Architectural Consultation";
+          const rawMessage = body.message;
+
+          if (!rawName || !rawEmail || !rawMessage) {
+            return Response.json({ error: "Name, email, and message are required" }, { status: 400 });
           }
-          const cleanName = name.trim().slice(0, 100);
-          const cleanEmail = email.trim().toLowerCase();
-          const cleanPhone = phone ? String(phone).trim() : null;
-          const cleanLocation = location ? String(location).trim() : null;
-          const cleanMessage = message ? String(message).trim() : null;
+
+          const cleanName = String(rawName).trim().slice(0, 100);
+          const cleanEmail = String(rawEmail).trim().toLowerCase();
+          const cleanPhone = rawPhone ? String(rawPhone).trim().slice(0, 30) : null;
+          const cleanLocation = rawLocation ? String(rawLocation).trim().slice(0, 100) : "Kerala";
+          const cleanDimensions = String(rawDimensions).trim().slice(0, 100);
+          const cleanBudget = String(rawBudget).trim().slice(0, 50);
+          const cleanProjectName = String(rawProjectName).trim().slice(0, 120);
+          const cleanProjectId = body.projectId ? String(body.projectId).trim() : null;
+          const cleanMessage = String(rawMessage).trim().slice(0, 2000);
           const inqId = `inq-${Date.now().toString(36)}`;
+
           await env.DB.prepare(
-            `INSERT INTO inquiries (id, name, email, phone, location, message, project_id, architect_id, status, metadata, created_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'new', ?, datetime('now'))`
+            `INSERT INTO inquiries (
+              id, client_name, client_email, client_phone, project_name, project_id,
+              plot_location, plot_dimensions, budget_range, message, status, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'new', datetime('now'), datetime('now'))`
           ).bind(
             inqId,
             cleanName,
             cleanEmail,
             cleanPhone,
+            cleanProjectName,
+            cleanProjectId,
             cleanLocation,
-            cleanMessage,
-            projectId || null,
-            architectId || null,
-            metadata ? JSON.stringify(metadata) : "{}"
+            cleanDimensions,
+            cleanBudget,
+            cleanMessage
           ).run();
 
           ctx.waitUntil(
@@ -1687,21 +1729,39 @@ ${urls.map((u) => `  <url>
               sendPlatformEmail(env, {
                 to: STUDIO_INBOX,
                 replyTo: { email: cleanEmail, name: cleanName },
-                subject: `New Inquiry (${inqId}) from ${cleanName}`,
-                text: `New Inquiry on S-ARC\nID: ${inqId}\nName: ${cleanName}\nEmail: ${cleanEmail}\nPhone: ${cleanPhone || "N/A"}\nLocation: ${cleanLocation || "N/A"}\nProject: ${projectId || "General"}\n\nMessage:\n${cleanMessage || "(none)"}`,
-                html: `<p><strong>New Project Inquiry (${escapeHtml(inqId)})</strong></p><ul><li><strong>Name:</strong> ${escapeHtml(cleanName)}</li><li><strong>Email:</strong> ${escapeHtml(cleanEmail)}</li><li><strong>Phone:</strong> ${escapeHtml(cleanPhone || "N/A")}</li><li><strong>Location:</strong> ${escapeHtml(cleanLocation || "N/A")}</li><li><strong>Project:</strong> ${escapeHtml(String(projectId || "General"))}</li></ul><p><strong>Message:</strong></p><p>${escapeHtml(cleanMessage || "(none)").replace(/\n/g, "<br/>")}</p>`,
+                subject: `New Inquiry (${inqId}) — ${cleanProjectName}`,
+                text: `New Inquiry on S-ARC\nID: ${inqId}\nName: ${cleanName}\nEmail: ${cleanEmail}\nPhone: ${cleanPhone || "N/A"}\nLocation: ${cleanLocation}\nPlot: ${cleanDimensions}\nBudget: ${cleanBudget}\nProject: ${cleanProjectName}\n\nMessage:\n${cleanMessage}`,
+                html: `<p><strong>New Project Inquiry (${escapeHtml(inqId)})</strong></p><ul><li><strong>Name:</strong> ${escapeHtml(cleanName)}</li><li><strong>Email:</strong> ${escapeHtml(cleanEmail)}</li><li><strong>Phone:</strong> ${escapeHtml(cleanPhone || "N/A")}</li><li><strong>Project:</strong> ${escapeHtml(cleanProjectName)}</li><li><strong>Location:</strong> ${escapeHtml(cleanLocation)} (${escapeHtml(cleanDimensions)})</li><li><strong>Budget:</strong> ${escapeHtml(cleanBudget)}</li></ul><p><strong>Message:</strong></p><p>${escapeHtml(cleanMessage).replace(/\n/g, "<br/>")}</p>`,
               }),
               sendPlatformEmail(env, {
                 to: { email: cleanEmail, name: cleanName },
                 replyTo: STUDIO_SENDER,
-                subject: "We received your S-ARC inquiry",
-                text: `Hi ${cleanName},\n\nThank you for contacting S-ARC (Southern Architecture). We have received your inquiry (${inqId}) and our studio team will review it and reply shortly.\n\nWarm regards,\nS-ARC — Southern Architecture\nhttps://southernarchitecture.in`,
-                html: `<p>Hi ${escapeHtml(cleanName)},</p><p>Thank you for contacting <strong>S-ARC (Southern Architecture)</strong>. We have received your inquiry (<code>${escapeHtml(inqId)}</code>) and our studio team will reply shortly.</p><p>Warm regards,<br/>S-ARC — Southern Architecture<br/><a href="https://southernarchitecture.in">southernarchitecture.in</a></p>`,
+                subject: `We received your S-ARC inquiry — ${cleanProjectName}`,
+                text: `Hi ${cleanName},\n\nThank you for contacting S-ARC (Southern Architecture). We have received your inquiry (${inqId}) for ${cleanProjectName} and our studio team will reply shortly.\n\nWarm regards,\nS-ARC — Southern Architecture\nhttps://southernarchitecture.in`,
+                html: `<p>Hi ${escapeHtml(cleanName)},</p><p>Thank you for contacting <strong>S-ARC (Southern Architecture)</strong>. We have received your inquiry (<code>${escapeHtml(inqId)}</code>) regarding <strong>${escapeHtml(cleanProjectName)}</strong> and our studio team will reply shortly.</p><p>Warm regards,<br/>S-ARC — Southern Architecture<br/><a href="https://southernarchitecture.in">southernarchitecture.in</a></p>`,
               }),
             ])
           );
 
-          return Response.json({ success: true, id: inqId, message: "Inquiry sent successfully" }, { status: 201 });
+          return Response.json({
+            success: true,
+            id: inqId,
+            message: "Inquiry sent successfully",
+            inquiry: {
+              id: inqId,
+              clientName: cleanName,
+              clientEmail: cleanEmail,
+              clientPhone: cleanPhone,
+              projectName: cleanProjectName,
+              projectId: cleanProjectId,
+              plotLocation: cleanLocation,
+              plotDimensions: cleanDimensions,
+              budgetRange: cleanBudget,
+              message: cleanMessage,
+              status: "new",
+              date: "Just now",
+            },
+          }, { status: 201 });
         } catch (err: any) {
           return Response.json({ error: "Failed to create inquiry: " + err.message }, { status: 500 });
         }
@@ -1711,38 +1771,85 @@ ${urls.map((u) => `  <url>
     // -------------------------------------------------------------
     // 15b. /api/inquiries/:id - Manage Single Inquiry (PATCH, DELETE)
     // -------------------------------------------------------------
-    if (url.pathname.startsWith("/api/inquiries/") && request.method === "PATCH") {
+    if (url.pathname.startsWith("/api/inquiries/") && (request.method === "PATCH" || request.method === "DELETE")) {
       const user = await authenticateUser(request, env);
       if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
       const inqId = decodeURIComponent(url.pathname.replace("/api/inquiries/", ""));
+
       try {
+        const existing = await env.DB.prepare("SELECT * FROM inquiries WHERE id = ? LIMIT 1").bind(inqId).first<any>();
+        if (!existing) {
+          return Response.json({ error: "Inquiry not found" }, { status: 404 });
+        }
+
+        const isAdmin = user.role === "admin";
+        let isAssignedArchitect = false;
+        if (existing.project_id) {
+          const project = await env.DB.prepare("SELECT architect_id FROM projects WHERE id = ? OR slug = ? LIMIT 1")
+            .bind(existing.project_id, existing.project_id)
+            .first<any>();
+          if (project && project.architect_id === user.id) {
+            isAssignedArchitect = true;
+          }
+        }
+        const isOwnerClient = existing.client_email && user.email && String(existing.client_email).toLowerCase() === String(user.email).toLowerCase();
+
+        if (request.method === "DELETE") {
+          if (!isAdmin && !isAssignedArchitect && !isOwnerClient) {
+            return Response.json({ error: "Forbidden" }, { status: 403 });
+          }
+          await env.DB.prepare("DELETE FROM inquiries WHERE id = ?").bind(inqId).run();
+          return Response.json({ success: true }, { status: 200 });
+        }
+
+        if (!isAdmin && !isAssignedArchitect) {
+          return Response.json({ error: "Forbidden: Only admins or the assigned studio can reply or change status." }, { status: 403 });
+        }
+
         const body: any = await request.json().catch(() => ({}));
-        const { status, reply_text, replyText } = body;
-        const text = reply_text || replyText;
+        const statusMap: Record<string, string> = {
+          new: "new",
+          pending: "new",
+          in_review: "in_review",
+          contacted: "in_review",
+          responded: "responded",
+          accepted: "responded",
+          completed: "completed",
+          closed: "completed",
+        };
+        const mappedStatus = body.status ? statusMap[String(body.status).toLowerCase().trim()] : undefined;
+        if (body.status && !mappedStatus) {
+          return Response.json({ error: "Invalid inquiry status." }, { status: 400 });
+        }
+        const reply = body.reply_text ?? body.replyText;
+        const cleanReply = reply !== undefined ? String(reply).trim().slice(0, 3000) : undefined;
+        const finalStatus = mappedStatus || (cleanReply ? "responded" : undefined);
+
         let sql = "UPDATE inquiries SET status = COALESCE(?, status)";
-        const params: any[] = [status || null];
-        if (text !== undefined) {
+        const params: any[] = [finalStatus || null];
+        if (cleanReply !== undefined) {
           sql += ", reply_text = ?";
-          params.push(text);
+          params.push(cleanReply);
         }
         sql += ", updated_at = datetime('now') WHERE id = ?";
         params.push(inqId);
         await env.DB.prepare(sql).bind(...params).run();
+
+        if (cleanReply && existing.client_email) {
+          ctx.waitUntil(
+            sendPlatformEmail(env, {
+              to: { email: existing.client_email, name: existing.client_name || "Homeowner" },
+              replyTo: STUDIO_SENDER,
+              subject: `Studio Reply: ${existing.project_name || "Your S-ARC Consultation"}`,
+              text: `Hi ${existing.client_name || "there"},\n\nAn architect has responded to your S-ARC consultation (${inqId}):\n\n"${cleanReply}"\n\nSign in to your S-ARC dashboard to review details: https://southernarchitecture.in/dashboard\n\n— S-ARC | Southern Architecture`,
+              html: `<p>Hi ${escapeHtml(existing.client_name || "there")},</p><p>An architect has responded to your <strong>S-ARC</strong> consultation (<code>${escapeHtml(inqId)}</code>) regarding <strong>${escapeHtml(existing.project_name || "your project")}</strong>:</p><blockquote style="border-left:3px solid #AD8065;padding-left:12px;color:#333;">${escapeHtml(cleanReply).replace(/\n/g, "<br/>")}</blockquote><p><a href="https://southernarchitecture.in/dashboard">Open your S-ARC Dashboard →</a></p>`,
+            })
+          );
+        }
+
         return Response.json({ success: true }, { status: 200 });
       } catch (err: any) {
         return Response.json({ error: "Failed to update inquiry: " + err.message }, { status: 500 });
-      }
-    }
-
-    if (url.pathname.startsWith("/api/inquiries/") && request.method === "DELETE") {
-      const user = await authenticateUser(request, env);
-      if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
-      const inqId = decodeURIComponent(url.pathname.replace("/api/inquiries/", ""));
-      try {
-        await env.DB.prepare("DELETE FROM inquiries WHERE id = ?").bind(inqId).run();
-        return Response.json({ success: true }, { status: 200 });
-      } catch (err: any) {
-        return Response.json({ error: "Failed to delete inquiry: " + err.message }, { status: 500 });
       }
     }
 
@@ -1974,6 +2081,114 @@ ${urls.map((u) => `  <url>
         return Response.json({ success: true, message: "Your message has been sent." }, { status: 200 });
       } catch (err: any) {
         return Response.json({ error: "Failed to send message: " + err.message }, { status: 500 });
+      }
+    }
+
+    // -------------------------------------------------------------
+    // 18. GET & PUT /api/settings + GET /api/audit-logs
+    // -------------------------------------------------------------
+    if (url.pathname === "/api/settings") {
+      const defaultSettings = {
+        platformCommissionPercent: 10,
+        autoApproveVerifiedArchitects: false,
+        maintenanceMode: true,
+        minListingPrice: 25000,
+        payoutEscrowHoldDays: 7,
+      };
+
+      if (request.method === "GET" || request.method === "HEAD") {
+        try {
+          const { results } = await env.DB.prepare("SELECT key, value FROM platform_settings").all<any>();
+          const dynamic: Record<string, any> = { ...defaultSettings };
+          for (const row of results || []) {
+            try {
+              dynamic[row.key] = JSON.parse(row.value);
+            } catch {
+              dynamic[row.key] = row.value;
+            }
+          }
+          return Response.json({ settings: dynamic }, { status: 200 });
+        } catch {
+          return Response.json({ settings: defaultSettings }, { status: 200 });
+        }
+      }
+
+      if (request.method === "PUT") {
+        const user = await authenticateUser(request, env);
+        if (!user || user.role !== "admin") {
+          return Response.json({ error: "Forbidden: Admin access required" }, { status: 403 });
+        }
+        try {
+          const body: any = await request.json().catch(() => ({}));
+          const allowedKeys = new Set([
+            "platformCommissionPercent",
+            "autoApproveVerifiedArchitects",
+            "maintenanceMode",
+            "minListingPrice",
+            "payoutEscrowHoldDays",
+          ]);
+          const updates: Record<string, any> = {};
+          for (const [k, v] of Object.entries(body || {})) {
+            if (allowedKeys.has(k)) {
+              updates[k] = v;
+              await env.DB.prepare(
+                "INSERT OR REPLACE INTO platform_settings (key, value, updated_at) VALUES (?, ?, datetime('now'))"
+              ).bind(k, JSON.stringify(v)).run();
+            }
+          }
+          try {
+            await env.DB.prepare(
+              `INSERT INTO audit_logs (id, actor_id, actor_name, actor_email, actor_role, action, target_id, target_type, details)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+            ).bind(
+              `aud-${Date.now().toString(36)}`,
+              user.id || "usr-admin-01",
+              user.name || "Admin",
+              user.email || "admin@s-arc.in",
+              "admin",
+              "Updated Platform System Settings",
+              "platform_settings",
+              "settings",
+              JSON.stringify(updates)
+            ).run();
+          } catch (_) {}
+
+          const { results } = await env.DB.prepare("SELECT key, value FROM platform_settings").all<any>();
+          const merged: Record<string, any> = { ...defaultSettings };
+          for (const row of results || []) {
+            try {
+              merged[row.key] = JSON.parse(row.value);
+            } catch {
+              merged[row.key] = row.value;
+            }
+          }
+          return Response.json({ success: true, settings: merged }, { status: 200 });
+        } catch (err: any) {
+          return Response.json({ error: "Failed to save settings: " + err.message }, { status: 500 });
+        }
+      }
+    }
+
+    if (url.pathname === "/api/audit-logs" && (request.method === "GET" || request.method === "HEAD")) {
+      const user = await authenticateUser(request, env);
+      if (!user || user.role !== "admin") {
+        return Response.json({ error: "Forbidden: Admin access required" }, { status: 403 });
+      }
+      try {
+        const { results } = await env.DB.prepare(
+          "SELECT id, actor_name AS actorName, actor_role AS actorRole, action, target_id AS target, details, created_at AS timestamp FROM audit_logs ORDER BY created_at DESC LIMIT 50"
+        ).all<any>();
+        const logs = (results || []).map((r: any) => ({
+          id: r.id,
+          actorName: r.actorName || "System",
+          actorRole: r.actorRole || "admin",
+          action: r.action,
+          target: r.target || r.details || "Platform",
+          timestamp: r.timestamp,
+        }));
+        return Response.json({ logs }, { status: 200 });
+      } catch (err: any) {
+        return Response.json({ logs: [], error: err.message }, { status: 200 });
       }
     }
 

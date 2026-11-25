@@ -150,9 +150,10 @@ interface AuthContextType {
     bio?: string;
   }) => Promise<void>;
   settings: PlatformSettings;
-  updateSettings: (newSettings: Partial<PlatformSettings>) => void;
+  updateSettings: (newSettings: Partial<PlatformSettings>) => Promise<boolean>;
   auditLogs: AuditLog[];
   logAction: (action: string, target: string) => void;
+  refreshAdminData: () => Promise<void>;
   resetAuthData: () => void;
 }
 
@@ -230,6 +231,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const storedLogs = localStorage.getItem(STORAGE_KEY_AUDIT_LOGS);
       if (storedLogs) setAuditLogs(JSON.parse(storedLogs));
 
+      // Sync live platform settings (including maintenance mode) from D1
+      fetch("/api/settings")
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (data?.settings) {
+            setSettings((prev) => {
+              const merged = { ...prev, ...data.settings };
+              try {
+                localStorage.setItem(STORAGE_KEY_SETTINGS, JSON.stringify(merged));
+              } catch {}
+              return merged;
+            });
+          }
+        })
+        .catch(() => {});
+
       // Validate session against server to keep security state synchronized
       fetch("/api/auth/me")
         .then((res) => {
@@ -248,6 +265,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               localStorage.setItem(STORAGE_KEY_AUTH_USER, JSON.stringify(data.user));
               localStorage.setItem(STORAGE_KEY_IS_LOGGED_IN, "true");
             } catch (err) {}
+            if (data.user.role === "admin") {
+              refreshAdminData();
+            }
           }
         })
         .catch(() => {
@@ -268,6 +288,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       localStorage.setItem(STORAGE_KEY_AUTH_USERS, JSON.stringify(newUsers));
     } catch (e) {
       console.error(e);
+    }
+  };
+
+  const refreshAdminData = async () => {
+    try {
+      const [usersRes, logsRes] = await Promise.all([
+        fetch("/api/users"),
+        fetch("/api/audit-logs"),
+      ]);
+      if (usersRes.ok) {
+        const usersData = await usersRes.json();
+        if (Array.isArray(usersData.users)) {
+          saveUsers(usersData.users);
+        }
+      }
+      if (logsRes.ok) {
+        const logsData = await logsRes.json();
+        if (Array.isArray(logsData.logs) && logsData.logs.length > 0) {
+          setAuditLogs(logsData.logs);
+          try {
+            localStorage.setItem(STORAGE_KEY_AUDIT_LOGS, JSON.stringify(logsData.logs));
+          } catch {}
+        }
+      }
+    } catch (err) {
+      console.warn("Failed to sync admin data from D1:", err);
     }
   };
 
@@ -297,6 +343,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return updated;
     });
     logAction("User Signed In", `${account.name} (${account.email})`);
+    if (account.role === "admin") {
+      refreshAdminData();
+    }
   };
 
   const logout = () => {
@@ -563,8 +612,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     );
   };
 
-  // Update platform settings
-  const updateSettings = (newSettings: Partial<PlatformSettings>) => {
+  // Update platform settings (persists to Cloudflare D1 + localStorage)
+  const updateSettings = async (newSettings: Partial<PlatformSettings>): Promise<boolean> => {
     const next = { ...settings, ...newSettings };
     setSettings(next);
     try {
@@ -573,6 +622,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.error(e);
     }
     logAction("Updated Platform System Settings", JSON.stringify(newSettings));
+    try {
+      const res = await fetch("/api/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newSettings),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data?.settings) {
+          setSettings(data.settings);
+          try {
+            localStorage.setItem(STORAGE_KEY_SETTINGS, JSON.stringify(data.settings));
+          } catch {}
+        }
+        return true;
+      }
+      return false;
+    } catch (e) {
+      console.warn("Async settings PUT failed:", e);
+      return false;
+    }
   };
 
   // Reset to default state
@@ -614,6 +684,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         updateSettings,
         auditLogs,
         logAction,
+        refreshAdminData,
         resetAuthData
       }}
     >

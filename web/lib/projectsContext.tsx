@@ -105,6 +105,7 @@ interface ProjectsContextType {
   deleteInquiry: (id: string) => void;
   isLoading: boolean;
   refreshProjects: () => Promise<void>;
+  refreshInquiries: () => Promise<void>;
 }
 
 const ProjectsContext = createContext<ProjectsContextType | undefined>(undefined);
@@ -197,6 +198,24 @@ export function ProjectsProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  // Sync inquiries from Cloudflare D1 Backend (authenticated)
+  const refreshInquiries = useCallback(async () => {
+    try {
+      const res = await fetch("/api/inquiries");
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data.inquiries)) {
+          setInquiries(data.inquiries);
+          try {
+            localStorage.setItem(STORAGE_KEY_INQUIRIES, JSON.stringify(data.inquiries));
+          } catch (e) {}
+        }
+      }
+    } catch (err) {
+      // Keep cached/demo inquiries when unauthenticated or offline
+    }
+  }, []);
+
   // Initial load
   useEffect(() => {
     try {
@@ -222,7 +241,8 @@ export function ProjectsProvider({ children }: { children: React.ReactNode }) {
     }
 
     refreshProjects();
-  }, [refreshProjects]);
+    refreshInquiries();
+  }, [refreshProjects, refreshInquiries]);
 
   // Save projects to localStorage whenever changed
   const saveProjects = (newProjects: ArchitecturalProject[]) => {
@@ -351,6 +371,14 @@ export function ProjectsProvider({ children }: { children: React.ReactNode }) {
 
     const updated = [copyProject, ...projects];
     saveProjects(updated);
+
+    fetch("/api/projects", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(copyProject),
+    }).catch((err) => {
+      console.warn("Async duplicate project POST failed:", err);
+    });
   };
 
   // Toggle Publish / Draft
@@ -441,6 +469,7 @@ export function ProjectsProvider({ children }: { children: React.ReactNode }) {
         deleteInquiry,
         isLoading,
         refreshProjects,
+        refreshInquiries,
       }}
     >
       {children}

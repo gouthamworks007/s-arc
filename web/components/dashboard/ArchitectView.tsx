@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useProjects } from "@/lib/projectsContext";
@@ -56,9 +56,24 @@ export default function ArchitectView() {
     deleteProject, 
     duplicateProject, 
     profile,
-    inquiries 
+    inquiries,
+    refreshInquiries
   } = useProjects();
   const { currentUser } = useAuth();
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    refreshInquiries();
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Miller's Law: 6 Core navigation items
   const [activeTab, setActiveTab] = useState<CoreTab>("overview");
@@ -148,7 +163,16 @@ export default function ArchitectView() {
     return projects.reduce((acc, curr) => acc + (curr.views || 420), 1250);
   }, [projects]);
 
-  const activeInquiriesCount = inquiries?.length || 18;
+  const activeInquiriesCount = inquiries.length;
+  const pendingInquiries = useMemo(
+    () => inquiries.filter((i) => i.status === "new" || i.status === "in_review"),
+    [inquiries]
+  );
+  const draftProjects = useMemo(
+    () => projects.filter((p) => p.status === "draft"),
+    [projects]
+  );
+  const attentionCount = pendingInquiries.length + draftProjects.length;
 
   // Active advanced filters count
   const activeFiltersCount = useMemo(() => {
@@ -377,6 +401,7 @@ export default function ArchitectView() {
           <div className="relative flex-1 max-w-md">
             <Search className="w-4 h-4 text-secondaryText absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
+              ref={searchInputRef}
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -528,7 +553,11 @@ export default function ArchitectView() {
                       </div>
                       <div className="mt-2 flex items-center gap-1.5 text-xs text-copper font-medium">
                         <Clock className="w-3.5 h-3.5" />
-                        <span>4 require architect response</span>
+                        <span>
+                          {pendingInquiries.length > 0
+                            ? `${pendingInquiries.length} require architect response`
+                            : "All inquiries answered"}
+                        </span>
                       </div>
                     </div>
                   </button>
@@ -785,81 +814,91 @@ export default function ArchitectView() {
                   <div className="lg:col-span-4 bg-white border border-warm-border rounded-3xl p-5 sm:p-6 shadow-sm flex flex-col justify-between space-y-4">
                     <div className="flex items-center justify-between pb-3 border-b border-warm-border/60">
                       <div className="flex items-center gap-2">
-                        <AlertCircle className="w-4 h-4 text-rose-600" />
+                        <AlertCircle className={`w-4 h-4 ${attentionCount > 0 ? "text-rose-600" : "text-emerald-600"}`} />
                         <h4 className="font-serif text-base text-charcoal font-normal">
                           Needs Attention
                         </h4>
                       </div>
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-rose-50 text-rose-700 font-semibold border border-rose-200">
-                        3 Pending
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-semibold border ${
+                        attentionCount > 0
+                          ? "bg-rose-50 text-rose-700 border-rose-200"
+                          : "bg-emerald-50 text-emerald-700 border-emerald-200"
+                      }`}>
+                        {attentionCount > 0 ? `${attentionCount} Pending` : "All Clear"}
                       </span>
                     </div>
 
-                    {/* Actionable Queue Items with consistent status pills */}
+                    {/* Dynamic Actionable Queue Items */}
                     <div className="space-y-3 flex-1 overflow-y-auto max-h-[300px] pr-1">
-                      {/* Item 1 */}
-                      <div className="p-3.5 rounded-2xl bg-warm-grey/30 border border-warm-border/80 space-y-2 hover:border-copper transition-colors">
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="text-xs font-semibold text-charcoal truncate">The Ridge House</span>
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-rose-100 text-rose-800 font-medium">
-                            Action Required
-                          </span>
+                      {attentionCount === 0 ? (
+                        <div className="p-6 text-center rounded-2xl bg-emerald-50/50 border border-emerald-200/70 space-y-2">
+                          <CheckCircle2 className="w-6 h-6 text-emerald-600 mx-auto" />
+                          <p className="text-xs font-medium text-charcoal">All Caught Up</p>
+                          <p className="text-[11px] text-secondaryText">
+                            No unanswered plot inquiries or unpublished draft listings.
+                          </p>
                         </div>
-                        <p className="text-[11px] text-secondaryText leading-relaxed">
-                          Buyer requested structural MEP schematic confirmation for Wayanad slope contour.
-                        </p>
-                        <button
-                          onClick={() => {
-                            const p = projects.find(pr => pr.id === "proj-001");
-                            if (p) handleOpenEdit(p);
-                          }}
-                          className="text-[11px] font-medium text-copper hover:underline flex items-center gap-1"
-                        >
-                          <span>Upload MEP Schematics</span>
-                          <ArrowRight className="w-3 h-3" />
-                        </button>
-                      </div>
+                      ) : (
+                        <>
+                          {pendingInquiries.slice(0, 2).map((inq) => (
+                            <div
+                              key={inq.id}
+                              className="p-3.5 rounded-2xl bg-warm-grey/30 border border-warm-border/80 space-y-2 hover:border-copper transition-colors"
+                            >
+                              <div className="flex items-center justify-between gap-2">
+                                <span className="text-xs font-semibold text-charcoal truncate">
+                                  {inq.projectName || "Consultation Inquiry"}
+                                </span>
+                                <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-amber-100 text-amber-800 font-medium shrink-0">
+                                  {inq.status === "new" ? "New Lead" : "In Review"}
+                                </span>
+                              </div>
+                              <p className="text-[11px] text-secondaryText leading-relaxed line-clamp-2">
+                                {inq.clientName}: {inq.message}
+                              </p>
+                              <button
+                                type="button"
+                                onClick={() => handleTabChange("inquiries")}
+                                className="text-[11px] font-medium text-copper hover:underline flex items-center gap-1"
+                              >
+                                <span>Review & Reply Inquiry</span>
+                                <ArrowRight className="w-3 h-3" />
+                              </button>
+                            </div>
+                          ))}
 
-                      {/* Item 2 */}
-                      <div className="p-3.5 rounded-2xl bg-warm-grey/30 border border-warm-border/80 space-y-2 hover:border-copper transition-colors">
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="text-xs font-semibold text-charcoal truncate">Kerala Courtyard</span>
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-amber-100 text-amber-800 font-medium">
-                            Pending Review
-                          </span>
-                        </div>
-                        <p className="text-[11px] text-secondaryText leading-relaxed">
-                          Dr. Mathew Thomas submitted a 14-Cent plot orientation adaptation inquiry.
-                        </p>
-                        <button
-                          onClick={() => setActiveTab("inquiries")}
-                          className="text-[11px] font-medium text-copper hover:underline flex items-center gap-1"
-                        >
-                          <span>Review & Reply Inquiry</span>
-                          <ArrowRight className="w-3 h-3" />
-                        </button>
-                      </div>
-
-                      {/* Item 3 */}
-                      <div className="p-3.5 rounded-2xl bg-warm-grey/30 border border-warm-border/80 space-y-2 hover:border-copper transition-colors">
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="text-xs font-semibold text-charcoal truncate">The Brick Pavilion</span>
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-emerald-100 text-emerald-800 font-medium">
-                            Live
-                          </span>
-                        </div>
-                        <p className="text-[11px] text-secondaryText leading-relaxed">
-                          KMBR Table 4 setback validation verified by S-ARC municipal team.
-                        </p>
-                        <div className="text-[11px] text-emerald-700 font-mono">
-                          ✓ All 38 sheets vetted
-                        </div>
-                      </div>
+                          {draftProjects.slice(0, 2).map((dp) => (
+                            <div
+                              key={dp.id}
+                              className="p-3.5 rounded-2xl bg-warm-grey/30 border border-warm-border/80 space-y-2 hover:border-copper transition-colors"
+                            >
+                              <div className="flex items-center justify-between gap-2">
+                                <span className="text-xs font-semibold text-charcoal truncate">{dp.name}</span>
+                                <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-rose-100 text-rose-800 font-medium shrink-0">
+                                  Draft
+                                </span>
+                              </div>
+                              <p className="text-[11px] text-secondaryText leading-relaxed line-clamp-2">
+                                Complete deliverables &amp; CAD sheets to publish to the S-ARC marketplace.
+                              </p>
+                              <button
+                                type="button"
+                                onClick={() => handleOpenEdit(dp)}
+                                className="text-[11px] font-medium text-copper hover:underline flex items-center gap-1"
+                              >
+                                <span>Edit &amp; Publish Listing</span>
+                                <ArrowRight className="w-3 h-3" />
+                              </button>
+                            </div>
+                          ))}
+                        </>
+                      )}
                     </div>
 
                     <div className="pt-2 text-center">
                       <button
-                        onClick={() => setActiveTab("designs")}
+                        type="button"
+                        onClick={() => handleTabChange("designs")}
                         className="text-xs text-secondaryText hover:text-charcoal font-medium"
                       >
                         View all listed designs →

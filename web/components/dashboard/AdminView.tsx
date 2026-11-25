@@ -21,7 +21,9 @@ import {
   Sliders,
   Users,
   Percent,
-  AlertTriangle
+  AlertTriangle,
+  RefreshCw,
+  Loader2
 } from "lucide-react";
 
 export default function AdminView() {
@@ -33,9 +35,10 @@ export default function AdminView() {
     updateUserStatus, 
     updateUserBadge,
     deleteUser,
-    logAction
+    logAction,
+    refreshAdminData
   } = useAuth();
-  const { projects, updateProject, inquiries } = useProjects();
+  const { projects, updateProject, inquiries, refreshInquiries } = useProjects();
 
   const [activeTab, setActiveTab] = useState<
     "approvals" | "moderation" | "inquiries" | "finances" | "users" | "audit"
@@ -48,7 +51,30 @@ export default function AdminView() {
   const [commissionRate, setCommissionRate] = useState(settings.platformCommissionPercent);
   const [escrowDays, setEscrowDays] = useState(settings.payoutEscrowHoldDays);
   const [maintenance, setMaintenance] = useState(settings.maintenanceMode);
+  const [isSavingSettings, setIsSavingSettings] = useState(false);
   const [settingsSuccess, setSettingsSuccess] = useState(false);
+  const [settingsError, setSettingsError] = useState<string | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Sync local form state when live D1 settings arrive
+  React.useEffect(() => {
+    setCommissionRate(settings.platformCommissionPercent);
+    setEscrowDays(settings.payoutEscrowHoldDays);
+    setMaintenance(settings.maintenanceMode);
+  }, [settings.platformCommissionPercent, settings.payoutEscrowHoldDays, settings.maintenanceMode]);
+
+  // Sync live D1 admin data & inquiries on mount
+  React.useEffect(() => {
+    refreshAdminData();
+    refreshInquiries();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleRefreshAll = async () => {
+    setIsRefreshing(true);
+    await Promise.all([refreshAdminData(), refreshInquiries()]);
+    setIsRefreshing(false);
+  };
 
   // User search & filter
   const [userSearch, setUserSearch] = useState("");
@@ -68,14 +94,22 @@ export default function AdminView() {
     );
   };
 
-  const handleSaveSettings = () => {
-    updateSettings({
+  const handleSaveSettings = async () => {
+    setIsSavingSettings(true);
+    setSettingsError(null);
+    setSettingsSuccess(false);
+    const ok = await updateSettings({
       platformCommissionPercent: commissionRate,
       payoutEscrowHoldDays: escrowDays,
       maintenanceMode: maintenance
     });
-    setSettingsSuccess(true);
-    setTimeout(() => setSettingsSuccess(false), 2000);
+    setIsSavingSettings(false);
+    if (ok) {
+      setSettingsSuccess(true);
+      setTimeout(() => setSettingsSuccess(false), 3000);
+    } else {
+      setSettingsError("Could not persist settings to D1 (saved locally). Check admin sign-in.");
+    }
   };
 
   const filteredProjects = projects.filter((p) => {
@@ -282,6 +316,16 @@ export default function AdminView() {
                 Review and verify Council of Architecture (CoA) statutory registrations for freelance architects and architecture agency firms before granting blueprint publishing privileges.
               </p>
             </div>
+            <button
+              type="button"
+              onClick={handleRefreshAll}
+              disabled={isRefreshing}
+              className="px-3.5 py-2 rounded-xl border border-warm-border hover:bg-warm-grey text-xs font-medium text-charcoal flex items-center gap-1.5 transition-colors self-start sm:self-auto shrink-0"
+              title="Sync latest records from Cloudflare D1"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? "animate-spin text-copper" : ""}`} />
+              <span>Sync D1</span>
+            </button>
           </div>
 
           {pendingArchitects.length === 0 ? (
@@ -548,8 +592,17 @@ export default function AdminView() {
             </p>
           </div>
 
-          <div className="space-y-4">
-            {inquiries.map((inq) => (
+          {inquiries.length === 0 ? (
+            <div className="p-10 text-center bg-white border border-warm-border rounded-3xl shadow-sm space-y-2">
+              <MessageSquare className="w-8 h-8 text-secondaryText/40 mx-auto" />
+              <div className="font-serif text-base text-charcoal font-medium">No Consultation Inquiries Yet</div>
+              <p className="text-xs text-secondaryText font-sans max-w-md mx-auto">
+                Homeowner consultation requests submitted on architectural plan pages will appear here automatically.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {inquiries.map((inq) => (
               <div
                 key={inq.id}
                 className="p-6 bg-white border border-warm-border rounded-3xl shadow-sm space-y-4"
@@ -588,8 +641,9 @@ export default function AdminView() {
                   </div>
                 )}
               </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -650,7 +704,7 @@ export default function AdminView() {
                 <label className="flex items-center justify-between p-4 rounded-2xl border border-warm-border hover:bg-warm-grey/30 cursor-pointer transition-colors">
                   <div>
                     <div className="text-xs font-medium text-charcoal font-sans">Platform Maintenance Mode</div>
-                    <div className="text-[11px] text-secondaryText">Temporarily disable CAD downloads and checkout during updates.</div>
+                    <div className="text-[11px] text-secondaryText">Show the animated construction screen to public visitors (admins retain full bypass access).</div>
                   </div>
                   <input
                     type="checkbox"
@@ -661,25 +715,32 @@ export default function AdminView() {
                 </label>
 
                 <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-xs font-sans leading-relaxed">
-                  <strong>Notice</strong>: All system adjustments are immediately recorded with immutable timestamps in the platform audit trail.
+                  <strong>Notice</strong>: All system adjustments are synced to Cloudflare D1 and recorded in the platform audit trail.
                 </div>
               </div>
             </div>
 
-            <div className="flex items-center justify-between pt-4 border-t border-warm-border">
+            <div className="flex items-center justify-between pt-4 border-t border-warm-border gap-3">
               {settingsSuccess ? (
                 <span className="text-xs text-emerald-600 font-medium flex items-center gap-1">
-                  <Check className="w-4 h-4" /> Settings updated successfully!
+                  <Check className="w-4 h-4" /> Settings saved to Cloudflare D1!
                 </span>
+              ) : settingsError ? (
+                <span className="text-xs text-red-600 font-medium">{settingsError}</span>
               ) : <div />}
 
               <button
                 type="button"
                 onClick={handleSaveSettings}
-                className="px-6 py-2.5 rounded-full bg-charcoal hover:bg-copper text-white text-xs font-medium tracking-wide flex items-center gap-2 transition-all shadow-sm"
+                disabled={isSavingSettings}
+                className="px-6 py-2.5 rounded-full bg-charcoal hover:bg-copper disabled:opacity-60 text-white text-xs font-medium tracking-wide flex items-center gap-2 transition-all shadow-sm shrink-0"
               >
-                <Check className="w-3.5 h-3.5 text-copper-light" />
-                <span>Save Platform Settings</span>
+                {isSavingSettings ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin text-copper-light" />
+                ) : (
+                  <Check className="w-3.5 h-3.5 text-copper-light" />
+                )}
+                <span>{isSavingSettings ? "Saving..." : "Save Platform Settings"}</span>
               </button>
             </div>
           </div>
