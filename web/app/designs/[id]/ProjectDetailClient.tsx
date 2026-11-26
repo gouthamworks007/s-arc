@@ -11,8 +11,8 @@ import ConsultArchitectModal from "@/components/plot-intelligence/ConsultArchite
 import VerificationBadge from "@/components/VerificationBadge";
 import { FEATURED_PROJECTS } from "@/lib/data";
 import { useSavedProjects } from "@/lib/savedProjectsContext";
-import { useProjects } from "@/lib/projectsContext";
-import { ProjectPackage } from "@/lib/types";
+import { useProjects, normalizeProject } from "@/lib/projectsContext";
+import { ArchitecturalProject, ProjectPackage } from "@/lib/types";
 import { 
   Maximize, 
   Bed, 
@@ -42,9 +42,46 @@ import {
 
 export default function ProjectDetailClient() {
   const params = useParams();
-  const projectId = params?.id as string;
-  const { projects } = useProjects();
-  const project = projects.find((p) => p.id === projectId) || FEATURED_PROJECTS.find((p) => p.id === projectId);
+  const [resolvedId, setResolvedId] = useState<string>((params?.id as string) || "");
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const pathPart = window.location.pathname.split("/designs/")[1]?.split("/")[0];
+      if (pathPart) {
+        setResolvedId(decodeURIComponent(pathPart));
+      }
+    }
+  }, [params?.id]);
+  const projectId = resolvedId || (params?.id as string);
+  const { projects, isLoading: projectsLoading } = useProjects();
+  const [fetchedProject, setFetchedProject] = useState<ArchitecturalProject | null>(null);
+  const [fetchingSingle, setFetchingSingle] = useState(false);
+
+  const project =
+    projects.find((p) => p.id === projectId || p.slug === projectId) ||
+    FEATURED_PROJECTS.find((p) => p.id === projectId || p.slug === projectId) ||
+    fetchedProject;
+
+  useEffect(() => {
+    if (!projectId || projects.some((p) => p.id === projectId || p.slug === projectId) || FEATURED_PROJECTS.some((p) => p.id === projectId || p.slug === projectId)) {
+      return;
+    }
+    let active = true;
+    setFetchingSingle(true);
+    fetch(`/api/projects/${encodeURIComponent(projectId)}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (active && data?.project) {
+          setFetchedProject(normalizeProject(data.project));
+        }
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (active) setFetchingSingle(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [projectId, projects]);
 
   const { isSaved, toggleSave } = useSavedProjects();
   const [activeImageIndex, setActiveImageIndex] = useState(0);
@@ -73,7 +110,7 @@ export default function ProjectDetailClient() {
     if (!project) return;
     setLoadingPackages(true);
 
-    fetch(`/api/packages?project_id=${project.id}`)
+    fetch(`/api/packages?projectId=${encodeURIComponent(project.id)}`)
       .then((res) => (res.ok ? res.json() : { packages: [] }))
       .then((data) => {
         if (data.packages && data.packages.length > 0) {
@@ -184,6 +221,21 @@ export default function ProjectDetailClient() {
       setSampleDownloaded(true);
     }
   };
+
+  if (!project && (projectsLoading || fetchingSingle)) {
+    return (
+      <main className="min-h-screen bg-white">
+        <Navbar />
+        <div className="pt-32 pb-20 text-center max-w-md mx-auto px-6 flex flex-col items-center space-y-3">
+          <Loader2 className="w-7 h-7 animate-spin text-copper" />
+          <p className="text-xs font-mono uppercase tracking-widest text-secondaryText">
+            Loading Architectural Blueprint...
+          </p>
+        </div>
+        <Footer />
+      </main>
+    );
+  }
 
   if (!project) {
     return (

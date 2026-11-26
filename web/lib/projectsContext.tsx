@@ -300,7 +300,7 @@ export function ProjectsProvider({ children }: { children: React.ReactNode }) {
     const updated = [newProject, ...projects];
     saveProjects(updated);
 
-    // Asynchronously synchronize with Cloudflare D1
+    // Asynchronously synchronize with Cloudflare D1 and replace temp ID with canonical D1 ID
     fetch("/api/projects", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -311,9 +311,34 @@ export function ProjectsProvider({ children }: { children: React.ReactNode }) {
         cents: newProject.cents,
         builtUpArea: newProject.builtUpArea,
       }),
-    }).catch((err) => {
-      console.warn("Async project POST failed:", err);
-    });
+    })
+      .then(async (res) => {
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          console.error("Project POST rejected:", res.status, data?.error || res.statusText);
+          return;
+        }
+        if (data?.id) {
+          setProjects((prev) => {
+            const synced = prev.map((item) =>
+              item.id === newId
+                ? {
+                    ...(data.project ? normalizeProject(data.project) : item),
+                    id: data.id,
+                    slug: data.slug || item.slug,
+                  }
+                : item
+            );
+            try {
+              localStorage.setItem(STORAGE_KEY_PROJECTS, JSON.stringify(synced));
+            } catch {}
+            return synced;
+          });
+        }
+      })
+      .catch((err) => {
+        console.warn("Async project POST failed:", err);
+      });
 
     return newProject;
   };
@@ -376,9 +401,31 @@ export function ProjectsProvider({ children }: { children: React.ReactNode }) {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(copyProject),
-    }).catch((err) => {
-      console.warn("Async duplicate project POST failed:", err);
-    });
+    })
+      .then(async (res) => {
+        if (!res.ok) return;
+        const data = await res.json().catch(() => ({}));
+        if (data?.id) {
+          setProjects((prev) => {
+            const synced = prev.map((item) =>
+              item.id === copyId
+                ? {
+                    ...(data.project ? normalizeProject(data.project) : item),
+                    id: data.id,
+                    slug: data.slug || item.slug,
+                  }
+                : item
+            );
+            try {
+              localStorage.setItem(STORAGE_KEY_PROJECTS, JSON.stringify(synced));
+            } catch {}
+            return synced;
+          });
+        }
+      })
+      .catch((err) => {
+        console.warn("Async duplicate project POST failed:", err);
+      });
   };
 
   // Toggle Publish / Draft

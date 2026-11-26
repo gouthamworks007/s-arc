@@ -914,17 +914,25 @@ ${urls.map((u) => `  <url>
         const body: any = await request.json().catch(() => ({}));
         const newId = `proj-${Date.now().toString().slice(-6)}`;
         const cleanName = (body.name || "Untitled Blueprint").trim().slice(0, 150);
-        const slug = cleanName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+        const baseSlug = cleanName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || newId;
+        const existingSlug = await env.DB.prepare("SELECT id FROM projects WHERE slug = ? LIMIT 1")
+          .bind(baseSlug)
+          .first<any>();
+        const finalSlug = existingSlug ? `${baseSlug}-${newId.slice(-4)}` : baseSlug;
         const formattedPrice = String(body.price || "₹35,000").startsWith("₹") ? String(body.price) : `₹${body.price}`;
         const priceNum = parseFloat(formattedPrice.replace(/[₹,]/g, "")) || 35000;
         const centsNum = parseFloat(body.cents) || 10;
-        const status = "published";
+        const status = body.status === "draft" ? "draft" : "published";
 
-        // Fetch architect's verification badge from database
+        // Fetch architect's full profile and badge from database (JWT only stores minimal claims)
         const dbUser = await env.DB.prepare(
-          "SELECT verification_badge FROM users WHERE id = ? LIMIT 1"
+          "SELECT name, studio_name, location, avatar, verification_badge FROM users WHERE id = ? LIMIT 1"
         ).bind(user.id).first<any>();
         const badge = dbUser?.verification_badge || user.verificationBadge || "none";
+        const archName = dbUser?.name || user.name || "Verified Architect";
+        const archStudio = dbUser?.studio_name || body.architect?.studio || "Verified Studio";
+        const archLocation = dbUser?.location || body.architect?.location || "South India";
+        const archAvatar = dbUser?.avatar || body.architect?.image || null;
 
         await env.DB.prepare(
           `INSERT INTO projects (
@@ -939,7 +947,7 @@ ${urls.map((u) => `  <url>
           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
         ).bind(
           newId,
-          slug,
+          finalSlug,
           cleanName,
           body.style || "CONTEMPORARY",
           body.location || "Kerala, India",
@@ -970,15 +978,22 @@ ${urls.map((u) => `  <url>
           body.bimAvailable !== false ? 1 : 0,
           body.boqAvailable !== false ? 1 : 0,
           body.mepAvailable !== false ? 1 : 0,
-          user.name,
-          user.studioName || "Verified Studio",
-          user.location || "South India",
-          user.avatar || null,
+          archName,
+          archStudio,
+          archLocation,
+          archAvatar,
           user.id,
           badge
         ).run();
 
-        return Response.json({ success: true, id: newId, slug }, { status: 201 });
+        const createdRow = await env.DB.prepare("SELECT * FROM projects WHERE id = ? LIMIT 1")
+          .bind(newId)
+          .first<any>();
+
+        return Response.json(
+          { success: true, id: newId, slug: finalSlug, project: createdRow ? formatProjectRow(createdRow) : null },
+          { status: 201 }
+        );
       } catch (err: any) {
         return Response.json({ error: "Failed to create project: " + err.message }, { status: 500 });
       }
@@ -1414,6 +1429,11 @@ ${urls.map((u) => `  <url>
       if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
       const projId = decodeURIComponent(url.pathname.replace("/api/projects/", ""));
       try {
+        const existing = await env.DB.prepare("SELECT architect_id FROM projects WHERE id = ? LIMIT 1").bind(projId).first<any>();
+        if (!existing) return Response.json({ error: "Project not found" }, { status: 404 });
+        if (user.role !== "admin" && existing.architect_id !== user.id) {
+          return Response.json({ error: "Forbidden: You can only delete your own studio's designs." }, { status: 403 });
+        }
         await env.DB.prepare("DELETE FROM projects WHERE id = ?").bind(projId).run();
         return Response.json({ success: true }, { status: 200 });
       } catch (err: any) {
@@ -1431,10 +1451,14 @@ ${urls.map((u) => `  <url>
         if (!existing) {
           return Response.json({ error: "Project not found" }, { status: 404 });
         }
+        if (user.role !== "admin" && existing.architect_id !== user.id) {
+          return Response.json({ error: "Forbidden: You can only edit your own studio's designs." }, { status: 403 });
+        }
 
         const centsNum = body.cents !== undefined ? Number(body.cents) : existing.cents;
         const priceFormatted = body.price !== undefined ? (String(body.price).startsWith("₹") ? String(body.price) : `₹${body.price}`) : existing.price;
         const priceNum = parseFloat(String(priceFormatted).replace(/[₹,]/g, "")) || existing.price_numeric;
+        const featuredVal = user.role === "admin" && body.featured !== undefined ? (body.featured ? 1 : 0) : existing.featured;
 
         await env.DB.prepare(
           `UPDATE projects SET
@@ -1452,6 +1476,7 @@ ${urls.map((u) => `  <url>
             price_numeric = ?,
             sheet_count = COALESCE(?, sheet_count),
             status = COALESCE(?, status),
+            featured = ?,
             image = COALESCE(?, image),
             gallery = COALESCE(?, gallery),
             floor_plan_image = COALESCE(?, floor_plan_image),
@@ -1484,6 +1509,7 @@ ${urls.map((u) => `  <url>
           priceNum,
           body.sheetCount !== undefined ? Number(body.sheetCount) : null,
           body.status !== undefined ? body.status : null,
+          featuredVal,
           body.image !== undefined ? body.image : null,
           body.gallery !== undefined ? JSON.stringify(body.gallery) : null,
           body.floorPlanImage !== undefined ? body.floorPlanImage : null,
@@ -1858,7 +1884,7 @@ ${urls.map((u) => `  <url>
     // -------------------------------------------------------------
     if (url.pathname === "/api/packages" && (request.method === "GET" || request.method === "HEAD")) {
       try {
-        const projectId = url.searchParams.get("projectId");
+        const projectId = url.searchParams.get("projectId") || url.searchParams.get("project_id");
         let sql = "SELECT * FROM project_packages WHERE 1=1";
         const params: any[] = [];
         if (projectId) {
@@ -2190,6 +2216,17 @@ ${urls.map((u) => `  <url>
       } catch (err: any) {
         return Response.json({ logs: [], error: err.message }, { status: 200 });
       }
+    }
+
+    // Dynamic /designs/<id> shell fallback for newly uploaded D1 plans
+    if (url.pathname.startsWith("/designs/") && url.pathname !== "/designs/" && !url.pathname.includes(".")) {
+      const assetRes = await env.ASSETS.fetch(request);
+      const html = await assetRes.text();
+      const slug = url.pathname.replace(/^\/designs\//, "").replace(/\/$/, "");
+      if (!html.includes(`/designs/${slug}`)) {
+        return env.ASSETS.fetch(new Request(new URL("/designs/ridge-house.html", url.origin), request));
+      }
+      return new Response(html, { status: assetRes.status, statusText: assetRes.statusText, headers: assetRes.headers });
     }
 
     // Default fallback to Static Assets
