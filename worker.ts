@@ -2219,12 +2219,13 @@ ${urls.map((u) => `  <url>
     }
 
     // Dynamic /designs/<id> shell fallback for newly uploaded D1 plans
-    if (url.pathname.startsWith("/designs/") && url.pathname !== "/designs/" && !url.pathname.includes(".")) {
-      const assetRes = await env.ASSETS.fetch(request);
+    if ((request.method === "GET" || request.method === "HEAD") && url.pathname.startsWith("/designs/") && url.pathname !== "/designs/" && !url.pathname.includes(".")) {
+      const assetRes = await env.ASSETS.fetch(new Request(url.toString(), { method: request.method, headers: request.headers }));
       const html = await assetRes.text();
       const slug = url.pathname.replace(/^\/designs\//, "").replace(/\/$/, "");
       if (!html.includes(`/designs/${slug}`)) {
-        return env.ASSETS.fetch(new Request(new URL("/designs/ridge-house.html", url.origin), request));
+        const fallbackUrl = new URL("/designs/ridge-house", url.origin);
+        return env.ASSETS.fetch(new Request(fallbackUrl.toString(), { method: request.method, headers: request.headers }));
       }
       return new Response(html, { status: assetRes.status, statusText: assetRes.statusText, headers: assetRes.headers });
     }
