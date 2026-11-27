@@ -131,7 +131,7 @@ export default function MaintenanceScreen({
 
         <p className="flex items-center gap-2 rounded-full border border-amber-400/30 bg-amber-400/10 px-3 py-1.5 text-sm text-amber-200">
           <span className="h-2 w-2 rounded-full bg-amber-400" aria-hidden="true" />
-          Maintenance in progress
+          Scheduled upgrade · Resuming shortly
         </p>
       </header>
 
@@ -143,9 +143,11 @@ export default function MaintenanceScreen({
             <h1 className="max-w-[18ch] font-serif text-4xl font-normal leading-[1.1] tracking-tight sm:text-5xl lg:text-[3.5rem]">
               S-ARC is offline while we upgrade it.
             </h1>
-            <p className="max-w-[52ch] text-base leading-relaxed text-stone-300 sm:text-lg">
-              The marketplace is temporarily paused while we upgrade our systems. Leave your email and
-              we’ll tell you the moment it’s back.
+            <p className="max-w-[54ch] text-base leading-relaxed text-stone-300 sm:text-lg">
+              Southern Architecture is a curated marketplace connecting homeowners across South India
+              with COA-verified architects for KMBR-compliant residential plans and CAD packages.
+              We&apos;re temporarily paused for platform upgrades—leave your email and we&apos;ll notify
+              you as soon as normal service resumes.
             </p>
           </div>
 

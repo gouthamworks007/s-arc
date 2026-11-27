@@ -28,7 +28,7 @@ export const metadata: Metadata = {
     siteName: "S-ARC — Southern Architecture",
     images: [
       {
-        url: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=1200&h=630&q=80",
+        url: "https://southernarchitecture.in/og-image.png",
         width: 1200,
         height: 630,
         alt: "S-ARC Verified Architects Directory",
@@ -41,7 +41,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Verified Architects in Kerala & South India | S-ARC",
     description: "Connect with COA licensed architects across Kochi, Trivandrum, Calicut, and Thrissur.",
-    images: ["https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=1200&h=630&q=80"],
+    images: ["https://southernarchitecture.in/og-image.png"],
   },
   other: {
     "geo.region": "IN-KL",

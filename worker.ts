@@ -194,6 +194,34 @@ function checkRateLimit(ip: string, action: string, maxRequests: number, windowS
   return { allowed: true };
 }
 
+// Short-TTL edge cache for platform_settings.maintenanceMode so public HTML routes avoid a D1 read on every hit
+const MAINTENANCE_CACHE_TTL_MS = 45_000;
+let cachedMaintenanceState: { value: boolean; expiresAt: number } | null = null;
+
+async function isMaintenanceModeEnabled(env: Env): Promise<boolean> {
+  const now = Date.now();
+  if (cachedMaintenanceState && now < cachedMaintenanceState.expiresAt) {
+    return cachedMaintenanceState.value;
+  }
+  try {
+    const row = await env.DB.prepare(
+      "SELECT value FROM platform_settings WHERE key = 'maintenanceMode' LIMIT 1"
+    ).first<{ value: string }>();
+    let enabled = false;
+    if (row?.value !== undefined) {
+      try {
+        enabled = Boolean(JSON.parse(row.value));
+      } catch {
+        enabled = row.value === "true" || row.value === "1";
+      }
+    }
+    cachedMaintenanceState = { value: enabled, expiresAt: now + MAINTENANCE_CACHE_TTL_MS };
+    return enabled;
+  } catch {
+    return cachedMaintenanceState?.value ?? false;
+  }
+}
+
 function getCorsHeaders(request: Request): Headers {
   const headers = new Headers();
   const origin = request.headers.get("Origin");
@@ -480,6 +508,54 @@ ${urls.map((u) => `  <url>
       }
     }
     return env.ASSETS.fetch(request);
+  }
+
+  // 2b. Edge Maintenance Mode Gate (cached 45s from D1; returns 503 + Retry-After + X-Robots-Tag: noindex, nofollow)
+  const isMaintenanceBypassPath =
+    url.pathname.startsWith("/api/") ||
+    url.pathname.startsWith("/_next/") ||
+    url.pathname.startsWith("/uploads/") ||
+    url.pathname === "/robots.txt" ||
+    url.pathname === "/sitemap.xml" ||
+    url.pathname === "/og-image.png" ||
+    url.pathname === "/logo.png" ||
+    url.pathname === "/logo-white.png" ||
+    url.pathname === "/logo.svg" ||
+    url.pathname === "/favicon.ico" ||
+    url.pathname === "/login" ||
+    url.pathname === "/login/" ||
+    url.pathname === "/signup" ||
+    url.pathname === "/signup/" ||
+    url.pathname === "/dashboard" ||
+    url.pathname === "/dashboard/" ||
+    url.pathname === "/maintenance" ||
+    url.pathname === "/maintenance/" ||
+    /\.(?:css|js|mjs|png|jpe?g|webp|svg|ico|woff2?|ttf|json|xml|txt)$/i.test(url.pathname);
+
+  if (!isMaintenanceBypassPath && (request.method === "GET" || request.method === "HEAD")) {
+    const maintenanceActive = await isMaintenanceModeEnabled(env);
+    if (maintenanceActive) {
+      let isAdmin = false;
+      const cookieHeader = request.headers.get("Cookie");
+      if (cookieHeader && cookieHeader.includes("sarc_session_token=")) {
+        const user = await authenticateUser(request, env);
+        isAdmin = user?.role === "admin";
+      }
+      if (!isAdmin) {
+        const maintUrl = new URL("/maintenance/", url.origin);
+        const maintRes = await env.ASSETS.fetch(new Request(maintUrl.toString(), { method: "GET" }));
+        const headers = new Headers(maintRes.headers);
+        headers.set("Content-Type", "text/html; charset=utf-8");
+        headers.set("Retry-After", "3600");
+        headers.set("X-Robots-Tag", "noindex, nofollow");
+        headers.set("Cache-Control", "no-store, no-cache, must-revalidate");
+        return new Response(request.method === "HEAD" ? null : maintRes.body, {
+          status: 503,
+          statusText: "Service Unavailable",
+          headers,
+        });
+      }
+    }
   }
 
   // 3. Dynamic /designs/<id> shell fallback for newly uploaded D1 plans
@@ -2137,7 +2213,7 @@ ${urls.map((u) => `  <url>
       const defaultSettings = {
         platformCommissionPercent: 10,
         autoApproveVerifiedArchitects: false,
-        maintenanceMode: true,
+        maintenanceMode: false,
         minListingPrice: 25000,
         payoutEscrowHoldDays: 7,
       };
@@ -2181,6 +2257,12 @@ ${urls.map((u) => `  <url>
                 "INSERT OR REPLACE INTO platform_settings (key, value, updated_at) VALUES (?, ?, datetime('now'))"
               ).bind(k, JSON.stringify(v)).run();
             }
+          }
+          if ("maintenanceMode" in updates) {
+            cachedMaintenanceState = {
+              value: Boolean(updates.maintenanceMode),
+              expiresAt: Date.now() + MAINTENANCE_CACHE_TTL_MS,
+            };
           }
           try {
             await env.DB.prepare(

@@ -11,7 +11,7 @@ routes = [
 [assets]
 directory = "./web/out"
 binding = "ASSETS"
-run_worker_first = ["/api/*", "/uploads/*", "/designs/*", "/robots.txt", "/sitemap.xml"]
+run_worker_first = ["/", "/designs", "/designs/*", "/architects", "/architects/*", "/styles", "/styles/*", "/plot-intelligence", "/plot-intelligence/*", "/plot-my-land", "/plot-my-land/*", "/api/*", "/uploads/*", "/robots.txt", "/sitemap.xml"]
 not_found_handling = "single-page-application"
 html_handling = "auto-trailing-slash"
 

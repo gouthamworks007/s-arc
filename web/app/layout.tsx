@@ -87,28 +87,7 @@ export const metadata: Metadata = {
     template: "%s | S-ARC — Southern Architecture",
   },
   description:
-    "South India's premier multi-vendor architectural marketplace connecting discerning landowners and homeowners with verified COA architects across Kerala, Tamil Nadu, and Karnataka. Download KMBR-compliant CAD blueprints, turnkey house designs, and BIM packages.",
-  keywords: [
-    "Architecture",
-    "Southern Architecture",
-    "Kerala Architecture",
-    "Architectural Marketplace",
-    "House Plans Kerala",
-    "Kerala House Design 4 BHK",
-    "Courtyard House Plans Kerala",
-    "KMBR 2019 Compliant Plans",
-    "CAD Drawings Download DWG",
-    "Modern Tropical Architecture",
-    "Exposed Brick Villa Kerala",
-    "Traditional Nalukettu House",
-    "COA Verified Architects",
-    "Plot Intelligence Kerala",
-    "Cent to SqFt Converter Kerala",
-    "Eco Friendly Home Designs South India",
-    "Architects in Kochi",
-    "Architects in Trivandrum",
-    "Architects in Bangalore"
-  ],
+    "Curated multi-vendor architectural marketplace connecting landowners and homeowners with verified COA architects across Kerala, Tamil Nadu, and Karnataka. Explore KMBR-compliant CAD blueprints, house designs, and BIM packages.",
   authors: [{ name: "S-ARC Architectural Advisory", url: "https://southernarchitecture.in" }],
   creator: "S-ARC (Southern Architecture)",
   publisher: "S-ARC Platform",
@@ -132,7 +111,7 @@ export const metadata: Metadata = {
     siteName: "S-ARC — Southern Architecture",
     images: [
       {
-        url: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&h=630&q=80",
+        url: "https://southernarchitecture.in/og-image.png",
         width: 1200,
         height: 630,
         alt: "S-ARC Architectural Marketplace — South Indian Residential Designs",
@@ -146,7 +125,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "S-ARC — Southern Architecture",
     description: "Curated architectural blueprints & verified architects across Kerala and South India.",
-    images: ["https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&h=630&q=80"],
+    images: ["https://southernarchitecture.in/og-image.png"],
   },
   robots: {
     index: true,
@@ -181,8 +160,8 @@ const structuredDataOrganization = {
   "alternateName": ["Southern Architecture", "S-ARC Platform", "S-ARC Kerala"],
   "url": "https://southernarchitecture.in",
   "logo": "https://southernarchitecture.in/logo.png",
-  "image": "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&h=630&q=80",
-  "description": "South India's premier curated architectural marketplace connecting discerning landowners and homeowners with verified Council of Architecture (COA) licensed architects. Curated tropical residential blueprints, turnkey CAD drawings, and KMBR 2019 compliance verifications.",
+  "image": "https://southernarchitecture.in/og-image.png",
+  "description": "Curated architectural marketplace connecting landowners and homeowners with verified Council of Architecture (COA) licensed architects. Tropical residential blueprints, turnkey CAD drawings, and KMBR 2019 compliance verifications.",
   "address": {
     "@type": "PostalAddress",
     "addressLocality": "Kochi",
