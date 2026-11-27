@@ -482,6 +482,26 @@ ${urls.map((u) => `  <url>
     return env.ASSETS.fetch(request);
   }
 
+  // 3. Dynamic /designs/<id> shell fallback for newly uploaded D1 plans
+  if ((request.method === "GET" || request.method === "HEAD") && url.pathname.startsWith("/designs/") && url.pathname !== "/designs/" && !url.pathname.includes(".")) {
+    const assetRes = await env.ASSETS.fetch(new Request(url.toString(), { method: request.method, headers: request.headers }));
+    const html = request.method === "HEAD" ? "" : await assetRes.text();
+    const isSpaRootFallback = request.method !== "HEAD" && html.includes("Turn Your Land Into A Home</title>");
+    if (isSpaRootFallback) {
+      const fallbackUrl = new URL("/designs/ridge-house/", url.origin);
+      const fallbackRes = await env.ASSETS.fetch(new Request(fallbackUrl.toString(), { method: request.method }));
+      return new Response(fallbackRes.body, {
+        status: fallbackRes.status,
+        statusText: fallbackRes.statusText,
+        headers: fallbackRes.headers,
+      });
+    }
+    if (request.method === "HEAD") {
+      return assetRes;
+    }
+    return new Response(html, { status: assetRes.status, statusText: assetRes.statusText, headers: assetRes.headers });
+  }
+
   // Only intercept /api/ requests; everything else is served by Cloudflare Static Assets
   if (!url.pathname.startsWith("/api/")) {
     return env.ASSETS.fetch(request);
@@ -2216,18 +2236,6 @@ ${urls.map((u) => `  <url>
       } catch (err: any) {
         return Response.json({ logs: [], error: err.message }, { status: 200 });
       }
-    }
-
-    // Dynamic /designs/<id> shell fallback for newly uploaded D1 plans
-    if ((request.method === "GET" || request.method === "HEAD") && url.pathname.startsWith("/designs/") && url.pathname !== "/designs/" && !url.pathname.includes(".")) {
-      const assetRes = await env.ASSETS.fetch(new Request(url.toString(), { method: request.method, headers: request.headers }));
-      const html = await assetRes.text();
-      const slug = url.pathname.replace(/^\/designs\//, "").replace(/\/$/, "");
-      if (!html.includes(`/designs/${slug}`)) {
-        const fallbackUrl = new URL("/designs/ridge-house", url.origin);
-        return env.ASSETS.fetch(new Request(fallbackUrl.toString(), { method: request.method, headers: request.headers }));
-      }
-      return new Response(html, { status: assetRes.status, statusText: assetRes.statusText, headers: assetRes.headers });
     }
 
     // Default fallback to Static Assets
