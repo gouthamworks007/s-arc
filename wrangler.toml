@@ -10,6 +10,7 @@ routes = [
 
 [assets]
 directory = "./web/out"
+binding = "ASSETS"
 not_found_handling = "single-page-application"
 html_handling = "auto-trailing-slash"
 
