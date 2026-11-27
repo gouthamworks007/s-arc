@@ -50,7 +50,7 @@ export default function Navbar({ onOpenSellerModal, onOpenSearch }: NavbarProps)
   // Public navigation: Dashboard is protected and accessible only with an account
   const navLinks = [
     { name: "Explore Designs", href: "/designs", active: pathname === "/designs" },
-    { name: "Plot My Land", href: "/plot-my-land", active: pathname === "/plot-my-land" || pathname === "/plot-intelligence" },
+    { name: "Plot Intelligence", href: "/plot-intelligence", active: pathname === "/plot-my-land" || pathname === "/plot-intelligence" },
     { name: "Styles", href: "/styles", active: pathname === "/styles" },
     { name: "Architects", href: "/architects", active: pathname === "/architects" },
   ];
@@ -303,15 +303,25 @@ export default function Navbar({ onOpenSellerModal, onOpenSearch }: NavbarProps)
                 </div>
               )}
 
-              <button
-                onClick={() => {
-                  setMobileMenuOpen(false);
-                  if (onOpenSellerModal) onOpenSellerModal();
-                }}
-                className="w-full text-left py-2 text-sm text-copper font-medium"
-              >
-                Become an Architect Seller →
-              </button>
+              {onOpenSellerModal ? (
+                <button
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    onOpenSellerModal();
+                  }}
+                  className="w-full text-left py-2 text-sm text-copper font-medium"
+                >
+                  Become an Architect Seller →
+                </button>
+              ) : (
+                <Link
+                  href="/signup?role=architect"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="w-full text-left py-2 text-sm text-copper font-medium block"
+                >
+                  Become an Architect Seller →
+                </Link>
+              )}
               <Link
                 href="/designs"
                 onClick={() => setMobileMenuOpen(false)}

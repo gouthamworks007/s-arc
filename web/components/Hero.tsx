@@ -3,8 +3,9 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, ChevronLeft, ChevronRight, Compass, Sparkles } from "lucide-react";
+import { ArrowRight, ChevronLeft, ChevronRight, Compass } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useProjects } from "@/lib/projectsContext";
 
 interface HeroProps {
   onWatchStory?: () => void;
@@ -15,53 +16,65 @@ interface HeroProps {
 const HERO_SLIDES = [
   {
     id: "ridge-house",
-    title: "The Courtyard House",
-    subtitle: "Contemporary Tropical • Kochi",
-    image: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1800&q=85",
-    alt: "Contemporary Luxury South Indian Residential Architecture",
+    title: "Courtyard & Tropical Style",
+    subtitle: "Style Showcase • Cross-Ventilation & Brick",
+    image: "/showcase-courtyard.webp",
+    alt: "Twilight courtyard tropical residence architectural render",
   },
   {
     id: "ridge-house",
-    title: "The Ridge House",
-    subtitle: "Cantilevered Concrete • Wayanad",
-    image: "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=1800&q=85",
-    alt: "The Ridge House Brutalist Residential Architecture",
+    title: "Contemporary Cantilever Style",
+    subtitle: "Style Showcase • Extended Roof Overhangs",
+    image: "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=1400&q=80",
+    alt: "Contemporary cantilevered concrete residential design",
   },
   {
     id: "kerala-courtyard",
-    title: "Kerala Heritage Courtyard",
-    subtitle: "Vernacular Nalukettu • Thrissur",
-    image: "https://images.unsplash.com/photo-1580587771525-78b9dba3b914?auto=format&fit=crop&w=1800&q=85",
-    alt: "Traditional Kerala Courtyard Architecture",
+    title: "Vernacular Sloping Roof Style",
+    subtitle: "Style Showcase • Deep Verandahs & Pitched Roof",
+    image: "https://images.unsplash.com/photo-1580587771525-78b9dba3b914?auto=format&fit=crop&w=1400&q=80",
+    alt: "Pitched roof vernacular residential architecture",
   },
   {
     id: "the-green-nest",
-    title: "The Green Nest",
-    subtitle: "Modern Biophilic Villa • Calicut",
-    image: "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=1800&q=85",
-    alt: "Biophilic Tropical Architecture",
+    title: "Biophilic Garden Residence",
+    subtitle: "Style Showcase • Indoor-Outdoor Courtyard",
+    image: "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=1400&q=80",
+    alt: "Biophilic garden residential architecture",
   },
   {
     id: "the-linear-home",
-    title: "The Linear Pavilion",
-    subtitle: "Minimalist Monolith • Bengaluru",
-    image: "https://images.unsplash.com/photo-1600607687920-4e2a09cf159d?auto=format&fit=crop&w=1800&q=85",
-    alt: "Minimalist Monolith Villa",
+    title: "Minimalist Linear Residence",
+    subtitle: "Style Showcase • Compact Plot Planning",
+    image: "https://images.unsplash.com/photo-1600607687920-4e2a09cf159d?auto=format&fit=crop&w=1400&q=80",
+    alt: "Minimalist linear modern home exterior",
   },
   {
     id: "mediterranean-villa",
-    title: "Villa Terracota",
-    subtitle: "Mediterranean Coastal • Pondicherry",
-    image: "https://images.unsplash.com/photo-1600607687644-c7171b42498f?auto=format&fit=crop&w=1800&q=85",
-    alt: "Mediterranean Coastal Villa",
+    title: "Mediterranean & Warm Stucco",
+    subtitle: "Style Showcase • Shaded Loggias & Arches",
+    image: "https://images.unsplash.com/photo-1600607687644-c7171b42498f?auto=format&fit=crop&w=1400&q=80",
+    alt: "Mediterranean residential villa exterior",
   },
 ];
 
 export default function Hero({ onExploreClick, onProjectClick }: HeroProps) {
+  const { projects } = useProjects();
   const [currentSlide, setCurrentSlide] = useState(0);
   const [direction, setDirection] = useState<1 | -1>(1);
   const [isPaused, setIsPaused] = useState(false);
   const touchStartX = useRef<number | null>(null);
+
+  const publishedProjects = projects.filter((p) => p.status !== "draft");
+  const liveCount = publishedProjects.length;
+  const minBuyerPrice = publishedProjects.reduce((min, p) => {
+    const val = Number(p.priceNumeric) || parseInt(String(p.price || "").replace(/[^\d]/g, ""), 10) || 0;
+    return val > 0 && val < min ? val : min;
+  }, Infinity);
+  const minPriceLabel = Number.isFinite(minBuyerPrice)
+    ? `₹${Math.round(minBuyerPrice).toLocaleString("en-IN")}`
+    : "Fixed Tiers";
+  const distinctStyles = new Set(publishedProjects.map((p) => p.style).filter(Boolean)).size || 3;
 
   const nextSlide = useCallback(() => {
     setDirection(1);
@@ -155,55 +168,55 @@ export default function Hero({ onExploreClick, onProjectClick }: HeroProps) {
                   onClick={onExploreClick}
                   className="inline-flex items-center justify-center gap-2.5 px-6 py-3.5 bg-copper hover:bg-copper-hover text-white text-xs font-medium font-sans tracking-wide rounded-full shadow-subtle hover:shadow transition-all group min-h-[44px] w-full sm:w-auto"
                 >
-                  <span>Explore 500+ Designs</span>
+                  <span>Explore Designs</span>
                   <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
                 </button>
 
                 <Link
-                  href="/plot-my-land"
+                  href="/plot-intelligence"
                   className="inline-flex items-center justify-center gap-2 px-5 py-3.5 bg-warm-grey hover:bg-warm-border/50 text-charcoal border border-warm-border text-xs font-medium font-sans tracking-wide rounded-full transition-all group min-h-[44px] w-full sm:w-auto"
                 >
                   <Compass className="w-3.5 h-3.5 text-copper" />
-                  <span>Plot My Land</span>
+                  <span>Plot Intelligence</span>
                 </Link>
               </div>
             </div>
 
-            {/* Platform Metrics / Statistics */}
+            {/* Live Catalog Highlights */}
             <div className="pt-4 sm:pt-6 border-t border-warm-border/80 grid grid-cols-4 gap-1.5 sm:gap-4">
               <div>
                 <div className="text-lg sm:text-2xl font-medium tracking-tight text-charcoal">
-                  500<span className="text-copper">+</span>
+                  {liveCount}
                 </div>
                 <div className="text-[10px] sm:text-[11px] text-mutedText tracking-wider uppercase mt-0.5 sm:mt-1 truncate">
-                  Designs
+                  Curated Plans
                 </div>
               </div>
 
               <div>
                 <div className="text-lg sm:text-2xl font-medium tracking-tight text-charcoal">
-                  100<span className="text-copper">+</span>
+                  {minPriceLabel}
                 </div>
                 <div className="text-[10px] sm:text-[11px] text-mutedText tracking-wider uppercase mt-0.5 sm:mt-1 truncate">
-                  Architects
+                  Starting From
                 </div>
               </div>
 
               <div>
                 <div className="text-lg sm:text-2xl font-medium tracking-tight text-charcoal">
-                  12<span className="text-copper">+</span>
+                  {distinctStyles}
                 </div>
                 <div className="text-[10px] sm:text-[11px] text-mutedText tracking-wider uppercase mt-0.5 sm:mt-1 truncate">
-                  Cities
+                  Style Categories
                 </div>
               </div>
 
               <div>
                 <div className="text-lg sm:text-2xl font-medium tracking-tight text-charcoal">
-                  10K<span className="text-copper">+</span>
+                  COA
                 </div>
                 <div className="text-[10px] sm:text-[11px] text-mutedText tracking-wider uppercase mt-0.5 sm:mt-1 truncate">
-                  Builders
+                  Reviewed Studios
                 </div>
               </div>
             </div>
@@ -316,7 +329,7 @@ export default function Hero({ onExploreClick, onProjectClick }: HeroProps) {
                   className="absolute bottom-3 left-3 right-3 sm:left-auto sm:right-8 sm:bottom-8 bg-charcoal/85 hover:bg-charcoal text-white backdrop-blur-md px-3.5 py-2.5 sm:px-4 sm:py-3 text-left border border-white/15 transition-all duration-300 group sm:max-w-[270px] z-20 shadow-lg rounded-xl"
                 >
                   <div className="text-[9px] sm:text-[10px] tracking-widest uppercase text-white/60 mb-0.5">
-                    Featured Project
+                    Style Preview
                   </div>
                   <div className="text-xs sm:text-[13px] font-medium tracking-wide flex items-center justify-between gap-3 text-white group-hover:text-copper transition-colors">
                     <div className="truncate">

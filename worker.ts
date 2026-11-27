@@ -442,6 +442,12 @@ Host: https://southernarchitecture.in
         { loc: "https://southernarchitecture.in/plot-intelligence", priority: "0.90", freq: "weekly", lastmod: now },
         { loc: "https://southernarchitecture.in/architects", priority: "0.90", freq: "weekly", lastmod: now },
         { loc: "https://southernarchitecture.in/styles", priority: "0.80", freq: "weekly", lastmod: now },
+        { loc: "https://southernarchitecture.in/faq", priority: "0.70", freq: "monthly", lastmod: now },
+        { loc: "https://southernarchitecture.in/licensing", priority: "0.70", freq: "monthly", lastmod: now },
+        { loc: "https://southernarchitecture.in/contact", priority: "0.70", freq: "monthly", lastmod: now },
+        { loc: "https://southernarchitecture.in/terms", priority: "0.50", freq: "monthly", lastmod: now },
+        { loc: "https://southernarchitecture.in/privacy", priority: "0.50", freq: "monthly", lastmod: now },
+        { loc: "https://southernarchitecture.in/refund-policy", priority: "0.50", freq: "monthly", lastmod: now },
       ];
 
       (dbProjects || []).forEach((p: any) => {

@@ -45,10 +45,10 @@ const PLOT_SHAPES = [
 ];
 
 const ROAD_DIRECTIONS: { id: string; label: string; side: Side; hint: string }[] = [
-  { id: "North Facing", label: "North", side: "N", hint: "Vaastu compliant" },
+  { id: "North Facing", label: "North", side: "N", hint: "Northern daylight" },
   { id: "East Facing", label: "East", side: "E", hint: "Morning sun" },
   { id: "South Facing", label: "South", side: "S", hint: "Cooling breeze" },
-  { id: "West Facing", label: "West", side: "W", hint: "Sunset horizon" },
+  { id: "West Facing", label: "West", side: "W", hint: "Evening sun" },
 ];
 
 const LOCATIONS = [
@@ -236,7 +236,11 @@ function PlotDiagram({
   const leftLabel = { x: CX - model.hw * model.scale - 7, y: CY };
 
   return (
-    <svg viewBox="0 0 260 260" className="w-full h-full" fill="none" role="group" aria-label={label}>
+    <svg viewBox="0 0 260 260" className="w-full h-full" fill="none" role="img" aria-label={label}>
+      <title>{label}</title>
+      <desc>
+        Interactive architectural plot boundary diagram showing indicative front and side setbacks and the estimated buildable zone. Click North, East, South, or West road edge to move road frontage.
+      </desc>
       <defs>
         <pattern id={`grid-${uid}`} width="16" height="16" patternUnits="userSpaceOnUse">
           <path d="M 16 0 L 0 0 0 16" fill="none" stroke="#E5E2DC" strokeWidth="0.7" />
@@ -486,6 +490,9 @@ export default function SmartSearch({ onSearch }: SmartSearchProps) {
                         <dd className="font-medium text-copper">{activeSize.builtUp} sq ft</dd>
                       </div>
                     </dl>
+                    <p className="mt-2.5 text-[10px] leading-snug text-mutedText font-sans">
+                      Indicative planning estimate based on assumed setbacks — not a statutory municipal/panchayat approval.
+                    </p>
                   </div>
                 </div>
 
@@ -723,11 +730,11 @@ export default function SmartSearch({ onSearch }: SmartSearchProps) {
                     </div>
                   </div>
 
-                  {/* Road side */}
+                  {/* Road faces */}
                   <div>
                     <div className="flex items-baseline justify-between gap-3">
                       <span id="road-title" className={groupTitle}>
-                        Road side
+                        Road faces
                       </span>
                       <span className="text-[12px] text-copper font-sans font-medium">{direction.hint}</span>
                     </div>
@@ -765,7 +772,7 @@ export default function SmartSearch({ onSearch }: SmartSearchProps) {
                       })}
                     </div>
                     <p className="mt-1.5 text-[11px] text-mutedText font-sans">
-                      You can also click a road edge on the diagram.
+                      Click any road edge on the diagram. East &amp; North frontages are traditionally preferred for Vaastu.
                     </p>
                   </div>
 
@@ -777,15 +784,15 @@ export default function SmartSearch({ onSearch }: SmartSearchProps) {
                     <ArrowRight className="w-4 h-4 text-white group-hover:translate-x-1 transition-transform" />
                   </button>
 
-                  {/* Direct Link to Live Satellite Workspace with Plot Guide */}
+                  {/* Direct Link to Plot Intelligence Workspace */}
                   <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-2.5 text-[12px] font-sans border-t border-warm-border/60">
-                    <span className="text-mutedText">Want to project this on your property?</span>
+                    <span className="text-mutedText">Want to map setbacks on your exact plot?</span>
                     <Link
                       href={`/plot-intelligence?cents=${isCustom ? customCents : (activeSize.sqft / 435.6).toFixed(1)}&shape=${encodeURIComponent(shapeId)}&direction=${encodeURIComponent(directionId)}&location=${encodeURIComponent(location)}&live=true&guide=true`}
                       className="inline-flex items-center gap-1.5 text-copper hover:text-copper-dark font-medium underline underline-offset-4 decoration-copper/60 transition-colors group"
                     >
                       <Compass className="w-3.5 h-3.5 text-copper shrink-0 group-hover:rotate-45 transition-transform" />
-                      <span>Open in Plot Guide</span>
+                      <span>Open in Plot Intelligence</span>
                       <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
                     </Link>
                   </div>

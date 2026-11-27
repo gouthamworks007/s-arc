@@ -3,8 +3,9 @@
 import React, { useState, useRef, useCallback, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, Layers, Compass, Plus, CheckCircle2, Sparkles, Home, Ruler, ChevronLeft, ChevronRight, Maximize, Bed } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { ArrowRight, Plus, CheckCircle2, Home, ChevronLeft, ChevronRight, Maximize, Bed } from "lucide-react";
+import { motion } from "framer-motion";
+import { useProjects } from "@/lib/projectsContext";
 
 export interface HouseCategory {
   id: string;
@@ -14,7 +15,6 @@ export interface HouseCategory {
   summary: string;
   idealPlot: string;
   bhkRange: string;
-  plansCount: number;
   climateFeature: string;
   tags: string[];
   styleParam: string;
@@ -28,121 +28,115 @@ const HOUSE_CATEGORIES: HouseCategory[] = [
     id: "courtyard",
     name: "Courtyard & Nadumuttam Homes",
     categoryBadge: "INWARD MICROCLIMATE",
-    tagline: "Natural thermal chimney cooling & inward serene water sanctuaries.",
-    summary: "Engineered around an open-to-sky central courtyard (Nadumuttam) that drops ambient indoor temperature by 3°–4°C. Perfect for dense urban plots requiring 100% natural daylight and complete privacy from neighbors.",
+    tagline: "Stack-ventilation courtyards for warm, humid climates.",
+    summary: "Organized around an open-to-sky central court (Nadumuttam) that draws warm air upward while keeping bedroom wings shaded and private on dense plots.",
     idealPlot: "6 to 15 Cents",
     bhkRange: "3 to 5 BHK",
-    plansCount: 78,
-    climateFeature: "Central convective stack ventilation exhausts trapped humid air",
-    tags: ["Nadumuttam Court", "Rainwater Basin", "Cross Ventilation", "Zero Street Glare"],
+    climateFeature: "Central convective courtyard supports cross-ventilation",
+    tags: ["Nadumuttam Court", "Cross Ventilation", "Private Living"],
     styleParam: "COURTYARD",
-    image: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80",
+    image: "/showcase-courtyard.webp",
     keyHighlights: [
-      "Open-to-sky water court creating cool microclimate",
+      "Open-to-sky central court aiding passive air circulation",
       "Perimeter verandahs shading private bedroom wings",
-      "100% natural daylight in every room even on zero-setback sites",
+      "Daylight access inside inward-facing rooms",
     ],
-    materials: "Exposed wire-cut bricks, sandstone, brass spouts, lime plaster",
+    materials: "Wire-cut bricks, timber joinery, natural stone, lime plaster",
   },
   {
     id: "modern-tropical",
     name: "Modern Tropical Residences",
     categoryBadge: "BIOPHILIC LIVING",
-    tagline: "Deep cantilevered monsoon eaves & breathable operable louvers.",
-    summary: "Dissolves the separation between indoor living and lush tropical vegetation. Built with deep 1.8m overhangs to protect glass facades from torrential Kerala monsoons, double-height living pavilions, and integrated garden terraces.",
+    tagline: "Deep monsoon roof overhangs and shaded terraces.",
+    summary: "Balances modern open plans with extended roof eaves, operable timber louvers, and planted buffers suited to heavy South Indian monsoon rainfall.",
     idealPlot: "10 to 20 Cents",
     bhkRange: "4 to 6 BHK",
-    plansCount: 97,
-    climateFeature: "Deep cantilevered eaves shield exterior walls from monsoon rain",
-    tags: ["Cantilevered Decks", "Timber Louvers", "Biophilic Terraces", "Double-Height Volumes"],
+    climateFeature: "Deep overhangs help shield walls from driving monsoon rain",
+    tags: ["Deep Overhangs", "Timber Louvers", "Garden Terraces"],
     styleParam: "MODERN TROPICAL",
-    image: "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=1200&q=80",
+    image: "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=1000&q=80",
     keyHighlights: [
-      "Operable timber jaalis admitting breezes while filtering tropical glare",
-      "Integrated rainwater harvesting swales and lush buffer gardens",
-      "Elevated ground plinth resisting ground moisture during monsoons",
+      "Operable timber screens filtering harsh tropical sun",
+      "Planted buffer courts around ground-floor living zones",
+      "Raised plinth detailing for high-rainfall seasons",
     ],
-    materials: "Natural bamboo composite, exposed brick, polished concrete, local granite",
+    materials: "Exposed brick, polished concrete, treated timber, local granite",
   },
   {
     id: "traditional",
     name: "Kerala Heritage Nalukettu",
-    categoryBadge: "TIMELESS VERNACULAR",
-    tagline: "Pitched clay tile roofs, handcrafted timber colonnades & laterite stone.",
-    summary: "Centuries of South Indian vernacular wisdom re-engineered for modern residential luxury. Features pitched Mangalore tile roofs shedding 3,000mm annual monsoon rains, surrounding Charupadi verandahs, and Vastu Vidya orientation.",
+    categoryBadge: "TRADITIONAL VERNACULAR",
+    tagline: "Pitched clay-tile roofs, timber colonnades, and laterite walls.",
+    summary: "Adapts traditional Nalukettu principles for modern family living with steep Mangalore-tiled roofs, shaded Charupadi sit-outs, and laterite thermal mass.",
     idealPlot: "12 to 25 Cents",
     bhkRange: "3 to 5 BHK",
-    plansCount: 115,
-    climateFeature: "Sloping terracotta tiles disperse heavy monsoon rainfall naturally",
-    tags: ["Mangalore Clay Tiles", "Charupadi Verandah", "Laterite Masonry", "Vastu Padavinyasa"],
+    climateFeature: "Pitched clay-tile roofs shed heavy monsoon rain quickly",
+    tags: ["Clay Tile Roof", "Charupadi", "Laterite Masonry"],
     styleParam: "TRADITIONAL",
-    image: "https://images.unsplash.com/photo-1580587771525-78b9dba3b914?auto=format&fit=crop&w=1200&q=80",
+    image: "https://images.unsplash.com/photo-1580587771525-78b9dba3b914?auto=format&fit=crop&w=1000&q=80",
     keyHighlights: [
-      "Traditional Charupadi perimeter seating offering shaded garden vistas",
-      "High thermal mass laterite stone dampening daytime heat gain",
-      "Handcrafted teakwood rafters with artisanal brass joinery",
+      "Shaded Charupadi perimeter seating overlooking gardens",
+      "Thick laterite stone masonry moderating daytime heat",
+      "Pitched timber roof trusses with ventilated ridge zones",
     ],
-    materials: "Mangalore clay tiles, laterite stone, teakwood colonnades, brass hardware",
+    materials: "Mangalore clay tiles, dressed laterite, teakwood, brass fittings",
   },
   {
     id: "contemporary",
     name: "Contemporary Cantilever Villas",
-    categoryBadge: "VOLUMETRIC MODERNISM",
-    tagline: "Cast-in-place board-formed concrete & double-height panoramic living.",
-    summary: "Architectural massing engineered for open suburban and corner plots with dramatic floating cantilevers, solar-shielded glass curtain walls, and seamless indoor-outdoor living pavilions that frame private garden lawns.",
+    categoryBadge: "CONTEMPORARY MASSING",
+    tagline: "Cantilevered decks and double-height living spaces.",
+    summary: "Suited to wider suburban and corner parcels with shaded exterior balconies, vertical brise-soleil screens, and double-height family lounges.",
     idealPlot: "10 to 22 Cents",
     bhkRange: "4 to 6 BHK",
-    plansCount: 84,
-    climateFeature: "Calibrated horizontal solar louvers block direct afternoon infrared radiation",
-    tags: ["Floating Cantilevers", "Board-Formed Concrete", "Double-Height Lounge", "Corner Plot Edge"],
+    climateFeature: "Cantilevered slabs and solar fins reduce western heat gain",
+    tags: ["Cantilever Decks", "Solar Fins", "Double-Height"],
     styleParam: "CONTEMPORARY",
-    image: "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=1200&q=80",
+    image: "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=1000&q=80",
     keyHighlights: [
-      "Dramatic 3.5m cantilevered terrace shading ground-level living pavilions",
-      "Solar-calibrated exterior fins preventing internal heat buildup",
-      "Double-height central living volume inducing passive thermal updraft",
+      "Projected terrace slabs shading lower living rooms",
+      "Exterior fins angled against afternoon western sun",
+      "Double-height hall connecting ground and upper levels",
     ],
-    materials: "Board-formed concrete, low-E solar glass, black architectural steel, Kota stone",
+    materials: "Exposed concrete, low-E glass, coated steel, natural stone",
   },
   {
-    id: "urban-infill",
-    name: "High-Efficiency Urban Infill",
-    categoryBadge: "COMPACT URBAN SITES",
-    tagline: "Engineered for 3 to 7 Cent narrow-frontage city parcels with zero dead space.",
-    summary: "Mastercrafted spatial efficiency tailored for compact city plots and tight municipal setbacks. Incorporates vertical light shafts, split-level living plates, and internal pocket courts to maximize daylight without exposing interiors to street noise.",
+    id: "minimalist",
+    name: "Minimalist Compact Homes",
+    categoryBadge: "MINIMALIST URBAN",
+    tagline: "Clean, efficient plans for 3 to 7 Cent compact urban sites.",
+    summary: "Streamlined layouts built for narrow city plots using vertical skylight wells, clean geometric forms, and integrated ground-level parking bays.",
     idealPlot: "3 to 7 Cents",
     bhkRange: "3 to 4 BHK",
-    plansCount: 62,
-    climateFeature: "Vertical skylight shafts channel natural daylight deep into narrow floor plates",
-    tags: ["Narrow Frontage", "Vertical Lightwell", "Pocket Garden", "Split-Level Flow"],
+    climateFeature: "Top-lit stairwell shaft brings daylight into tight city plots",
+    tags: ["Compact Plot", "Sky-Lit Core", "Clean Geometry"],
     styleParam: "MINIMALIST",
-    image: "https://images.unsplash.com/photo-1600607687920-4e2a09cf159d?auto=format&fit=crop&w=1200&q=80",
+    image: "https://images.unsplash.com/photo-1600607687920-4e2a09cf159d?auto=format&fit=crop&w=1000&q=80",
     keyHighlights: [
-      "Calibrated 5m–8m frontage blueprints complying with Kerala municipal KMBR setbacks",
-      "Skylit triple-height lightwell illuminating central stair core without boundary windows",
-      "Concealed dual car porch integrated cleanly beneath upper residential levels",
+      "Narrow-frontage layouts suited to urban KMBR setbacks",
+      "Central skylit stair bringing light without side windows",
+      "Integrated covered porch for two-car city parking",
     ],
-    materials: "Smooth micro-cement, white lime wash, structural steel frame, perforated metal screens",
+    materials: "Micro-cement, lime plaster, structural steel, perforated screens",
   },
   {
-    id: "coastal",
-    name: "Coastal & Waterfront Residences",
-    categoryBadge: "COASTAL RESILIENCE",
-    tagline: "Salt-resistant hydraulic lime, arched loggias & wind-funneling terraces.",
-    summary: "Custom-engineered for South India's coastal belt and waterfront terrains. Features thick lime-washed thermal mass, arched breezeway loggias that capture marine currents, and elevated plinths resilient against coastal dampness.",
+    id: "mediterranean",
+    name: "Mediterranean & Coastal Homes",
+    categoryBadge: "MEDITERRANEAN COASTAL",
+    tagline: "Lime stucco finishes, shaded arches, and breeze loggias.",
+    summary: "Designed with textured lime walls, deep arched corridors, and durable coastal hardware to handle humid sea breezes along South India's shoreline.",
     idealPlot: "12 to 30 Cents",
     bhkRange: "4 to 6 BHK",
-    plansCount: 53,
-    climateFeature: "Hydraulic lime stucco deflects maritime salt humidity and intense solar radiation",
-    tags: ["Salt-Air Resilience", "Arched Loggias", "Wind Breezeway", "Rooftop Belvederes"],
+    climateFeature: "Shaded loggias channel offshore breezes through rooms",
+    tags: ["Arched Loggias", "Lime Stucco", "Coastal Durability"],
     styleParam: "MEDITERRANEAN",
-    image: "https://images.unsplash.com/photo-1600607687644-c7171b42498f?auto=format&fit=crop&w=1200&q=80",
+    image: "https://images.unsplash.com/photo-1600607687644-c7171b42498f?auto=format&fit=crop&w=1000&q=80",
     keyHighlights: [
-      "Weathered lime stucco and marine-grade stainless hardware impervious to coastal salt air",
-      "Deep shaded loggias funneling cooling offshore breezes through living quarters",
-      "Reinforced high-plinth foundations engineered for high-water-table coastal soils",
+      "Breathable hydraulic lime renders suited to salt humidity",
+      "Arched breezeway corridors oriented toward coastal winds",
+      "Elevated plinth protection on high-water-table plots",
     ],
-    materials: "Hydraulic lime plaster, terracotta pavers, marine-grade 316 fittings, solid teakwood",
+    materials: "Hydraulic lime stucco, terracotta tiles, marine-grade fittings",
   },
 ];
 
@@ -151,8 +145,26 @@ interface ArchitecturalJournalProps {
 }
 
 export default function ArchitecturalJournal({ articles }: ArchitecturalJournalProps) {
+  const { projects } = useProjects();
   const [activeCategoryId, setActiveCategoryId] = useState<string>(HOUSE_CATEGORIES[0].id);
   const [selectedCategory, setSelectedCategory] = useState<HouseCategory | null>(null);
+  const [isMobileViewport, setIsMobileViewport] = useState(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 767px)");
+    const update = () => setIsMobileViewport(mq.matches);
+    update();
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
+  }, []);
+
+  const publishedProjects = projects.filter((p) => p.status !== "draft");
+  const getLiveStyleCount = (styleParam: string) =>
+    publishedProjects.filter(
+      (p) =>
+        (p.style || "").toLowerCase().includes(styleParam.toLowerCase()) ||
+        styleParam.toLowerCase().includes((p.style || "").toLowerCase())
+    ).length;
 
   // Mobile Carousel State & Navigation
   const mobileScrollRef = useRef<HTMLDivElement>(null);
@@ -177,11 +189,11 @@ export default function ArchitecturalJournal({ articles }: ArchitecturalJournalP
 
   useEffect(() => {
     const el = mobileScrollRef.current;
-    if (!el) return;
+    if (!el || !isMobileViewport) return;
     el.addEventListener("scroll", handleMobileScroll, { passive: true });
     handleMobileScroll();
     return () => el.removeEventListener("scroll", handleMobileScroll);
-  }, [handleMobileScroll]);
+  }, [handleMobileScroll, isMobileViewport]);
 
   const scrollMobilePrev = () => {
     if (!mobileScrollRef.current) return;
@@ -248,7 +260,8 @@ export default function ArchitecturalJournal({ articles }: ArchitecturalJournalP
             </Link>
 
             {/* Mobile Carousel Navigation Arrows (< >) */}
-            <div className="flex md:hidden items-center gap-1.5">
+            {isMobileViewport && (
+            <div className="flex items-center gap-1.5">
               <button
                 type="button"
                 onClick={scrollMobilePrev}
@@ -277,16 +290,20 @@ export default function ArchitecturalJournal({ articles }: ArchitecturalJournalP
                 <ChevronRight className="w-4 h-4" />
               </button>
             </div>
+            )}
           </div>
         </div>
 
-        {/* MOBILE VIEW (< md): Clean full-card swipeable carousel showing ALL 6 categories */}
-        <div className="md:hidden">
+        {/* Single DOM branch per viewport so crawlers and screen readers never see duplicate categories */}
+        {isMobileViewport ? (
+        <div>
           <div
             ref={mobileScrollRef}
             className="flex gap-4 overflow-x-auto snap-x snap-mandatory scroll-smooth no-scrollbar pb-3 pt-1 -mx-4 px-4"
           >
-            {HOUSE_CATEGORIES.map((cat) => (
+            {HOUSE_CATEGORIES.map((cat) => {
+              const liveMatches = getLiveStyleCount(cat.styleParam);
+              return (
               <div
                 key={cat.id}
                 className="w-[84vw] max-w-[360px] shrink-0 snap-center bg-white border border-warm-border rounded-2xl shadow-card overflow-hidden flex flex-col justify-between"
@@ -297,6 +314,7 @@ export default function ArchitecturalJournal({ articles }: ArchitecturalJournalP
                     src={cat.image}
                     alt={cat.name}
                     fill
+                    loading="lazy"
                     className="object-cover"
                     sizes="(max-width: 640px) 85vw, 360px"
                   />
@@ -306,10 +324,12 @@ export default function ArchitecturalJournal({ articles }: ArchitecturalJournalP
                     {cat.categoryBadge}
                   </div>
 
-                  <div className="absolute bottom-2.5 left-2.5 bg-black/70 backdrop-blur-sm text-white text-[10px] font-mono px-2 py-0.5 rounded-full flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-copper" />
-                    <span>{cat.plansCount} Plans Vetted</span>
-                  </div>
+                  {liveMatches > 0 && (
+                    <div className="absolute bottom-2.5 left-2.5 bg-black/70 backdrop-blur-sm text-white text-[10px] font-mono px-2 py-0.5 rounded-full flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-copper" />
+                      <span>{liveMatches} {liveMatches === 1 ? "Plan" : "Plans"} Live</span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Card Body */}
@@ -360,7 +380,7 @@ export default function ArchitecturalJournal({ articles }: ArchitecturalJournalP
                       href={`/designs?style=${encodeURIComponent(cat.styleParam)}`}
                       className="inline-flex items-center gap-1.5 py-2 px-3.5 bg-copper hover:bg-copper-hover text-white text-[11px] font-medium font-sans tracking-wide rounded-full transition-all shadow-subtle shrink-0"
                     >
-                      <span>Explore {cat.plansCount}+ Plans</span>
+                      <span>{liveMatches > 0 ? `Browse ${liveMatches} ${liveMatches === 1 ? "Plan" : "Plans"}` : "Browse Style"}</span>
                       <ArrowRight className="w-3 h-3" />
                     </Link>
 
@@ -373,12 +393,12 @@ export default function ArchitecturalJournal({ articles }: ArchitecturalJournalP
                   </div>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
 
           {/* Mobile Pagination Footer */}
           <div className="mt-4 flex items-center justify-between px-1">
-            {/* 6 Dots */}
             <div className="flex items-center gap-1.5">
               {HOUSE_CATEGORIES.map((_, idx) => (
                 <button
@@ -396,7 +416,6 @@ export default function ArchitecturalJournal({ articles }: ArchitecturalJournalP
               ))}
             </div>
 
-            {/* Slide counter */}
             <div className="text-[11px] font-mono text-mutedText flex items-center gap-1">
               <span className="font-semibold text-charcoal">0{mobileActiveIndex + 1}</span>
               <span>/</span>
@@ -404,31 +423,24 @@ export default function ArchitecturalJournal({ articles }: ArchitecturalJournalP
             </div>
           </div>
         </div>
-
-        {/* DESKTOP VIEW (>= md): Retractable Expanding Panels */}
-        <div className="hidden md:flex flex-row gap-3.5 md:gap-4 items-stretch w-full md:h-[460px] overflow-x-visible pb-2 no-scrollbar">
+        ) : (
+        <div className="flex flex-row gap-3.5 md:gap-4 items-stretch w-full md:h-[460px] overflow-x-visible pb-2 no-scrollbar">
           {HOUSE_CATEGORIES.map((category) => {
             const isExpanded = activeCategoryId === category.id;
+            const liveMatches = getLiveStyleCount(category.styleParam);
 
             return (
               <div
                 key={category.id}
                 id={`cat-panel-${category.id}`}
                 onMouseEnter={() => setActiveCategoryId(category.id)}
-                onClick={() => {
-                  setActiveCategoryId(category.id);
-                  if (typeof window !== "undefined" && window.innerWidth < 768) {
-                    const el = document.getElementById(`cat-panel-${category.id}`);
-                    el?.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
-                  }
-                }}
-                className={`relative rounded-xl sm:rounded-2xl overflow-hidden transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] select-none shrink-0 md:shrink ${
+                onClick={() => setActiveCategoryId(category.id)}
+                className={`relative rounded-2xl overflow-hidden transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] select-none shrink ${
                   isExpanded
-                    ? "w-[84vw] sm:w-[72vw] md:w-auto md:flex-[3.5] lg:flex-[3.8] bg-white border border-copper/50 shadow-card"
-                    : "w-[44px] sm:w-[54px] md:w-auto md:flex-1 bg-charcoal border border-warm-border/60 hover:border-charcoal/50 shadow-subtle cursor-pointer min-w-[40px] sm:min-w-[50px] md:min-w-0"
+                    ? "flex-[3.5] lg:flex-[3.8] bg-white border border-copper/50 shadow-card"
+                    : "flex-1 bg-charcoal border border-warm-border/60 hover:border-charcoal/50 shadow-subtle cursor-pointer min-w-0"
                 }`}
               >
-                {/* EXPANDED VIEW: Image & Content Side-by-Side in a Line */}
                 {isExpanded ? (
                   <motion.div
                     key={`expanded-${category.id}`}
@@ -436,70 +448,60 @@ export default function ArchitecturalJournal({ articles }: ArchitecturalJournalP
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.3 }}
-                    className="flex flex-row h-full w-full p-2.5 sm:p-4 md:p-6 gap-2.5 sm:gap-4 md:gap-6 items-stretch"
+                    className="flex flex-row h-full w-full p-5 md:p-6 gap-5 md:gap-6 items-stretch"
                   >
-                    {/* Left Column: Image with Typology Badge */}
-                    <div className="w-[36%] sm:w-[40%] md:w-[42%] relative h-full rounded-lg sm:rounded-xl overflow-hidden bg-charcoal shrink-0">
+                    <div className="w-[42%] relative h-full rounded-xl overflow-hidden bg-charcoal shrink-0">
                       <Image
                         src={category.image}
                         alt={category.name}
                         fill
+                        loading="lazy"
                         className="object-cover"
-                        sizes="(max-width: 640px) 40vw, 35vw"
+                        sizes="35vw"
                       />
-                      <div className="absolute top-2 left-2 sm:top-3 sm:left-3 bg-black/75 backdrop-blur-sm text-white text-[8px] sm:text-[10px] tracking-widestExtra uppercase px-2 py-0.5 sm:px-2.5 sm:py-1 font-semibold rounded-full font-sans truncate max-w-[90%]">
+                      <div className="absolute top-3 left-3 bg-black/75 backdrop-blur-sm text-white text-[10px] tracking-widestExtra uppercase px-2.5 py-1 font-semibold rounded-full font-sans truncate max-w-[90%]">
                         {category.categoryBadge}
                       </div>
 
-                      {/* Plans count pill */}
-                      <div className="absolute bottom-2 left-2 bg-black/65 backdrop-blur-sm text-white/95 text-[9px] font-mono px-2 py-0.5 rounded-full hidden sm:flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 rounded-full bg-copper" />
-                        <span>{category.plansCount} Plans Vetted</span>
-                      </div>
+                      {liveMatches > 0 && (
+                        <div className="absolute bottom-2 left-2 bg-black/65 backdrop-blur-sm text-white/95 text-[9px] font-mono px-2 py-0.5 rounded-full flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-copper" />
+                          <span>{liveMatches} {liveMatches === 1 ? "Plan" : "Plans"} Live</span>
+                        </div>
+                      )}
                     </div>
 
-                    {/* Right Column: Typology Specifications Side by Side */}
-                    <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5 sm:py-1 md:py-2">
+                    <div className="flex-1 min-w-0 flex flex-col justify-between py-1 md:py-2">
                       <div className="min-w-0">
-                        {/* Title */}
-                        <h3 className="text-sm sm:text-lg md:text-2xl font-normal font-serif leading-snug text-charcoal mb-1 sm:mb-1.5 line-clamp-1 sm:line-clamp-2">
+                        <h3 className="text-lg md:text-2xl font-normal font-serif leading-snug text-charcoal mb-1.5 line-clamp-2">
                           {category.name}
                         </h3>
-
-                        {/* Tagline */}
-                        <p className="text-[10px] sm:text-xs text-copper font-sans font-medium line-clamp-1 mb-1.5 sm:mb-2">
+                        <p className="text-xs text-copper font-sans font-medium line-clamp-1 mb-2">
                           {category.tagline}
                         </p>
-
-                        {/* Summary */}
-                        <p className="text-[11px] sm:text-xs md:text-[13px] leading-relaxed text-secondaryText font-light font-sans line-clamp-2 mb-2 sm:mb-3">
+                        <p className="text-xs md:text-[13px] leading-relaxed text-secondaryText font-light font-sans line-clamp-2 mb-3">
                           {category.summary}
                         </p>
 
-                        {/* Topic Tags */}
-                        <div className="flex flex-wrap gap-1 mb-2 sm:mb-3">
-                          {category.tags.slice(0, 2).map((tag, tIdx) => (
+                        <div className="flex flex-wrap gap-1 mb-3">
+                          {category.tags.slice(0, 3).map((tag, tIdx) => (
                             <span
                               key={tIdx}
-                              className="px-2 py-0.5 rounded-full bg-warm-grey text-charcoal/80 text-[9px] sm:text-[10px] font-sans font-medium border border-warm-border"
+                              className="px-2 py-0.5 rounded-full bg-warm-grey text-charcoal/80 text-[10px] font-sans font-medium border border-warm-border"
                             >
                               #{tag}
                             </span>
                           ))}
-                          <span className="hidden md:inline px-2 py-0.5 rounded-full bg-warm-grey text-charcoal/80 text-[10px] font-sans font-medium border border-warm-border">
-                            #{category.tags[2]}
-                          </span>
                         </div>
                       </div>
 
-                      {/* Bottom CTA Bar */}
                       <div className="pt-2 border-t border-warm-border/80 flex items-center justify-between gap-2 shrink-0">
                         <Link
                           href={`/designs?style=${encodeURIComponent(category.styleParam)}`}
-                          className="inline-flex items-center gap-1.5 py-1.5 px-3 sm:py-2 sm:px-4 bg-copper hover:bg-copper-hover text-white text-[10px] sm:text-xs font-medium font-sans tracking-wide rounded-full transition-all shadow-subtle group/btn shrink-0"
+                          className="inline-flex items-center gap-1.5 py-2 px-4 bg-copper hover:bg-copper-hover text-white text-xs font-medium font-sans tracking-wide rounded-full transition-all shadow-subtle group/btn shrink-0"
                         >
-                          <span>Explore {category.plansCount}+ Plans</span>
-                          <ArrowRight className="w-3 h-3 sm:w-3.5 sm:h-3.5 transition-transform group-hover/btn:translate-x-1" />
+                          <span>{liveMatches > 0 ? `Browse ${liveMatches} ${liveMatches === 1 ? "Plan" : "Plans"}` : "Browse Style"}</span>
+                          <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover/btn:translate-x-1" />
                         </Link>
 
                         <button
@@ -507,7 +509,7 @@ export default function ArchitecturalJournal({ articles }: ArchitecturalJournalP
                             e.stopPropagation();
                             setSelectedCategory(category);
                           }}
-                          className="text-[10px] sm:text-xs text-mutedText hover:text-charcoal font-sans transition-colors hidden sm:inline"
+                          className="text-xs text-mutedText hover:text-charcoal font-sans transition-colors"
                         >
                           View Specs &rarr;
                         </button>
@@ -515,41 +517,31 @@ export default function ArchitecturalJournal({ articles }: ArchitecturalJournalP
                     </div>
                   </motion.div>
                 ) : (
-                  /* RETRACTED / COLLAPSED VIEW: Slim & Compact tab in the Line */
-                  <div className="relative w-full h-full cursor-pointer group flex flex-col items-center justify-between p-2 sm:p-3">
-                    {/* Background photo */}
+                  <div className="relative w-full h-full cursor-pointer group flex flex-col items-center justify-between p-3">
                     <Image
                       src={category.image}
                       alt={category.name}
                       fill
+                      loading="lazy"
                       className="object-cover filter brightness-[0.65] group-hover:brightness-[0.8] group-hover:scale-105 transition-all duration-700"
-                      sizes="(max-width: 640px) 15vw, 20vw"
+                      sizes="20vw"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-black/30 pointer-events-none" />
 
-                    {/* Top: Plus Icon */}
-                    <div className="relative z-10 w-full flex justify-center sm:justify-between items-center">
-                      <span className="hidden sm:inline bg-white/20 backdrop-blur-md text-white text-[9px] tracking-widestExtra uppercase px-2 py-0.5 rounded-full font-semibold truncate max-w-[80px]">
+                    <div className="relative z-10 w-full flex justify-between items-center">
+                      <span className="bg-white/20 backdrop-blur-md text-white text-[9px] tracking-widestExtra uppercase px-2 py-0.5 rounded-full font-semibold truncate max-w-[80px]">
                         {category.categoryBadge}
                       </span>
-                      <span className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-white/25 backdrop-blur-md text-white flex items-center justify-center text-[10px] sm:text-xs font-bold transition-transform group-hover:scale-110">
+                      <span className="w-6 h-6 rounded-full bg-white/25 backdrop-blur-md text-white flex items-center justify-center text-xs font-bold transition-transform group-hover:scale-110">
                         <Plus className="w-3 h-3" />
                       </span>
                     </div>
 
-                    {/* Middle on mobile: Vertical Category name */}
-                    <div className="relative z-10 sm:hidden my-auto">
-                      <span className="[writing-mode:vertical-rl] rotate-180 text-[9px] font-mono tracking-widest uppercase text-white/80 font-medium truncate max-h-[140px]">
-                        {category.categoryBadge}
-                      </span>
-                    </div>
-
-                    {/* Bottom: Title & Hint (desktop/tablet) */}
-                    <div className="relative z-10 w-full hidden sm:block">
+                    <div className="relative z-10 w-full">
                       <div className="text-[10px] text-copper font-mono mb-1 truncate">
-                        {category.plansCount} Plans
+                        {category.idealPlot}
                       </div>
-                      <h4 className="text-xs sm:text-sm font-serif text-white font-normal line-clamp-2 leading-snug group-hover:text-copper-light transition-colors">
+                      <h4 className="text-sm font-serif text-white font-normal line-clamp-2 leading-snug group-hover:text-copper-light transition-colors">
                         {category.name}
                       </h4>
                       <div className="mt-1.5 text-[9px] font-sans text-copper-light uppercase tracking-wider font-semibold flex items-center gap-1 opacity-80 group-hover:opacity-100">
@@ -563,6 +555,7 @@ export default function ArchitecturalJournal({ articles }: ArchitecturalJournalP
             );
           })}
         </div>
+        )}
 
       </div>
 
@@ -579,7 +572,7 @@ export default function ArchitecturalJournal({ articles }: ArchitecturalJournalP
           <div className="bg-white max-w-2xl w-full p-5 sm:p-8 max-h-[90vh] overflow-y-auto rounded-2xl sm:rounded-3xl shadow-card">
             <div className="flex justify-between items-start mb-3 sm:mb-4">
               <span className="text-xs font-semibold text-copper uppercase tracking-widest font-mono">
-                {selectedCategory.categoryBadge} • {selectedCategory.plansCount} Vetted Plans
+                {selectedCategory.categoryBadge} • {selectedCategory.idealPlot}
               </span>
               <button
                 onClick={() => setSelectedCategory(null)}

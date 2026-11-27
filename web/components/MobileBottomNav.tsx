@@ -67,9 +67,9 @@ export default function MobileBottomNav() {
           </span>
         </Link>
 
-        {/* 3. My Plot (Center Hero Tab) */}
+        {/* 3. Plot Intelligence (Center Hero Tab) */}
         <Link
-          href="/plot-my-land"
+          href="/plot-intelligence"
           className={`flex flex-col items-center justify-center min-w-[62px] py-1 transition-all duration-200 group ${
             isPlot ? "text-copper" : "text-charcoal/70 hover:text-charcoal"
           }`}
@@ -84,7 +84,7 @@ export default function MobileBottomNav() {
             </div>
           </div>
           <span className={`text-[10px] font-sans font-medium tracking-tight mt-0.5 ${isPlot ? "text-copper font-semibold" : ""}`}>
-            My Plot
+            Plot Intel
           </span>
         </Link>
 

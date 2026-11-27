@@ -15,6 +15,8 @@ import {
   Sparkles 
 } from "lucide-react";
 
+import { useProjects } from "@/lib/projectsContext";
+
 export interface NetworkPortal {
   id: string;
   badge: string;
@@ -25,64 +27,74 @@ export interface NetworkPortal {
   image: string;
 }
 
-const PORTALS: NetworkPortal[] = [
-  {
-    id: "designs",
-    badge: "500+ DESIGNS",
-    title: "Featured Designs",
-    desc: "Curated collection of residential architectural plans with dimensioned CAD drawings, structural schedules, and BOQ.",
-    href: "/designs",
-    linkText: "Explore 500+ Plans",
-    image: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=800&q=80",
-  },
-  {
-    id: "plot-intelligence",
-    badge: "SATELLITE SURVEY",
-    title: "Plot My Land",
-    desc: "Top-down satellite mapping, real-time Cent area calculation, and KMBR 2019 statutory setback projections.",
-    href: "/plot-my-land",
-    linkText: "Launch Satellite Map",
-    image: "https://images.unsplash.com/photo-1524813686514-a57563d77d66?auto=format&fit=crop&w=800&q=80",
-  },
-  {
-    id: "styles",
-    badge: "6 REGIONAL STYLES",
-    title: "Architectural Styles",
-    desc: "From Traditional Nalukettu courtyards to Modern Tropical, Minimalist Monoliths, and Coastal Residences.",
-    href: "/styles",
-    linkText: "Discover Styles",
-    image: "https://images.unsplash.com/photo-1580587771525-78b9dba3b914?auto=format&fit=crop&w=800&q=80",
-  },
-  {
-    id: "architects",
-    badge: "VERIFIED STUDIOS",
-    title: "Featured Architects",
-    desc: "Connect with verified, COA-licensed architects and leading residential design practices across South India.",
-    href: "/architects",
-    linkText: "Meet the Creators",
-    image: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=800&q=80",
-  },
-  {
-    id: "packages",
-    badge: "FIXED-PRICE TIERS",
-    title: "Drawing Packages",
-    desc: "Transparent 3-tier deliverables: Municipal Permit Sets, Executive Builder Working Sets, and Comprehensive 3D BIM + BOQ.",
-    href: "/designs",
-    linkText: "View Deliverable Tiers",
-    image: "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=800&q=80",
-  },
-  {
-    id: "typologies",
-    badge: "CLIMATE RESPONSIVE",
-    title: "House Typologies",
-    desc: "Regional home designs engineered specifically for Kerala monsoons, narrow city infill parcels, and sloping terrain.",
-    href: "/#inspiration",
-    linkText: "Explore Typologies",
-    image: "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=800&q=80",
-  },
-];
-
 export default function NetworkCarousel() {
+  const { projects } = useProjects();
+  const published = projects.filter((p) => p.status !== "draft");
+  const liveCount = published.length;
+  const minPrice = published.reduce((min, p) => {
+    const val = Number(p.priceNumeric) || parseInt(String(p.price || "").replace(/[^\d]/g, ""), 10) || 0;
+    return val > 0 && val < min ? val : min;
+  }, Infinity);
+  const priceBadge = Number.isFinite(minPrice)
+    ? `FROM ₹${Math.round(minPrice).toLocaleString("en-IN")}`
+    : "FIXED TIERS";
+
+  const PORTALS: NetworkPortal[] = [
+    {
+      id: "designs",
+      badge: `${liveCount} LIVE PLANS`,
+      title: "Curated Designs",
+      desc: "Residential architectural plans with dimensioned CAD drawings, structural schedules, and BOQ documentation.",
+      href: "/designs",
+      linkText: "Explore Designs",
+      image: "/showcase-courtyard.webp",
+    },
+    {
+      id: "plot-intelligence",
+      badge: "KMBR & CENT TOOL",
+      title: "Plot Intelligence",
+      desc: "Interactive plot dimensioning, Cent-to-SqFt conversion, and indicative KMBR 2019 setback projections.",
+      href: "/plot-intelligence",
+      linkText: "Open Plot Intelligence",
+      image: "https://images.unsplash.com/photo-1524813686514-a57563d77d66?auto=format&fit=crop&w=800&q=80",
+    },
+    {
+      id: "styles",
+      badge: "6 STYLE GUIDES",
+      title: "Architectural Styles",
+      desc: "Explore Traditional Nalukettu courtyards, Modern Tropical, Minimalist Monoliths, and Mediterranean designs.",
+      href: "/styles",
+      linkText: "Discover Styles",
+      image: "https://images.unsplash.com/photo-1580587771525-78b9dba3b914?auto=format&fit=crop&w=800&q=80",
+    },
+    {
+      id: "architects",
+      badge: "COA STUDIOS",
+      title: "Verified Architects",
+      desc: "Connect with verified, COA-licensed architects and vetted residential design practices across South India.",
+      href: "/architects",
+      linkText: "Meet the Creators",
+      image: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=800&q=80",
+    },
+    {
+      id: "packages",
+      badge: priceBadge,
+      title: "Drawing Packages & Licensing",
+      desc: "Transparent deliverable tiers: Municipal Permit Sets, Builder Working Drawings, and Turnkey BIM + BOQ.",
+      href: "/licensing",
+      linkText: "View Licensing & Scopes",
+      image: "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=800&q=80",
+    },
+    {
+      id: "typologies",
+      badge: "CLIMATE RESPONSIVE",
+      title: "House Typologies",
+      desc: "Regional house categories suited to Kerala monsoons, compact urban parcels, and sloped terrain.",
+      href: "/#inspiration",
+      linkText: "Explore Typologies",
+      image: "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=800&q=80",
+    },
+  ];
   const scrollRef = useRef<HTMLDivElement>(null);
   const [activeIndex, setActiveIndex] = useState(0);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
@@ -159,7 +171,7 @@ export default function NetworkCarousel() {
               href="/designs"
               className="inline-flex items-center gap-1.5 sm:gap-2 text-xs sm:text-[13px] font-medium font-sans text-charcoal hover:text-copper transition-colors group shrink-0"
             >
-              <span>View All 500+ Designs</span>
+              <span>View All {liveCount} Plans</span>
               <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
             </Link>
 

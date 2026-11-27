@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, Instagram, Youtube, Linkedin, Pin, CheckCircle2 } from "lucide-react";
+import { ArrowRight, CheckCircle2, Mail, MessageSquare } from "lucide-react";
 
 interface FooterProps {
   onOpenSellerModal?: () => void;
@@ -65,35 +65,23 @@ export default function Footer({ onOpenSellerModal }: FooterProps) {
               A platform that connects people with exceptional architectural designs, created by professional architects across South India and beyond.
             </p>
 
-            {/* Social Links */}
-            <div className="flex items-center space-x-4 text-white/60">
+            {/* Direct Studio Contact */}
+            <div className="flex flex-wrap items-center gap-2.5 text-xs">
               <a
-                href="#instagram"
-                aria-label="Instagram"
-                className="w-8 h-8 rounded-full border border-white/20 flex items-center justify-center hover:text-white hover:border-white transition-colors"
+                href="https://wa.me/919446077889?text=Hi%20S-ARC%2C%20I%20would%20like%20to%20enquire%20about%20a%20house%20design."
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-emerald-400/35 text-emerald-300 hover:bg-emerald-400/10 transition-colors"
               >
-                <Instagram className="w-3.5 h-3.5" />
+                <MessageSquare className="w-3.5 h-3.5" />
+                <span>WhatsApp Studio</span>
               </a>
               <a
-                href="#youtube"
-                aria-label="YouTube"
-                className="w-8 h-8 rounded-full border border-white/20 flex items-center justify-center hover:text-white hover:border-white transition-colors"
+                href="mailto:contact@southernarchitecture.in"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-white/20 text-white/75 hover:text-white hover:border-white/40 transition-colors"
               >
-                <Youtube className="w-3.5 h-3.5" />
-              </a>
-              <a
-                href="#linkedin"
-                aria-label="LinkedIn"
-                className="w-8 h-8 rounded-full border border-white/20 flex items-center justify-center hover:text-white hover:border-white transition-colors"
-              >
-                <Linkedin className="w-3.5 h-3.5" />
-              </a>
-              <a
-                href="#pinterest"
-                aria-label="Pinterest"
-                className="w-8 h-8 rounded-full border border-white/20 flex items-center justify-center hover:text-white hover:border-white transition-colors"
-              >
-                <Pin className="w-3.5 h-3.5" />
+                <Mail className="w-3.5 h-3.5" />
+                <span>Email</span>
               </a>
             </div>
           </div>
@@ -111,7 +99,7 @@ export default function Footer({ onOpenSellerModal }: FooterProps) {
               </li>
               <li>
                 <Link href="/plot-intelligence" className="hover:text-copper transition-colors">
-                  Plot Intelligence & KMBR
+                  Plot Intelligence &amp; KMBR
                 </Link>
               </li>
               <li>
@@ -125,80 +113,47 @@ export default function Footer({ onOpenSellerModal }: FooterProps) {
                 </Link>
               </li>
               <li>
-                <Link href="/#search-section" className="hover:text-copper transition-colors">
-                  Plot Size Guide
+                <Link href="/#inspiration" className="hover:text-copper transition-colors">
+                  House Typologies
                 </Link>
               </li>
             </ul>
           </div>
 
-          {/* Links Column 2: Company (2 cols) */}
+          {/* Links Column 2: Platform (2 cols) */}
           <div className="lg:col-span-2">
             <h4 className="text-[12px] uppercase tracking-widestExtra text-white font-medium mb-4">
-              Company
+              Platform
             </h4>
             <ul className="space-y-2.5 text-[13px] text-white/65">
               <li>
-                <Link href="/#why-sarc" className="hover:text-copper transition-colors">
-                  About Us
+                {onOpenSellerModal ? (
+                  <button
+                    type="button"
+                    onClick={onOpenSellerModal}
+                    className="hover:text-copper transition-colors text-left"
+                  >
+                    Become a Seller
+                  </button>
+                ) : (
+                  <Link href="/signup?role=architect" className="hover:text-copper transition-colors">
+                    Become a Seller
+                  </Link>
+                )}
+              </li>
+              <li>
+                <Link href="/faq" className="hover:text-copper transition-colors">
+                  Help Centre &amp; FAQs
                 </Link>
               </li>
               <li>
-                <Link href="/login" className="hover:text-copper transition-colors flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-copper" />
-                  <span>Architect & Admin Login</span>
+                <Link href="/contact" className="hover:text-copper transition-colors">
+                  Contact Advisory
                 </Link>
-              </li>
-              <li>
-                <button
-                  onClick={onOpenSellerModal}
-                  className="hover:text-copper transition-colors text-left"
-                >
-                  Become a Seller
-                </button>
-              </li>
-              <li>
-                <a href="#why-sarc" className="hover:text-copper transition-colors">
-                  Our Story
-                </a>
-              </li>
-              <li>
-                <a href="#contact" className="hover:text-copper transition-colors">
-                  Contact
-                </a>
-              </li>
-            </ul>
-          </div>
-
-          {/* Links Column 3: Support (2 cols) */}
-          <div className="lg:col-span-2">
-            <h4 className="text-[12px] uppercase tracking-widestExtra text-white font-medium mb-4">
-              Support
-            </h4>
-            <ul className="space-y-2.5 text-[13px] text-white/65">
-              <li>
-                <a href="#faq" className="hover:text-copper transition-colors">
-                  Help Centre
-                </a>
-              </li>
-              <li>
-                <a href="#faq" className="hover:text-copper transition-colors">
-                  FAQs
-                </a>
-              </li>
-              <li>
-                <a href="#terms" className="hover:text-copper transition-colors">
-                  Terms & Conditions
-                </a>
-              </li>
-              <li>
-                <a href="#privacy" className="hover:text-copper transition-colors">
-                  Privacy Policy
-                </a>
               </li>
               <li>
                 <Link href="/login" className="hover:text-copper transition-colors">
-                  Client / Architect Sign In
+                  Sign In
                 </Link>
               </li>
               <li>
@@ -206,10 +161,34 @@ export default function Footer({ onOpenSellerModal }: FooterProps) {
                   Create Account
                 </Link>
               </li>
+            </ul>
+          </div>
+
+          {/* Links Column 3: Legal & Licensing (2 cols) */}
+          <div className="lg:col-span-2">
+            <h4 className="text-[12px] uppercase tracking-widestExtra text-white font-medium mb-4">
+              Policies
+            </h4>
+            <ul className="space-y-2.5 text-[13px] text-white/65">
               <li>
-                <a href="#licensing" className="hover:text-copper transition-colors">
-                  Licensing Information
-                </a>
+                <Link href="/licensing" className="hover:text-copper transition-colors">
+                  Blueprint Licensing
+                </Link>
+              </li>
+              <li>
+                <Link href="/terms" className="hover:text-copper transition-colors">
+                  Terms &amp; Conditions
+                </Link>
+              </li>
+              <li>
+                <Link href="/privacy" className="hover:text-copper transition-colors">
+                  Privacy Policy (DPDP)
+                </Link>
+              </li>
+              <li>
+                <Link href="/refund-policy" className="hover:text-copper transition-colors">
+                  Refund Policy
+                </Link>
               </li>
             </ul>
           </div>
@@ -231,22 +210,28 @@ export default function Footer({ onOpenSellerModal }: FooterProps) {
             ) : (
               <div className="space-y-2">
                 <form onSubmit={handleSubscribe} className="flex">
+                  <label htmlFor="footer-newsletter-email" className="sr-only">
+                    Email address for design updates
+                  </label>
                   <input
+                    id="footer-newsletter-email"
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="Enter your email"
+                    aria-label="Email address for design updates"
                     required
                     disabled={isSubmitting}
                     className="bg-white/10 border border-white/20 text-white placeholder-white/40 text-[12px] px-3 py-2 w-full outline-none focus:border-copper disabled:opacity-50"
                   />
                   <button
                     type="submit"
-                    aria-label="Subscribe"
+                    aria-label="Subscribe to newsletter"
                     disabled={isSubmitting}
-                    className="bg-copper hover:bg-copper-hover px-3 flex items-center justify-center text-white transition-colors disabled:opacity-50"
+                    className="bg-copper hover:bg-copper-hover px-3 flex items-center justify-center text-white transition-colors disabled:opacity-50 text-[11px] font-medium"
                   >
-                    <ArrowRight className="w-3.5 h-3.5" />
+                    <ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />
+                    <span className="sr-only">Subscribe</span>
                   </button>
                 </form>
                 {error && (
